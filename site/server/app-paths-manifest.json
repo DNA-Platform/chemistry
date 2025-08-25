@@ -1,0 +1,4 @@
+{
+  "/page": "app/page.js",
+  "/tests/property-binding/page": "app/tests/property-binding/page.js"
+}
