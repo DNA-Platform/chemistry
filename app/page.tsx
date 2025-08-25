@@ -4,35 +4,29 @@ import { useState } from 'react';
 // Test metadata
 const tests = [
     {
-        id: 'property-binding',
-        name: 'Property Binding Test',
+        id: 'basics',
+        name: 'Basic Tests',
+        description: 'Test the most basic aspects of chemistry',
+        path: '/tests/basics'
+    },
+    {
+        id: 'children',
+        name: 'Children Tests',
+        description: 'Test viewing the children of a component',
+        path: '/tests/children'
+    },
+    {
+        id: 'view-methods',
+        name: 'View Method Tests',
+        description: 'Tests using multiple methods to display the view',
+        path: '/tests/view-methods'
+    },
+    {
+        id: 'child-binding',
+        name: 'Child Binding Test',
         description: 'Test simple parent-child binding with @child decorator',
-        path: '/tests/property-binding'
+        path: '/tests/child-binding'
     },
-    {
-        id: 'navigation',
-        name: 'Navigation Test',
-        description: 'Test the Book/Cover/Chapter navigation scenario',
-        path: '/tests/navigation'
-    },
-    {
-        id: 'reactivity',
-        name: 'Reactivity Test',
-        description: 'Test property changes trigger re-renders',
-        path: '/tests/reactivity'
-    },
-    {
-        id: 'array-binding',
-        name: 'Array Binding Test',
-        description: 'Test binding multiple children to an array property',
-        path: '/tests/array-binding'
-    },
-    {
-        id: 'positional',
-        name: 'Positional Binding Test',
-        description: 'Test @first, @second decorators',
-        path: '/tests/positional'
-    }
 ];
 
 export default function TestRunner() {

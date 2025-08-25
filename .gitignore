@@ -60,7 +60,7 @@ PROJECT.md
 # Next.js build outputs
 /.next/
 /out/
-library/.public-temp/
+/site/
 
 # Dependencies
 node_modules/

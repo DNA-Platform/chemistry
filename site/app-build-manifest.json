@@ -11,10 +11,15 @@
       "static/chunks/main-app.js",
       "static/chunks/app/page.js"
     ],
-    "/tests/property-binding/page": [
+    "/tests/child-binding/page": [
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
-      "static/chunks/app/tests/property-binding/page.js"
+      "static/chunks/app/tests/child-binding/page.js"
+    ],
+    "/tests/basics/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/tests/basics/page.js"
     ]
   }
 }
