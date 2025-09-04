@@ -1,5 +1,6 @@
+// app > tests > basics
 'use client'
-import { $Chemical } from '@/chemistry';
+import { $Chemical } from '@/chemistry2';
 
 // Test 1: Most basic - can we pass a prop and see it?
 class $Display extends $Chemical {

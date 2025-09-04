@@ -1,3 +1,4 @@
+// app > tests > child-binding
 'use client'
 import { $Chemical, child, optional } from '@/chemistry';
 

@@ -1,3 +1,4 @@
+// app > tests > children
 'use client'
 import { $Chemical } from '@/chemistry';
 
@@ -28,8 +29,8 @@ class $Container extends $Chemical {
 // Parent with explicit passthrough view
 class $PassthroughContainer extends $Chemical {
     view() {
-        console.log('PassthroughContainer.elements:', this.elements);
-        return this.elements;
+        console.log('PassthroughContainer.elements:', this.children);
+        return this.children;
     }
 }
 
@@ -41,7 +42,7 @@ class $WrapperContainer extends $Chemical {
         return (
             <div style={{ border: '2px solid #666', padding: '10px', borderRadius: '4px' }}>
                 <h3>{this.$title}</h3>
-                {this.elements}
+                {this.children}
             </div>
         );
     }

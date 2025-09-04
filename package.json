@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "site": "npm run build && npx serve site",
+    "start": "npm run build && npx serve site",
     "lint": "next lint"
   },
   "dependencies": {
