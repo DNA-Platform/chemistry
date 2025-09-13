@@ -1,6 +1,7 @@
 // app > tests > basics
 'use client'
-import { $Chemical } from '@/chemistry2';
+import { $Chemical, Children, Properties } from '@/chemistry2';
+import React, { Component, JSX, ReactElement, ReactNode } from 'react';
 
 // Test 1: Most basic - can we pass a prop and see it?
 class $Display extends $Chemical {
@@ -203,6 +204,7 @@ export default function BasicsTest() {
                    <strong>Expected:</strong> Count should increment when button clicked
                </div>
                <Counter />
+               <Counter />
                <div style={{ marginTop: '10px', color: '#666' }}>
                    ✓ Pass if count increases on click<br/>
                    ✗ Fail if count stays at 0
@@ -242,4 +244,3 @@ export default function BasicsTest() {
        </div>
    );
 }
-

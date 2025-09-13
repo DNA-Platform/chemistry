@@ -1,27 +1,47 @@
 "use client"
-import React, { ReactNode, ReactElement, useState, useRef, useEffect } from 'react';
+import React, { ReactNode, ReactElement, useState, useRef, useEffect, JSX } from 'react';
 import stringify from 'fast-safe-stringify';
-import { basename } from 'path';
-import { GSP_NO_RETURNED_VALUE } from 'next/dist/lib/constants';
+
+const console = { log: (message: string) => {} };
 
 // Core framework types
 type Constructor<T = {}> = new (...args: any[]) => T;
-type Type<T = any> = Constructor<T>;
-type Component<T = any> = React.FC<Properties<T>>;
-type OptionalComponent<T = any> = React.FC<OptionalProperties<T>>;
-
-type Properties<T = any> = {
+export type Type<T = any> = Constructor<T>;
+export type Component<T = any> = React.FC<Properties<T>>;
+export type Properties<T = any> = {
     [K in keyof T as K extends `$${infer Rest}` ? Rest : never]: T[K]
-} & {
-    children?: ReactNode;
 };
 
-type OptionalProperties<T = any> = {
-    [K in keyof T as K extends `$${infer Rest}` ? Rest : never]?: T[K]
-} & {
-    children?: ReactNode;
-};
+type TransformChild<T> = 
+    T extends readonly (infer U)[] ? TransformChild<U>[] :
+    T extends keyof JSX.IntrinsicElements ? ReactElement<JSX.IntrinsicElements[T]> :
+    T extends $Chemical ? ReactElement<Properties<T>> :  // THIS handles $Empty instance type
+    T extends new (...args: any[]) => infer Instance ?
+        Instance extends $Chemical ? 
+            ReactElement<Properties<Instance>> : 
+            never :
+    T extends React.ComponentType<infer P> ? ReactElement<P> :
+    T extends string ? string :
+    T extends number ? number :
+    T extends boolean ? boolean :
+    T extends null ? null :
+    T extends undefined ? undefined :
+    never;
 
+// Children type with automatic ReactNode spread and explicit undefined
+export type Children<T extends readonly unknown[] = []> = [
+    ...{ [K in keyof T]: TransformChild<T[K]> }
+] | undefined;
+
+type Formula<T extends $Chemical> = $Formula & {
+    [K in keyof T as 
+        K extends `_${string}` ? never : 
+        K extends symbol ? never :
+        K extends 'constructor' ? never :
+        K]: T[K] extends (...args: any[]) => any ?
+        T extends { [P in K]: T[K] } ? $Bond<T extends $Chemical ? T : never, T[K]> : never
+        : $Bond<T extends $Chemical ? T : never, T[K]>
+};
 interface Setter<T extends $Chemical = $Chemical> {
     (value: T): void;
     instance?: $Chemical;  // The instance that owns this setter
@@ -31,17 +51,22 @@ interface Setter<T extends $Chemical = $Chemical> {
 const decoratorsKey = Symbol('decoratorsField');
 
 // Global registry for Chemical instances by key
-const chemicalRegistry = new Map<Component, $Chemical>();
+const chemicalRegistry = new Map<number, $Chemical>();
 
 class DecoratorCache {
     $: Map<string, { type: Type, expecting: '?' | '!' | '[]' }> = new Map();
     parent: Map<string, Type> = new Map();
     inert: Map<string, boolean> = new Map();
     dynamic: Map<string, ((value: any) => any) | undefined> = new Map();
+    reactive: Map<string, boolean> = new Map();  // New!
+}
+
+export function $Array(type: Type<$Chemical>): Type<$Chemical>[] {
+    return [type];
 }
 
 // A decorator for expressing configurable binding
-export function $(type: Type, expecting: '?' | '!' | '[]' = '!') {
+export function $(type: Type | Type[] | (() => Type | Type[]) {
     type = resolveType(type);
     if (!(!type || type === $Chemical || type.prototype instanceof $Chemical))
         throw new Error(`$ decorator expects a $Chemical class instead of ${type?.name}`);
@@ -66,6 +91,17 @@ export function parent(type?: Type) {
     };
 }
 
+// Reactive decorator for methods
+export function reactive() {
+    return function (target: any, property: string) {
+        const dynamicTarget: any = target;
+        if (!dynamicTarget[decoratorsKey])
+            dynamicTarget[decoratorsKey] = new DecoratorCache();
+        const decorators: DecoratorCache = dynamicTarget[decoratorsKey];
+        decorators.reactive.set(property, true);
+    };
+}
+
 // Decorator to mark a field as inert (non-reactive)
 export function inert() {
     return function (target: any, property: string) {
@@ -87,29 +123,22 @@ export function dynamic(symbolizer?: (value: any) => any) {
         decorators.dynamic.set(property, symbolizer || symbolize);
     };
 }
-
 export class $Chemical {
-    private _diagram!: Diagram;
-    private _updateToken?: number;
+    private _formula!: Formula<this>;
+    private _updateToken: number = -1;
 
     @inert()
-    get chemicalId() { return this._id; }
-    private _id: number;
+    get cid() { return this._cid; }
+    private _cid: number;
 
     @inert()
-    get formula(): this { return this.getType()._formula as any; }
-
-    @inert()
-    get formulaId() { return this.formula.chemicalId; }
+    get example(): this { return this._example; }
+    private _example: this;
 
     @inert()
     get Component(): Component<this> {
-        // Ensure that the formula creates a new model every time
-        if (this.formula === this) 
-            this._component = undefined;
-        if (!this._component)
+        if (!this._component) 
             this.assignComponent();
-
         return this._component!;
     }
     private _component?: Component<this>;
@@ -120,10 +149,6 @@ export class $Chemical {
 
     @inert()
     get inert(): boolean { return !this._reactive; }
-
-    @inert()
-    get children() { return this._children; }
-    private _children?: ReactNode;
 
     @parent()
     get parent() { return this._parent; }
@@ -142,27 +167,30 @@ export class $Chemical {
     private _onRenderedView = new DelayedEvent<this, { props: Properties, view: ReactNode }>(this);
 
     @inert()
-    get onUpdate() { return this._onUpdate; }
-    private _onUpdate = new UpdateEvent(this);
+    get children() { return this._children; }
+    private _children?: ReactNode;
+
+    @$(() => $Array($Chemical))
+    $children?: any[] = [];
 
     $on?: Setter;
 
     constructor() {
-        this._id = $Chemical.getNextChemicalId();
+        this._cid = $Chemical.getNextCid();
         const type = this.getType();
-        if (!type._formula) {
-            type._formula = this;
-        }
-        this._diagram = new Diagram(this);
+        if (!type._example) 
+            type._example = this;
+        this._example = this;
+        this._formula = new $Formula(this);
     }
 
     construct(parent?: $Chemical): this {
-        const formula = this.getType()._formula;
+        const formula = this.getType()._example;
         const chemical = Object.create(formula) as this;
 
         chemical._parent = parent;
-        chemical._id = $Chemical.getNextChemicalId(); 
-        chemical._diagram = new Diagram(chemical);
+        chemical._cid = $Chemical.getNextCid(); 
+        chemical._formula = new $Formula(chemical);
         return chemical as this;
     }
 
@@ -174,7 +202,7 @@ export class $Chemical {
 
     reactivate() {
         this._reactive = true;
-        this._diagram.bonds.forEach(bond => {
+        this._formula.$$bonds.forEach(bond => {
             bond.isReactive = true;
             bond.reactivate(this);
         });
@@ -183,7 +211,7 @@ export class $Chemical {
     deactivate() {
         this._reactive = false;
         this._onUpdate.cancelUpdate();
-        this._diagram.bonds.forEach(bond => {
+        this._formula.$$bonds.forEach(bond => {
             bond.isReactive = false;
         });
     }
@@ -197,48 +225,51 @@ export class $Chemical {
         return this.constructor as any;
     }
 
-    private assignComponent(): void {
-        const formula = this.getType().formula as this;
+    private assignComponent(): Component<this> {
+        const formula = this.getType().example as this;
         const isFormula = this === formula;
-        if (!isFormula && this._component) return
+        if (!isFormula && this._component) return this._component;
 
-        let hasMounted = false;
-        const Component = (props: Properties) => {
-            let chemical = chemicalRegistry.get(Component) as this;
-            let newChemical = false;
-            if (!chemical || isFormula) {
+        const Component: Component<this> = (props: Properties<this>) => {
+            const nullId = -1;
+            const [id, setId] = useState(nullId);
+            
+            let chemical = this;
+            if (id == nullId) {
                 chemical = this.construct();
                 chemical._component = Component;
                 chemical.reactivate();
-                chemicalRegistry.set(Component as any, chemical);
-                newChemical = true;
-            }
 
-            // Cleanup the old subscription
-            if (chemical._updateToken)
-                chemical.onUpdate.unsubscribe(chemical._updateToken);
+                setId(chemical.cid);
+                chemicalRegistry.set(chemical.cid, chemical);
+            } else {
+                chemical = chemicalRegistry.get(id) as any;
+            }
 
             // Set up this component's update function
             const [, update] = useState({});
+            chemical.onUpdate.unsubscribe(chemical._updateToken);
             chemical._updateToken = chemical.onUpdate.subscribe(() => update({}));
 
             useEffect(() => {
+                setId(chemical.cid);
                 return () => {
                     chemical._onReceivingProps.clear();
                     chemical._onRenderingView.clear();
                     chemical._onRenderedView.clear();
                     chemical.onUpdate.clear();
                     if (chemical._component)
-                        chemicalRegistry.delete(Component as any);
+                        chemicalRegistry.delete(chemical.cid);
                 };
             }, []);
 
             // Give subscribers the ability to weigh in on props
-            let newProps = chemical.onReceivingProps.fire(props);
-            props = newProps || props;
+            let props$: Properties<any> = props;
+            let newProps = chemical.onReceivingProps.fire(props$);
+            props$ = newProps || props;
 
             // Bind the props to the associated fields that are prefixed with $
-            chemical.bindProps(props);
+            chemical.bindProps(props$);
 
             // Reactivate the props
             chemical.reactivate();
@@ -250,14 +281,14 @@ export class $Chemical {
             let view = chemical.view();
 
             // Give subscribers the ability to weigh after the view has been rendered
-            const result = chemical.onRenderingView.fire({ props, view });
+            const result = chemical.onRenderingView.fire({ props: props$, view });
             view = result?.view || view;
 
             // Bind the components specified by this chemical
             // view = chemical.bindExplicit(props, view);
 
             // Give subscribers the ability to weigh in after the event loop ends and the UI updates
-            chemical.onRenderedView.fire({ props, view });
+            chemical.onRenderedView.fire({ props: props$, view });
 
             return view
         }
@@ -266,6 +297,8 @@ export class $Chemical {
             formula._component = Component;
         if (!this._component)
             this._component = Component;
+
+        return Component;
     }
 
     private bindProps(props: any) {
@@ -280,10 +313,10 @@ export class $Chemical {
             const value = props[key];
             
             // Check if bond exists, create if not
-            let bond = this._diagram.bonds.get(propName);
+            let bond = this._formula.$$bonds.get(propName);
             if (!bond) {
                 // Discover new property from props
-                bond = this._diagram.configureBond(propName, value);
+                bond = this._formula.configureBond(propName, value);
                 // Need to reactivate this new bond!
                 if (this._reactive) {
                     bond.isReactive = true;
@@ -300,32 +333,37 @@ export class $Chemical {
         throw new Error('$setter is a placeholder that should be replaced with an actual setter');
     };
 
-    private static _formula: $Chemical;
-    static get formula(): $Chemical { return this._formula; }
+    private static _example: $Chemical;
+    static get example(): $Chemical { return this._example; }
 
-    private static nextChemicalId = 1;
-    private static getNextChemicalId(): number { return $Chemical.nextChemicalId++; }
+    private static nextCid = 1;
+    private static getNextCid(): number { return $Chemical.nextCid++; }
 }
+export class $Formula {
+    get $$chemical() { return this._$$chemical; }
+    private _$$chemical: $Chemical;
 
-class Diagram {
-    chemical: $Chemical;
-    bonds: Map<string, Bond> = new Map();
-    initialized: boolean = false;
-    get props() { return this.bonds.values().filter(b => b.isProp); }
-    get chemicals() { return this.bonds.values().filter(b => b.isChemical); }
+    get $$bonds() { return this._$$bonds; }
+    private _$$bonds: Map<string, $Bond> = new Map();
+
+    get $$initialized() { return this._$$initialized; }
+    private _$$initialized: boolean = false;
+    
+    get props() { return this.$$bonds.values().filter(b => b.isProp); }
+    get chemicals() { return this.$$bonds.values().filter(b => b.isChemical); }
 
     constructor(chemical: $Chemical) {
-        this.chemical = chemical;
+        this._$$chemical = chemical;
         this.configureBonds()
     }
 
     configureBonds() {
-        console.log(`Diagram.configureBonds: ${this.chemical.getType().name}`)
-        if (this.initialized) return;
-        this.initialized = true;
-        this.bonds = new Map();
+        console.log(`Diagram.configureBonds: ${this.$$chemical.getType().name}`)
+        if (this._$$initialized) return;
+        this._$$initialized = true;
+        this._$$bonds = new Map();
 
-        let chemical = this.chemical;
+        let chemical = this.$$chemical;
         const prototypes: any[] = [];
         while (chemical) {
             prototypes.unshift(chemical);
@@ -340,21 +378,21 @@ class Diagram {
                 const descriptor = Object.getOwnPropertyDescriptor(prototype, property);
                 const value = descriptor?.get ? undefined : prototype[property];
                 if (!isReactiveProperty(prototype, property, value)) continue;
-                this.configureBond(property, value, !this.initialized ? prototype[decoratorsKey] : undefined);
+                this.configureBond(property, value, !this._$$initialized ? prototype[decoratorsKey] : undefined);
             }
         }
     }
 
-    configureBond(property: string, value: any, decorators?: DecoratorCache): Bond {
-        console.log(`Diagram.configureBond[1]: ${this.chemical.getType().name}.${property} = ${value}`);
-        let bond = this.bonds.get(property);
+    configureBond(property: string, value: any, decorators?: DecoratorCache): $Bond {
+        console.log(`Diagram.configureBond[1]: ${this.$$chemical.getType().name}.${property} = ${value}`);
+        let bond = this.$$bonds.get(property);
         if (bond) {
             bond.merge(value);
             return bond;
         }
 
-        bond = new Bond(property);
-        this.bonds.set(property, bond);
+        bond = new $Bond(property);
+        this.$$bonds.set(property, bond);
 
         const parentType = decorators?.parent.get(property);
         if (parentType) {
@@ -366,7 +404,7 @@ class Diagram {
             return bond;
         }
 
-        const descriptor = Object.getOwnPropertyDescriptor(this.chemical, property);
+        const descriptor = Object.getOwnPropertyDescriptor(this.$$chemical, property);
         if (descriptor?.get && !descriptor.set) {
             bond.isSettable = false;
             bond.isMutable = true;
@@ -384,7 +422,7 @@ class Diagram {
             bond.type = $config.type;
             bond.isProp = property.startsWith('$');
             bond.isChemical = true;  // $ decorator only accepts Chemical types
-            if (bond.isProp && (this.chemical as any)[property.substring(1)] === $Chemical.$set)
+            if (bond.isProp && (this.$$chemical as any)[property.substring(1)] === $Chemical.$set)
                 bond.isExplicitlyBound = true;
             else
                 bond.isImplicitlyBound = true;
@@ -395,8 +433,8 @@ class Diagram {
         return bond;
     }
 
-    private initializeBondValue(bond: Bond, expecting: '?' | '!' | '[]', property: string, value: any) {
-        const chemical = this.chemical as any;
+    private initializeBondValue(bond: $Bond, expecting: '?' | '!' | '[]', property: string, value: any) {
+        const chemical = this.$$chemical as any;
         if (expecting === '[]') {
             bond.isCollective = true;
             bond.isRequired = true;
@@ -414,174 +452,138 @@ class Diagram {
     }
 }
 
-class Bond {
-    private _id: number;
+class $Bond<T extends $Chemical = any, P = any> {
     get id() { return this._id; }
-    type?: Type;  // Only for Chemical types, undefined otherwise
-    property: string;
-    isInitialized: boolean;
+    private _id: string;
+    get chemical() { return this._chemical; }
+    private _chemical: T;
+    get property() { return this._property; }
+    private _property: string;
+    get type() { return this._type; }
+    private _type?: Type;
     
-    isParent = false;           // Represents a property which returns the parent of the chemical
-    isChemical = false;         // Property holds a chemical
-    isMutable = false;          // Object/array that can change without reference change
-    isValue = false;            // Has value semantics
-    isCollective = false;       // Is a collection of chemicals 
-    isSettable = true;          // Is a field, or a property with both a get and set method
-    isRequired = false;         // Must not be null or undefinmed
-    isInert = false;            // Never reactive
-    isProp = false;             // Non-chemical property that Starts with $
-    isDelayed = false           // Uses set-timeout to check if a value was changed after being accessed
-    isImplicitlyBound = false;  // Chemical without setter
-    isExplicitlyBound = false;  // Has $set setter
-    symbolizer: (value: any) => any = (value) => value;
+    get isChemical() { return this._isChemical; }
+    private _isChemical = false;
+    get isCollective() { return this._isCollective; }
+    private _isCollective = false;
+    get isRequired() { return this._isRequired; }
+    private _isRequired = false;
+    get isFrozen() { return this._isFrozen; }
+    private _isFrozen = false;
+    get isProp() { return this._isProp; }
+    private _isProp = false;
+    get symbolizer() { return this._symbolizer; }
+    private _symbolizer!: (value: any) => any;
     
-    private _isReactive = true;
-    get isReactive() { return this.isInert ? false : this._isReactive; }
-    set isReactive(value: boolean) { this._isReactive = value; }
-    get isPolled() { return this.isMutable || !this.isSettable; }
+    get onGet() { return this._onGet; }
+    private _onGet: BondEvent;
 
-    constructor(property: string, type?: Type) {
-        this._id = Bond.getNextBondId();
-        this.property = property;
-        this.type = type;
-        this.isInitialized = false;
-        this.isReactive = false;
+    get value(): P { return (this._chemical as any)[this._property]; }
+    set value(value: P) { (this._chemical as any)[this._property] = value; }
+
+    private _backingField: symbol;
+    private _isInitialized = false;
+
+    constructor(property: string, chemical: T) {
+        this._chemical = chemical;
+        this._property = property;
+        this._id = $Bond.getNextBondId(chemical, property);
+        this._backingField = Symbol(`_${property}`);
+        this._onGet = new BondEvent(this);
+        this.configure();
     }
 
-    deactivate(chemical: $Chemical) {
-        if (chemical === chemical.getType().formula)
-            throw new Error('Formulas should not have activated properties');
-
-        this.isReactive = false;
-    }
-
-    reactivate(chemical: $Chemical): any {
-        if (chemical === chemical.getType().formula)
-            throw new Error('Formulas should not have activated properties');
-
-        if (this.isInitialized) {
-            this.isReactive = true;
-            return;
-        }
-
-        if (this.isParent) {
-            console.log(`Creating ${chemical.getType().name}.${this.property} as parent`)
-            Object.defineProperty(chemical, this.property, {
-                get() { return chemical.parent; },
-                enumerable: true,
-                configurable: false,
-            });
-            this.isInitialized = true;
-            return;
-        }
-
-        // Create getters and setters
-        const thisBond = this;
+    freeze() { this._isFrozen = true; }
+    
+    activate(chemical: $Chemical): void {
+        if (this._isInitialized) return;
+        
         const chemical$: any = chemical;
-        const backingField = Symbol(`_${this.property}${this.id}`);
-        const descriptor = Object.getOwnPropertyDescriptor(chemical$, this.property);
-        const getValue = descriptor?.get ? () => descriptor!.get!.call(chemical) : () => chemical$[backingField];
-        const setValue = descriptor?.set ? (value: any) => descriptor!.set!.call(chemical, value) : ((value: any) => { chemical$[backingField] = value; });
-        if (!descriptor?.get) setValue(chemical$[this.property]);
-
-        // Create reactive properties
-        console.log(`Creating ${chemical.getType().name}.${this.property}`)
-        Object.defineProperty(chemical$, this.property, {
+        const bond = this;
+        const backingField = this._backingField;
+        
+        const existingDesc = Object.getOwnPropertyDescriptor(chemical$, this._property);
+        const getValue = existingDesc?.get ? 
+            () => existingDesc.get!.call(chemical$) : 
+            () => chemical$[backingField];
+        const setValue = existingDesc?.set ? 
+            (v: P) => existingDesc.set!.call(chemical$, v) : 
+            (v: P) => { chemical$[backingField] = v; };
+        
+        if (!existingDesc?.get && chemical$[this._property] !== undefined)
+            setValue(chemical$[this._property]);
+        
+        Object.defineProperty(chemical$, this._property, {
             get() {
                 const value = getValue();
-                console.log(`Getting value ${value} from property ${this.property}`)
-                if (!thisBond.isReactive || !thisBond.isPolled) return value;
-                
-                const symbol = thisBond.symbolizer(value);
-                setTimeout(() => {
-                    if (!thisBond.isReactive) return;
-                    const previousValue = getValue();
-                    const previousSymbol = thisBond.symbolizer(previousValue);
-                    if (previousSymbol !== symbol)
-                        chemical.update();
-                });
+                const symbol = bond._symbolizer(value);
+                bond._onGet.fire({ value, symbol });
                 return value;
             },
-            set(value: any) {
-                console.log(`Setting value ${value} from property ${this.property}`)
-                if (!thisBond.isSettable)
-                    throw new Error(`${thisBond.property} is not settable`);
-                if (thisBond.isRequired && value == null)
-                    throw new Error(`${thisBond.property} is required`);
+            set(value: P) {
+                if (bond._isFrozen) throw new Error(`${bond._property} is frozen`);
+                if (bond._isRequired && value == null) throw new Error(`${bond._property} is required`);
                 
-                thisBond.merge(value);
-                if (thisBond.isChemical) thisBond.checkType(value);
-
                 const previous = getValue();
                 setValue(value);
-
-                if (previous != value) {
+                
+                // Handle Chemical binding changes
+                if (bond._isChemical && previous !== value) {
                     if (previous instanceof $Chemical) previous.onUpdate.unbind(chemical);
                     if (value instanceof $Chemical) value.onUpdate.bind(chemical);
-                }
-
-                if (!thisBond.isReactive) return;
-                if (thisBond.symbolizer(previous) !== thisBond.symbolizer(value)) {
-                    chemical.update();
                 }
             },
             enumerable: true,
             configurable: false,
         });
-
-        this.isInitialized = true;
-        this.isReactive = true;
+        
+        this._isInitialized = true;
     }
 
-    merge(value: any): void {
-        if (value === null || value === undefined) return;
-        
-        if (value instanceof $Chemical) {
-            if (this.isMutable) 
-                throw new Error(`${this.property} was mutable, now Chemical`);
-            this.isChemical = true;
-            this.isValue = true;
-            this.isMutable = false;
-            this.symbolizer = (v) => v;
-            this.type = value.constructor as Type;
-            return;
-        }
-        
-        const valueType = typeof value;
-        if (valueType === 'string' || valueType === 'number' || valueType === 'boolean') {
-            if (!this.isValue && !this.isMutable) {
-                this.isValue = true;
-                this.symbolizer = (v) => v;
+    private configure() {
+        let proto = this._chemical as any;
+        while (proto) {
+            const decorators = proto[decoratorsKey];
+            if (decorators) {
+                const $config = decorators.$.get(this._property);
+                if ($config) {
+                    this._type = $config.type;
+                    this._isChemical = true;
+                    this._isProp = this._property.startsWith('$');
+                    this._isRequired = $config.expecting === '!';
+                    this._isCollective = $config.expecting === '[]';
+                }
+                
+                if (decorators.dynamic.get(this._property))
+                    this._symbolizer = decorators.dynamic.get(this._property) || symbolize;
             }
-            return;
-        }
-        
-        if (valueType === 'object') {
-            if (this.isCollective && !Array.isArray(value))
-                throw new Error(`${this.property} is collective but got non-array`);
-            if (!this.isCollective && Array.isArray(value) && this.isRequired)
-                throw new Error(`${this.property} got unexpected array`);
             
-            if (!this.isMutable) {
-                this.isMutable = true;
-                this.isValue = false;
-                this.symbolizer = symbolize;
+            if (proto === $Chemical.prototype) break;
+            proto = Object.getPrototypeOf(proto);
+        }
+        
+        // Infer symbolizer from value if not set
+        const value = this.value;
+        if (!this._symbolizer) {
+            if (value instanceof $Chemical) {
+                this._isChemical = true;
+                this._symbolizer = (v: any) => v?.cid;
+            } else if (Array.isArray(value) && value[0] instanceof $Chemical
+        ) {
+                this._isChemical = true;
+                this._isCollective = true;
+                this._symbolizer = (v: any[]) => symbolize(v?.map(c => c?.cid));
+            } else if (typeof value === 'object') {
+                this._symbolizer = symbolize;
             }
         }
-    }
-
-    equivalent(first: any, second: any) {
-        return this.symbolizer(first) === this.symbolizer(second);
-    }
-
-    private checkType(value: any): void {
-        if (!this.type || !this.isChemical || value === null || value === undefined) return;
-        if (!(value instanceof this.type))
-            throw new Error(`${this.property} must be an instance of ${this.type.name}`);
     }
 
     private static nextBondId = 1;
-    private static getNextBondId(): number { return Bond.nextBondId++; }
+    private static getNextBondId(chemical: any, property: string): string {
+        const typeName = chemical.getType ? chemical.getType().name : chemical.constructor.name;
+        return `${typeName}[${$Bond.nextBondId++}].${property}`;
+    }
 }
 
 class Event<Source = any, Target = undefined> {
@@ -636,44 +638,41 @@ class Event<Source = any, Target = undefined> {
     }
 }
 
-class DelayedEvent<Source = any, Target = undefined> extends Event<Source, Target> {
-    fire(target?: Target): undefined {
-        setTimeout(() => {
-            let result: Target | undefined = undefined;
-            for (const subscriber of this.subscribers) {
-                const returned = subscriber(this.source, result || target);
-                if (returned !== undefined) result = returned;
-            }
-        });
-        return undefined;
+class BondEvent {
+    private bond: $Bond;
+    private subscribers: ((chemical: $Chemical, symbol: any) => void)[] = []
+    private map = new Map<$Chemical, (chemical: $Chemical, symbol: any) => void>();
+
+    constructor(bond: $Bond) {
+        this.bond = bond;
+    }
+    
+    subscribe(chemical: $Chemical, subscriber: (chemical: $Chemical, symbol: any) => void): void {
+        this.subscribers.push(subscriber);
+        this.map.set(chemical, subscriber);
+    }
+    
+    unsubscribe(chemical: $Chemical): void {
+        const subscriber = this.map.get(chemical);
+        if (!subscriber) return;
+        
+        const index = this.subscribers.indexOf(subscriber);
+        if (index >= 0) this.subscribers.splice(index, 1);
+        this.map.delete(chemical);
+    }
+
+    fire(symbol: any): void {
+        const chemical = this.bond.chemical;
+        for (const subscriber of this.subscribers)
+            subscriber(chemical, symbol);
+    }
+    
+    clear() {
+        this.map.clear();
     }
 }
 
-class UpdateEvent<T extends $Chemical> extends Event<T> {
-    private _updating = false;
-    get updating() { return this._updating; }
-
-    beginUpdate() { this._updating = true; }
-    cancelUpdate() { this._updating = false; }
-
-    fire(): undefined {
-        if (this.source.inert) return;
-        super.fire();
-        this._updating = false;
-    }
-
-    bind(chemical: $Chemical): void {
-        if (this.source === chemical) return;
-        chemical.onUpdate.clear();
-        chemical.onUpdate.subscribe(this.source.update)
-    }
-
-    unbind(chemical: $Chemical): void {
-        chemical.onUpdate.unsubscribe(this.source.update);
-    }
-}
-
-function resolveType(type: Type | (() => Type)): Type {
+function resolveType(type: Type | Type[] | (() => Type | Type[])): Type | Type[] {
     // Check if it's a function
     if (typeof type === 'function') {
         // Try to determine if it's a constructor or a regular function
@@ -691,23 +690,21 @@ function resolveType(type: Type | (() => Type)): Type {
 }
 
 function symbolize(value: any): string {
-    return stringify(value, function (this: any, property: string, value: any): any {
-        if (property === '') return value;
-        if (this instanceof $Chemical && !isReactiveProperty(this, property, value))
-            return undefined;
-
-        // Only keep the Proxy check if Next.js proxies cause issues
-        // Otherwise, fast-safe-stringify handles most edge cases
-        if (value?.constructor?.name === 'Proxy') return '[NextProxy]';
-        return value;
+    return stringify(value, function(this: any, key: string, val: any): any {
+        if (key === '') return val;
+        if (val instanceof $Chemical) return val.cid;
+        if (this instanceof $Chemical) return this.cid;
+        if (typeof val === 'function') return undefined;
+        if (val?.constructor?.name === 'Proxy') return '[Proxy]';
+        return val;
     });
 }
 
-function isReactiveProperty(instance: any, key: string, value: any): boolean {
-    // Skip symbols, functions, underscore properties
-    if (typeof key === 'symbol' ||
-        typeof value === 'function' ||
-        key.startsWith('_'))
-        return false;
-    return true;
+function isReactiveProperty(instance: any, key: string, value: any, decorators?: DecoratorCache): boolean {
+    if (typeof key === 'symbol' || key.startsWith('_')) return false;
+    if (!decorators) decorators = instance[decoratorsKey];
+    if (decorators?.inert.get(key)) return false;
+    if (typeof value === 'function') return decorators?.reactive.get(key) || false;
+    return key !== 'constructor' && key !== 'Component' && key !== 'parent' && 
+           key !== 'children' && key !== 'elements';
 }
