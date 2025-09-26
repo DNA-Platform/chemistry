@@ -1,1187 +1,776 @@
-"use client"
-import React, { ReactNode, ReactElement, useState, useRef, useEffect } from 'react';
-import stringify from 'fast-safe-stringify';
-import { BuildManifest } from 'next/dist/server/get-page-files';
+import React, { ReactNode, ReactElement, useState, useRef, useEffect, JSX, useContext } from 'react';
+import stringify from 'fast-safe-stringify'; 
 
-// [Symbols remain the same]
-const reactivated = Symbol('reactivated');
-const backingFields = Symbol('backingFields');
-const originalValues = Symbol('originalValues');
-const deactivated = Symbol('deactivated');
-const comparerSymbol = Symbol('comparer');
-const updateSymbol = Symbol('update');
+export type $Type<T = any> = $Constructor<T>;
+export type $Constructor<T = {}> = new (...args: any[]) => T;
+type $State = Record<string, any> & { cid: number, render: number };
 
-// Global registry for Chemical instances by key
-const chemicalRegistry = new Map<string, $Chemical>();
-
-type Properties<T> = {
-    [K in keyof T as K extends `$${infer Rest}` ? Rest : never]: T[K]
-} & {
+export type Props = {
+    [key: string]: any;
     children?: ReactNode;
+}
+
+export type $Properties<T> = {
+    [K in keyof T as K extends `$${infer First}${infer Rest}` ? 
+        (First extends Lowercase<First> ?
+            (First extends '_' | '$' ? never :
+            (K extends keyof $Chemical ? never : 
+            (T[K] extends Function ? never : `${First}${Rest}`))) : never) : never]: 
+        T[K]
+} & {
+    [K in keyof T as K extends `$${infer First}${infer Rest}` ? 
+        (First extends Lowercase<First> ?
+            (First extends '_' | '$' ? never :
+            (K extends keyof $Chemical ? never : 
+            (T[K] extends Function ? `${First}${Rest}` : never))) : never) : never]?: 
+        T[K]
 };
 
-/**
- * Base class for Chemical components
- */
+export type $$Properties<T> = {
+    [K in keyof T as K extends `$${infer First}${infer Rest}` ? 
+        (First extends Lowercase<First> ?
+            (First extends '_' | '$' ? never :
+            (K extends keyof $Chemical ? never : 
+            (T[K] extends Function ? never : `${First}${Rest}`))) : never) : never]?: 
+        T[K]
+} & {
+    [K in keyof T as K extends `$${infer First}${infer Rest}` ? 
+        (First extends Lowercase<First> ?
+            (First extends '_' | '$' ? never :
+            (K extends keyof $Chemical ? never : 
+            (T[K] extends Function ? `${First}${Rest}` : never))) : never) : never]?: 
+        T[K]
+};
+
+export type $Component<T extends $Chemical = $Chemical> = React.FC<$Properties<T>> & Component<T>;
+export type $$Component<T extends $Chemical = $Chemical> = React.FC<$$Properties<T>> & Component<T>;
+
+export interface Component<T extends $Chemical> {
+    get $template(): T;
+    get $bound(): boolean;
+    get $chemical(): T;
+    $?(): $$Component<T>;
+    $bind(parent?: $Chemical, chemical?: T): $$Component<T>;
+}
+
+export type $Function<P> = $$Function<P> & {
+    [K in keyof P as K extends 'children' ? never : `$${string & K}`]: P[K];
+};
+
+export interface $ {
+    (props: Record<string, any> & { children?: ReactNode}): ReactNode | Promise<ReactNode>;
+    <P>(Component: React.FC<P>): $Function<P>;  
+}
+
+export type $$<T> = 
+    T extends $Chemical ? $$Component<T> :
+    T extends React.FC<infer P> ? $Function<P> : 
+    T extends keyof JSX.IntrinsicElements ? JSX.IntrinsicElements[T] :
+    T;
+
+// Global registry for Chemical instances by key
+const $chemicalRegistry = new Map<number, $Chemical>();
+
+// Symbols to support shared state
+const $state = Symbol("$Chemical.state");
+const $decorators = Symbol("$Chemical.decorators");
+
+class $Decorators {
+    parent: Set<string> = new Set();
+    inert: Map<string, boolean> = new Map();
+    reactive: Map<string, boolean> = new Map();
+    static on(chemical: $Chemical): $Decorators {
+        if (chemical[$decorators]) return chemical[$decorators];
+        chemical[$decorators] = new $Decorators();
+        return chemical[$decorators];
+    }
+}
+
+// A decorator for reassigning the parent property
+export function parent() {
+    return function (chemical: $Chemical, property: string) {
+        const decorators = $Decorators.on(chemical);
+        decorators.parent.add(property);
+    };
+}
+
+// Reactive decorator for methods
+export function reactive() {
+    return function (chemical: $Chemical, property: string) {
+        const decorators = $Decorators.on(chemical);
+        decorators.reactive.set(property, true);
+    };
+}
+
+// Decorator to mark a field as inert (non-reactive)
+export function inert() {
+    return function (chemical: $Chemical, property: string) {
+        const decorators = $Decorators.on(chemical);
+        decorators.inert.set(property, true);
+    };
+}
 export class $Chemical {
-    @inert()
-    private childPositionCounts?: Map<any, number>;
+    /** @internal */
+    [$state]: $State = { cid: -1, render: -1 };
 
-    @inert()
-    private _isSetup: boolean = false;
+    /** @internal */
+    [$decorators]!: $Decorators;
 
-    @inert()
-    private _id: number = 0;
+    /** @internal */ 
+    __cid!: number;
+    @inert() 
+    get cid() { return this.__cid; }
 
+    /** @internal */
+    __name?: string;
     @inert()
-    private get _prototype(): $Chemical {
-        const constructor = this.constructor as typeof $Chemical;
-        return constructor.chemicalPrototype;
+    get name() { 
+        if (!this.__name) 
+            this.__name = this.template.getType().name; 
+        return this.__name; 
     }
 
-    // Public inert properties
-    @inert()
-    public Component!: React.FC<Properties<this>>;
+    /** @internal */
+    __formula: $Formula;
+    @inert() 
+    get formula(): $Formula { return this.__formula; }
 
-    @inert()
-    public parent?: $Chemical;
+    /** @internal */
+    __template: this;
+    @inert() 
+    get template(): this { return this.__template; }
 
-    @inert()
-    public children?: ReactNode;
+    @inert() 
+    get isTemplate() { return this.__template == this; }
 
-    // Constructor
+    /** @internal */
+    __parent: $Chemical | undefined;
+    @inert() 
+    get parent() { return this.__parent; }
+
+    /** @internal */
+    __component?: $Component<this>;
+    @inert() 
+    get Component(): $Component<this> {
+        if (this.formula && !this.__component)
+            this.template.__component = this.template.__createComponent();
+        return this.__component! as any;
+    }
+
+    /** @internal */
+    __binder: $BondOrchestrator<this>;
+    @inert()
+    get binder(): $BondOrchestrator<this> { return this.__binder; }
+
+    /** @internal */
+    __reactive = false;
+    @inert() 
+    get reactive() { return this.__reactive; }
+    @inert() 
+    get inactive() { return !this.__reactive; }
+    reactivate() { this.__reactive = true; }
+    deactivate() { this.__reactive = false; }
+
+    /** @internal */
+    __children: ReactNode;
+    @inert() 
+    get children() { return this.__children; }
+
     constructor() {
-        this._id = $Chemical._getNextId();
-        const constructor: any = this.constructor as typeof $Chemical;
-        if (!constructor.chemicalPrototype) {
-            constructor.chemicalPrototype = this;
-            this.Component = this.createComponent();
-        } else {
-            this.Component = constructor.chemicalPrototype.Component;
-        }
+        this.__cid = $Chemical.getNextCid();
+        const type = this.getType();
+        if (!type.__template) 
+            type.__template = this;
+        this.__template = this;
+        this.__formula = new $Formula(this);
+        this.__binder = new $BondOrchestrator(this);
     }
 
-    // Public method - subclasses override this to control rendering
     view(): ReactNode {
-        // Default implementation - subclasses should override
         return this.children;
     }
 
-    /**
-     * Creates a React component that preserves Chemical instances across re-renders
-     * by caching them in a global registry keyed by React's key prop
-     */
-    private createComponent(): React.FC<Properties<this>> {
-        const prototype = this._prototype;
-        const ChemicalComponent: React.FC<Properties<this>> = (props: any) => {
-            // Use Chemical ID from props if provided, otherwise generate stable one
-            const chemicalId = props._chemicalId || prototype._id;
-            
-            // Look up or create instance based on ID
-            let instance = chemicalRegistry.get(chemicalId);
-            if (!instance) {
-                instance = this.createInstance();
-                instance._id = chemicalId;
-                chemicalRegistry.set(chemicalId, instance);
-            }
-            
-            // Set up this component's update function
-            const [, update] = useState({});
-            (instance as any)[updateSymbol] = () => update({});
-            
-            // Clean up on unmount
-            useEffect(() => {
-                return () => {
-                    // Don't delete from registry - preserve for next mount
-                    (instance as any)[updateSymbol] = undefined;
-                };
-            }, []);
-
-            if (props.children) {
-                const modifiedChildren = $Chemical.modifyChildren(instance, props.children);
-                instance.children = modifiedChildren;
-            }
-
-            return instance.view();
-        };
-
-        (ChemicalComponent as any).isChemical = true;
-        return ChemicalComponent;
+    /** @internal */
+    render(props: any): ReactNode | Promise<ReactNode> {
+        const binder = this.__binder;
+        binder.bond(props);
+        return binder.render();
     }
 
-    private createInstance(): $Chemical {
-        const prototype = this._prototype;
-        const instance = Object.create(prototype);
-        instance._isSetup = false;
+    getType<T extends $Type<$Chemical> = typeof $Chemical>(): T {
+        return this.constructor as any;
+    }
 
-        // Give each instance its own copy of bindable properties
-        const bindings = getBindings(this);
-        for (const binding of bindings) {
-            if (binding.property !== 'children') {
-                const self = this as any;
-                const protoValue = self[binding.property];
+    private __createComponent(): $Component<this> {
+        if (this.__component) 
+            throw new Error(`The Component for ${this.getType().name}[${this.cid}] has already been created`);
 
-                // Just copy whatever the @child decorator set up on the prototype
-                // Don't create new objects that overwrite the placeholder Chemicals
-                if (protoValue !== undefined) {
-                    if (Array.isArray(protoValue)) {
-                        instance[binding.property] = [];
-                    } else {
-                        // Copy the prototype value as-is (it's already a placeholder Chemical)
-                        instance[binding.property] = protoValue;
-                    }
+        this.assertViewConstructors();
+        this.template.formula.init();
+        return new $ComponentFunction(this.template) as any;
+    }
+
+    private assertViewConstructors(prototype?: any, childConstructor?: any) {
+        if (!prototype) prototype = Object.getPrototypeOf(this.template);
+        if (!prototype || prototype === $Chemical.prototype) return;
+        
+        const className = prototype.constructor.name;
+        const thisConstructor = prototype[className];
+        if (thisConstructor && typeof thisConstructor !== 'function')
+            throw new Error(`The ${className} class has property ${className} but it's not a function`);
+        if (childConstructor && !thisConstructor)
+            throw new Error(`The ${className} class must have a constructor method named ${className} because child class has one`);
+
+        this.assertViewConstructors(Object.getPrototypeOf(prototype), thisConstructor);
+    }
+
+    /** @internal */
+    static __template: $Chemical;
+    static get template(): $Chemical { return this.__template; }
+
+    /** @internal */
+    static getNextCid(): number { return $Chemical.nextCid++; }
+    private static nextCid = 1;
+}
+
+export class $Collection extends $Chemical {
+    get elements(): any[] { return this._elements; }
+    private _elements: any[] = [];
+
+    get Component(): $Component<this> { return this._component as any; }
+    private _component = () => {};
+
+    $Collection(...elements: any[]) {
+        this._elements = elements;
+    }
+}
+
+export class $$Function<P = any> extends $Chemical {
+    private FunctionComponent: React.FC<P>;
+
+    get props() { return this.gatherProps(); }
+
+    constructor(Component: React.FC<P>) {
+        super();
+        this.FunctionComponent = Component;
+    }
+
+    bind(): $Function<P> { return this as any; }
+
+    async view() { return this.FunctionComponent(this.props); }
+
+    protected gatherProps(): any {
+        this.formula.init();
+        this.formula.refresh();
+        const props: Record<string, any> = this.children ? { children: this.children } : { };
+        for (const bond of this.formula.bonds.values()) {
+            if (bond.isProp) props[bond.property.slice(1)] = bond.value();
+        }
+        return props;
+    }
+}
+
+class $ComponentFunction<T extends $Chemical> {
+    private Component: $Component<T>;
+    private _parent?: $Chemical;
+
+    get $template() { return this._template; };
+    private _template: T;
+
+    get $chemical() { return this._chemical; }
+    private _chemical?: T;
+
+    get $bound() { return !!this._chemical; }
+    
+    constructor(template: T, chemical?: T, parent?: $Chemical) {
+        this._template = template;
+        this._chemical = chemical;
+        this._parent = parent;
+        const isArray = this._template.getType().name === $Collection.name;
+
+        this.Component = ((props: any) => {
+            if (isArray && typeof props === 'function') return new $$Function(props);
+            const [cid, setChemicalId] = useState<number>(-1);
+            let chemical: T;
+            if (!this.$bound) {
+                let newChemical = cid === -1;
+                chemical = newChemical ? this.createChemical() : $chemicalRegistry.get(cid)! as T;
+                if (newChemical) {
+                    $chemicalRegistry.set(chemical.cid, chemical);
+                    setChemicalId(chemical.cid);
                 }
+            } else {
+                chemical = this._chemical!;
             }
-        }
 
-        return instance;
+            chemical.formula.clearState();
+            const [_, setState] = useState<string>(chemical.formula.state);
+            chemical.formula.bindUpdate(setState);
+
+            useEffect(() => {
+                chemical.formula.updateState();
+                return () => {
+                    //You have a memory leak problem, so deal with it later!!
+                    $chemicalRegistry.delete(cid);
+                };
+            }, [chemical]);
+
+            return chemical.render(props);
+        }) as any;
+
+        if (this._chemical) {
+            this._chemical.__parent = parent;
+            this._chemical.__component = this.Component;
+        }
+        
+        Object.setPrototypeOf(this.Component, this);
+        return this.Component as any;
     }
 
-    private static _nextId = 0;
-    private static chemicalPrototype: $Chemical;
-    private static _getNextId(): number { return this._nextId++; }
-
-    private static applyProps(instance: $Chemical, props: any): void {
-        if (!props) return;
-
-        for (const key in props) {
-            if (props.hasOwnProperty(key) &&
-                key !== 'children' &&
-                key !== '__parentInstance') {
-                this.setProp(instance, key, props[key]);
-            }
-        }
+    $?(): $$Component<T> { return this.Component as any; }
+    
+    $bind(parent?: $Chemical, chemical?: T): $$Component<T> {
+        if (chemical && chemical === this._chemical) return this.Component as any;
+        if (!chemical) chemical = this.createChemical(parent ?? this._parent);
+        return new $ComponentFunction(chemical, parent ?? this._parent) as any;
     }
 
-    private static setProp(instance: $Chemical, key: string, value: any): void {
-        const componentKey = '$' + String(key);
-        const transformers = instance.constructor.prototype.transformers;
+    private createChemical(parent?: $Chemical): T {
+        this.$template.formula.refresh();
+        const chemical = Object.create(this.$template) as T;
+        chemical.__parent = parent;
+        chemical.__cid = $Chemical.getNextCid();
+        chemical.__formula = new $Formula(chemical);
+        chemical.__binder = new $BondOrchestrator(chemical);
+        chemical.__formula.init();
+        console.log(`${chemical.getType().name}[${chemical.cid}].isTemplate = ${chemical.isTemplate}`)
+        return chemical;
+    }
+}
 
-        if (transformers?.has(componentKey)) {
-            const transformer = transformers.get(componentKey);
-            (instance as any)[componentKey] = transformer(value);
-        } else {
-            (instance as any)[componentKey] = value;
-        }
+class $Formula {
+    private _initialized = false;
+
+    get chemical() { return this._chemical; }
+    private _chemical: $Chemical;
+
+    get bonds() { return this._bonds; }
+    private _bonds: Map<string, $Bond> = new Map();
+    
+    get state() { return symbolize(this._state); }
+    private _state: $State = { cid: -1, render: 0 };
+
+    get render() { return this._state.render; }
+    set render(value: number) { this._state.render = value; }
+    
+    private _setState: (state: string) => void = () => {};
+
+    constructor(chemical: $Chemical) {
+        this._chemical = chemical;
+        this.clearState();
     }
 
-    private static handleParentBinding(instance: $Chemical, props: any): void {
-        if (!props.__parentInstance) {
+    has(property: string): boolean {
+        return this._bonds.has(property);
+    }
+
+    get<T extends $Chemical = $Chemical, P = any>(property: string): $Bond<T, P> | undefined {
+        return this._bonds.get(property);
+    }
+
+    init() {
+        if (this._initialized) {
+            this.refresh();
             return;
         }
+        this._createBonds();
+        this._initialized = true;
+    }
 
-        instance.parent = props.__parentInstance;
-        if (instance.parent) {
-            this.applyBinding(instance, instance.parent);
+    refresh() {
+        if (!this._initialized) {
+            this.init();
+            return;
+        }
+        const chain = [Object.getPrototypeOf(this._chemical), this._chemical.template, this._chemical];
+        this._createBonds(chain);
+    }
+
+    bindState() {
+        this._chemical[$state] = this._state;
+    }
+
+    bindUpdate(setState: (state: string) => void) {
+        this._setState = setState;
+        this.bindState();
+    }
+
+    clearState() {
+        this._state = { cid: this._chemical.cid, render: 0 };
+        this._chemical[$state] = this._state;
+        this._setState = () => {};
+    }
+
+    updateState() {
+        console.log(`updateState: ${this.state}`);
+        this._setState(this.state); 
+    }
+
+    private _createBonds(chain?: any[]) {
+        if (!chain) chain = this._getDescendancyChain();
+        const properties = this._findProperties(chain);
+        for (const [property, descriptor] of properties) {
+            if (this._bonds.has(property)) continue;
+            const bond = new $Bond(this._chemical, property, descriptor);
+            this._bonds.set(property, bond);
+            bond.init();
+            console.log(`Bond initialized: ${this._chemical.name}.${property}`)
         }
     }
 
-    private static applyBinding(child: $Chemical, parent: $Chemical): void {
-        const bindings = getBindings(parent);
-        console.log(`applyBinding: ${parent.constructor.name} has ${bindings.length} bindings`);
-
-        if (!parent.childPositionCounts) {
-            parent.childPositionCounts = new Map();
-        }
-
-        for (const binding of bindings) {
-            if (binding.property === 'children') continue;
-
-            console.log(`applyBinding: Checking binding for property '${binding.property}', expects class: ${binding.class?.name}`);
-
-            if (this.matchesBinding(child, parent, binding)) {
-                console.log(`applyBinding: MATCH! Binding ${child.constructor.name} to ${parent.constructor.name}.${binding.property}`);
-                this.bindChild(child, parent, binding);
-                break;
-            } else {
-                console.log(`applyBinding: No match for ${binding.property}`);
+    private _findProperties(chain: any[]) {
+        const properties = new Map<string, PropertyDescriptor>();
+        for (const chemical of chain) {
+            for (const property of Object.getOwnPropertyNames(chemical)) {
+                const descriptor = Object.getOwnPropertyDescriptor(chemical, property);
+                if (!descriptor) continue;
+                if (isReactiveProperty(property, descriptor.value))
+                    properties.set(property, descriptor);
             }
+
+            const decorators = chemical[$decorators] as $Decorators | undefined;
+            if (!decorators) continue;
+            
+            decorators.inert.forEach((isInert, prop) => {
+                if (isInert) properties.delete(prop);
+            });
+            
+            decorators.reactive.forEach((isReactive, prop) => {
+                if (!isReactive) return properties.delete(prop);
+                const descriptor = Object.getOwnPropertyDescriptor(chemical, prop);
+                if (descriptor) properties.set(prop, descriptor);
+            });
         }
+
+        return properties;
     }
 
-    private static matchesBinding(child: $Chemical, parent: $Chemical, binding: any): boolean {
-        if (!(child instanceof binding.class!)) return false;
-
-        if (binding.position !== undefined) {
-            const count = parent.childPositionCounts!.get(binding.class) || 0;
-            if (binding.position !== count) {
-                parent.childPositionCounts!.set(binding.class!, count + 1);
-                return false;
-            }
-            parent.childPositionCounts!.set(binding.class!, count + 1);
+    private _getDescendancyChain(): any[] {
+        const chain: any[] = [this._chemical];
+        let current = Object.getPrototypeOf(this._chemical);
+        while (current && current !== $Chemical.prototype) {
+            chain.push(current);
+            current = Object.getPrototypeOf(current);
         }
+        if (current === $Chemical.prototype) chain.push(current);
+        chain.reverse();
+        return chain;
+    }
+}
 
-        if (binding.where && !binding.where(child)) return false;
+class $Bond<T extends $Chemical = any, P = any> {
+    private _getter?: () => any;
+    private _setter?: (value: any) => void;
+    private _action?: Function;
+    private _backingField: any;
+    private _propertyDescriptor?: PropertyDescriptor;
 
-        return true;
+    private _bid?: string;
+    get bid() { 
+        if (!this._bid) 
+            this._bid = `${this._chemical.getType().name}[${this.chemical.cid}].${this._property}`; 
+        return this._bid 
+    }
+    
+    get chemical() { return this._chemical; }
+    private _chemical: T;
+    
+    get property() { return this._property; }
+    private _property: string;
+    
+    get descriptor() { return this._descriptor; }
+    private _descriptor: PropertyDescriptor;
+
+    get value(): P { return (this._chemical as any)[this._property]; }
+    set value(value: P) { (this._chemical as any)[this._property] = value; }
+    
+    get valueType() { return this._valueType; }
+    private _valueType: $Type = Object;
+
+    get isProp() { return this._isProp; }
+    private _isProp: boolean;
+
+    get reactive() { return this._reactive; }
+    get inactive() { return !this._reactive; }
+    private _reactive = true;
+    reactivate() { this._reactive = true && !this._frozen; }
+    deactivate() { this._reactive = false; }
+
+    get frozen() { return this._frozen; }
+    crystallize() { this.deactivate(); this._frozen = true;  }
+    private _frozen = false;
+
+    constructor(chemical: T, property: string, descriptor: PropertyDescriptor) {
+        this._chemical = chemical;
+        this._property = property;
+        this._descriptor = descriptor;
+        this._isProp = isProp(property, descriptor);
     }
 
-    /**
-    * Binds a child Chemical to its parent property
-    */
-    private static bindChild(child: $Chemical, parent: $Chemical, binding: any): void {
-        console.log(`bindChild: Binding ${child.constructor.name} to ${parent.constructor.name}.${binding.property}`);
+    init() {
+        const property = this._property;
+        const descriptor = this._descriptor;
 
-        // Initialize property if undefined
-        if ((parent as any)[binding.property] === undefined) {
-            const defaultValue = Array.isArray(binding.default) ? [] : createPlaceholderChemical(binding.class);
-            (parent as any)[binding.property] = defaultValue;
-            console.log(`bindChild: Initialized ${binding.property} with placeholder`);
-        }
-
-        // Get the current value
-        const currentValue = (parent as any)[binding.property];
-
-        // Handle array properties
-        if (Array.isArray(currentValue)) {
-            console.log(`bindChild: Adding to array ${binding.property}, current length: ${currentValue.length}`);
-
-            // Replace placeholder if it exists at index 0
-            if (currentValue.length > 0 && currentValue[0]._isPlaceholder) {
-                currentValue[0] = child;
-            } else {
-                currentValue.push(child);
-            }
-
-            // Trigger update through setter
-            (parent as any)[binding.property] = [...currentValue];
-
+        const isMethod = typeof descriptor.value === 'function' && !descriptor.get && !descriptor.set;
+        if (isMethod) {
+            console.log(`${this.property}: ${this.descriptor.value}`);
+            this._action = descriptor.value.bind(this._chemical);
+            this._propertyDescriptor = {
+                value: (...args: any[]) => {
+                    this._chemical.formula?.bindState();
+                    const result = this._action!(...args);
+                    this._chemical.formula.updateState();
+                    return result;
+                },
+                writable: true,
+                enumerable: true,
+                configurable: true,
+            };
         } else {
-            // Handle single property
-            if (currentValue._isPlaceholder) {
-                console.log(`bindChild: Replacing placeholder with real child for ${binding.property}`);
-                (parent as any)[binding.property] = child;
-            } else if (!currentValue) {
-                console.log(`bindChild: Setting single child to ${binding.property}`);
-                (parent as any)[binding.property] = child;
-            } else {
-                console.log(`bindChild: Property ${binding.property} already has a real value, skipping`);
-                return;
-            }
-        }
-
-        // Check if all bindings are now satisfied
-        const allSatisfied = checkAllBindingsSatisfied(parent);
-        if (allSatisfied) {
-            console.log(`bindChild: All bindings satisfied for ${parent.constructor.name}`);
-
-            // Force a re-render to remove hidden elements
-            //const updateFn = componentUpdaters.get(parent);
-            const update: Function = (parent as any)[updateSymbol];
-            if (update) {
-                console.log(`bindChild: Triggering final update to remove hidden elements`);
-                update();
-            } else {
-                console.warn(`bindChild: No update function found for parent ${parent.constructor.name}`);
-            }
-        }
-    }
-
-    private static unbindChild(child: $Chemical, parent: $Chemical): void {
-        const bindings = getBindings(parent);
-
-        for (const binding of bindings) {
-            if (binding.property === 'children') continue;
-
-            const prop = (parent as any)[binding.property];
-            if (Array.isArray(prop)) {
-                const index = prop.indexOf(child);
-                if (index >= 0) prop.splice(index, 1);
-            } else if ((parent as any)[binding.property] === child) {
-                (parent as any)[binding.property] = undefined;
-            }
-        }
-    }
-
-    // private static unregisterFromParent(child: $Chemical, parent: $Chemical): void {
-    //     this.unbindChild(child, parent);
-    //     this.untrackChild(parent, child);
-    // }
-
-    private static runCatalystMethods(instance: $Chemical): void {
-        const methods = instance.constructor.prototype.catalystMethods;
-        if (!methods) return;
-
-        for (const methodName of methods) {
-            if (typeof (instance as any)[methodName] === 'function') {
-                (instance as any)[methodName]();
-            }
-        }
-    }
-
-    private static modifyChildren(instance: $Chemical, children: ReactNode): ReactNode {
-        console.log(`modifyChildren for ${instance.constructor.name}:`, children);
-        const childrenArray = React.Children.toArray(children);
-
-        return childrenArray.map(child => {
-            if (React.isValidElement(child) && (child.type as any).isChemical) {
-                return React.cloneElement(child as any, {
-                    ...(child.props as any),
-                    __parentInstance: instance
-                });
-            }
-            return child;
-        });
-    }
-}
-
-/**
- * Decorator to mark a field as inert (non-reactive)
- */
-export function inert() {
-    return function (target: any, propertyKey: string) {
-        // Create or get the inert properties set
-        if (!target[deactivated as any]) {
-            target[deactivated as any] = new Set<string>();
-        }
-
-        // Add this property to the inert set
-        target[deactivated as any].add(propertyKey);
-    };
-}
-
-/**
- * Decorator to specify a custom equality comparison for a field
- */
-export function equate(comparer: (a: any, b: any) => boolean) {
-    return function (target: any, propertyKey: string) {
-        // Create or get the property comparers map
-        if (!target[comparerSymbol as any]) {
-            target[comparerSymbol as any] = new Map<string, (a: any, b: any) => boolean>();
-        }
-
-        // Add the custom comparer for this property
-        target[comparerSymbol as any].set(propertyKey, comparer);
-    };
-}
-
-/**
- * Decorator for properties that should use deep equality comparison
- * Useful for arrays, collections, and complex objects
- */
-export function dynamic() {
-    return function (target: any, propertyKey: string) {
-        // Create or get the property comparers map
-        if (!target[comparerSymbol as any]) {
-            target[comparerSymbol as any] = new Map<string, (a: any, b: any) => boolean>();
-        }
-
-        // Add a JSON-based deep comparer for this property
-        target[comparerSymbol as any].set(propertyKey, (a: any, b: any) => {
-            try {
-                return stringify(a) === stringify(b);
-            } catch (e) {
-                // If stringify fails (circular refs, etc.), fall back to reference equality
-                return a === b;
-            }
-        });
-    };
-}
-
-/**
- * Decorator for methods that should run after component rendering
- */
-export function entail() {
-    return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
-        const originalMethod = descriptor.value;
-
-        // Create or get the catalysts methods set
-        if (!target.catalystMethods) {
-            target.catalystMethods = new Set<string>();
-        }
-
-        // Add this method to the catalysts set
-        target.catalystMethods.add(propertyKey);
-
-        // Return the original descriptor
-        return descriptor;
-    };
-}
-
-/**
- * Decorator for properties that should run the value through a transformation function
- */
-export function transform(transformer: (value: any) => any) {
-    return function (target: any, propertyKey: string) {
-        // Create or get the transformers map
-        if (!target.transformers) {
-            target.transformers = new Map<string, (value: any) => any>();
-        }
-
-        // Add the transformer for this property
-        target.transformers.set(propertyKey, transformer);
-    };
-}
-
-/**
- * Interface for binding decorators
- */
-interface Binding {
-    class?: typeof $Chemical;                    // The class to bind
-    optional?: boolean;                         // Whether binding is optional
-    position?: number;                          // For @first, @second, etc (0-based)
-    where?: (instance: any) => boolean;         // Conditional predicate
-    property: string;                           // Property name (for convenience)
-}
-
-/**
-* Decorator for binding a child to a property
-*/
-export function child(ChildClass: any) {
-    return function (target: any, propertyKey: string) {
-        // Set up binding metadata
-        const constructor = target.constructor as any;
-        if (!constructor.__bindingsMap) {
-            constructor.__bindingsMap = new Map<string, Binding>();
-        }
-
-        // Store metadata about binding
-        let binding = constructor.__bindingsMap.get(propertyKey);
-        if (!binding) {
-            binding = { property: propertyKey };
-            constructor.__bindingsMap.set(propertyKey, binding);
-        }
-
-        // Mark this property as a Chemical property in metadata
-        if (!constructor.__chemicalProperties) {
-            constructor.__chemicalProperties = new Set<string>();
-        }
-        constructor.__chemicalProperties.add(propertyKey);
-
-        binding.class = ChildClass;
-        if (binding.optional === undefined) {
-            binding.optional = false;
-        }
-
-        // Wrap the view method only once for the entire class
-        if (!constructor.__viewWrapped) {
-            constructor.__viewWrapped = true;
-            const originalView = target.view;
-
-            target.view = function () {
-                const originalResult = originalView.call(this);
-
-                // Render hidden children if there are any bindings that could receive children
-                const hasBindings = getBindings(this).some(b => b.property !== 'children');
-
-                if (hasBindings && this.elements) {
-                    return React.createElement(
-                        React.Fragment,
-                        null,
-                        originalResult,
-                        React.createElement(
-                            'div',
-                            {
-                                style: { display: 'none' },
-                                'aria-hidden': 'true',
-                                'data-chemistry-hidden': 'true'
-                            },
-                            this.elements
-                        )
-                    );
-                }
-
-                return originalResult;
+            this._getter = descriptor.get?.bind(this._chemical);
+            this._setter = descriptor.set?.bind(this._chemical);
+            this._backingField = descriptor.value;
+            this._propertyDescriptor = {
+                get: () => this._bondGet(),
+                set: (value: any) => this._bondSet(value),
+                enumerable: true,
+                configurable: true,
             };
         }
 
-        // Initialize property with placeholder
-        if (!target.hasOwnProperty(propertyKey)) {
-            const descriptor = Object.getOwnPropertyDescriptor(target, propertyKey);
-            const isArray = descriptor?.value instanceof Array;
-            target[propertyKey] =
-                isArray ? [] :
-                    !binding.optional ? createPlaceholderChemical(ChildClass) :
-                        undefined;
-        }
-        dynamic()(target, propertyKey);
-    };
-}
-
-/**
- * Decorator for positional child property binding
- */
-export function optional() {
-    return function (target: any, propertyKey: string) {
-        const constructor = target.constructor as any;
-        if (!constructor.__bindingsMap) constructor.__bindingsMap = new Map<string, Binding>();
-
-        let binding = constructor.__bindingsMap.get(propertyKey);
-        if (!binding) {
-            binding = { property: propertyKey };
-            constructor.__bindingsMap.set(propertyKey, binding);
-        }
-
-        binding.optional = true;
-        if (target[propertyKey])
-            target[propertyKey] = undefined;
-    };
-}
-
-/**
- * Decorator for conditional child property binding
- */
-export function where(predicate: (instance: $Chemical) => boolean) {
-    return function (target: any, propertyKey: string) {
-        const constructor = target.constructor as any;
-        if (!constructor.__bindingsMap) constructor.__bindingsMap = new Map<string, Binding>();
-
-        let binding = constructor.__bindingsMap.get(propertyKey);
-        if (!binding) {
-            binding = { property: propertyKey };
-            constructor.__bindingsMap.set(propertyKey, binding);
-        }
-
-        binding.where = predicate;
-        binding.optional = true;
-        if (target[propertyKey])
-            target[propertyKey] = undefined;
-    };
-}
-
-/**
- * Decorator for positional child property binding
- */
-export function position(n: number) {
-    return function (target: any, propertyKey: string) {
-        const constructor = target.constructor as any;
-        if (!constructor.__bindingsMap) constructor.__bindingsMap = new Map<string, Binding>();
-
-        let binding = constructor.__bindingsMap.get(propertyKey);
-        if (!binding) {
-            binding = { property: propertyKey };
-            constructor.__bindingsMap.set(propertyKey, binding);
-        }
-
-        binding.position = n - 1;  // 0-based
-    };
-}
-
-// Convencience child binding decorators for different positions
-export const first = position(1);
-export const second = position(2);
-export const third = position(3);
-export const fourth = position(4);
-export const fifth = position(5);
-
-/**
- * Get merged bindings for a Chemical instance
- */
-function getBindings(instance: $Chemical): any[] {
-    const constructor = instance.constructor as any;
-
-    // Return cached if available
-    if (constructor._mergedBindings) {
-        return constructor._mergedBindings;
+        if (!this._chemical.isTemplate)
+            Object.defineProperty(this._chemical, property, this._propertyDescriptor);
     }
 
-    // Build merged map
-    const mergedMap = new Map<string, any>();
-
-    // Walk up prototype chain, child bindings override parent
-    let proto = constructor;
-    while (proto && proto !== $Chemical) {
-        if (proto.__bindingsMap) {
-            proto.__bindingsMap.forEach((binding: any, key: string) => {
-                // Only add if not already set by child class
-                if (!mergedMap.has(key)) {
-                    mergedMap.set(key, { ...binding, property: key });
-                }
+    private _bondGet() {
+        const state = this._chemical[$state];
+        let value = this._getter ? this._getter() : this._backingField;
+        if (value instanceof $Chemical)
+            value[$state] = state;
+        else if (Array.isArray(value)) {
+            value.forEach(item => { 
+                if (item instanceof $Chemical) 
+                    item[$state] = state; 
             });
         }
-        proto = Object.getPrototypeOf(proto);
-    }
-
-    // Convert to array, filter invalid, and sort
-    const bindings: any[] = [];
-    mergedMap.forEach(binding => {
-        if (!binding.class) {
-            console.warn(`Binding for '${binding.property}' missing @child decorator`);
-            return;
-        }
-        bindings.push(binding);
-    });
-
-    // Sort: indexed first, then by index value
-    bindings.sort((a, b) => {
-        if (a.position !== undefined && b.position === undefined) return -1;
-        if (b.position !== undefined && a.position === undefined) return 1;
-        if (a.position !== undefined && b.position !== undefined) {
-            return a.position - b.position;
-        }
-        return 0;
-    });
-
-    // Cache and return
-    constructor._mergedBindings = bindings;
-    return bindings;
-}
-
-/**
- * Reactivates an object, making its properties reactive
- */
-function reactivate<T extends object>(instance: T, owner?: $Chemical): T {
-    (instance as any)[reactivated] = true;
-    const className = (instance as any).constructor?.name || 'Unknown';
-    console.log(`reactivate: ${className}`);
-
-    const triggerUpdate = () => {
-        const update =
-            owner ? (owner as any)[updateSymbol] :
-            instance instanceof $Chemical ? (instance as any)[updateSymbol] :
-            undefined;
-
-        if (update) {
-            console.log(`reactivate: Update triggered for ${className}`);
-            update();
-        } else {
-            console.warn(`reactivate: No update function found for ${className}`);
-        }
-    };
-
-    decorate(instance, {
-        after: (className, memberName, memberType, method, args, result) => {
-            if (memberType === 'field') {
-                triggerUpdate();
-            }
-            return result;
-        }
-    });
-
-    // Count reactive properties
-    let reactiveCount = 0;
-    for (const key in instance) {
-        if (key !== 'constructor' && !key.startsWith('_')) {
-            const value = (instance as any)[key];
-            if (!(value instanceof $Chemical) && value && typeof value === 'object' && !(value instanceof Date)) {
-                reactiveCount++;
-            }
-        }
-    }
-
-    console.log(`reactivate: ${className} has ${reactiveCount} reactive properties`);
-
-    return instance;
-}
-/**
- * Reactivates a nested data object in an object or field 
- */
-function reactivateData(obj: any, owner: $Chemical) {
-    if (!obj || typeof obj !== 'object' || obj instanceof $Chemical) return;
-    reactivate(obj, owner);
-}
-
-/**
- * Deactivates an object, preventing it from triggering updates
- * This is exported for advanced usage but generally should be used via Chemical.deactivate
- */
-function deactivate<T extends object>(instance: T): T {
-    // Mark as deactivated
-    (instance as any)[deactivated] = true;
-    return instance;
-}
-
-/**
- * Creates a reactive getter for a property
- */
-function createReactiveGetter(key: string, className: string, shouldUseDynamic: boolean, config: DecoratorConfig) {
-    return function (this: any) {
-        const value = this[backingFields][key];
-
-        // Schedule dirty check for dynamic properties
-        if (shouldUseDynamic && value) {
-            if (!this[backingFields][key + '_checkScheduled']) {
-                const snapshot = represent(value);
-                this[backingFields][key + '_checkScheduled'] = true;
-
-                setTimeout(() => {
-                    try {
-                        const current = represent(this[backingFields][key]);
-                        if (snapshot !== current) {
-                            console.log(`Dirty check detected change in ${key}`);
-                            if (config.after) {
-                                config.after(className, key, 'field', () => { }, [this[backingFields][key]], undefined);
-                            }
-                        }
-                    } catch (e) {
-                        console.error(`Error in dirty check for ${key}:`, e);
-                    }
-                    this[backingFields][key + '_checkScheduled'] = false;
-                }, 0);
-            }
-        }
-
-        if (config.after) {
-            const afterResult = config.after(className, key, 'property', () => { }, [], value);
-            return afterResult ?? value;
-        }
+        
+        if (this.reactive && state) 
+            state[this.bid] = symbolize(value);
 
         return value;
-    };
+    }
+
+    private _bondSet(value: any) {
+        if (this._setter) this._setter(value);
+        else if (this._getter) throw new Error(`${this._property} property not settable`);
+        else this._backingField = value;
+    }
 }
 
-/**
- * Creates a reactive setter for a property
- */
-function createReactiveSetter(key: string, className: string, shouldUseDynamic: boolean, config: DecoratorConfig) {
-    return function (this: any, newValue: any) {
-        const oldValue = this[backingFields][key];
-
-        // Check if values are equal
-        if (oldValue === newValue) {
-            return;
+class $BondOrchestrator<T extends $Chemical> {
+    private _chemical: T;
+    private _bondConstructor?: Function;
+    private _parameters: { rest: boolean }[] = [];
+    private _lastProps?: any;
+    private _lastProcessedChildren?: ReactNode;
+    private _lastArgs?: any[];
+    
+    constructor(chemical: T) {
+        this._chemical = chemical;
+        const name = chemical.getType().name;
+        this._bondConstructor = (chemical as any)[name];
+        this.parseBondConstructor();
+    }
+    
+    bond(props: any): any {
+        // Cache to avoid reprocessing identical props
+        if (props === this._lastProps) {
+            return this._lastProps;
         }
-
-        // Check for custom comparer
-        const proto = Object.getPrototypeOf(this);
-        const hasCustomComparer = proto?.[comparerSymbol as any]?.has(key);
-
-        if (hasCustomComparer) {
-            const customComparer = proto[comparerSymbol as any].get(key);
-            if (customComparer(oldValue, newValue)) {
-                return;
-            }
-        } else if (shouldUseDynamic) {
-            // Use represent for comparison
-            // Skip comparison if transitioning from undefined to defined
-            if (oldValue !== undefined && newValue !== undefined) {
-                try {
-                    if (represent(oldValue) === represent(newValue)) {
-                        return;
-                    }
-                } catch (e) {
-                    // Continue with update if comparison fails
+        
+        let children = props.children;
+        let args: any[] = [];
+        
+        // Only process children if they changed or first time
+        if (!this._lastProps || props.children !== this._lastProps.children) {
+            [children, args] = this.process(props.children);
+            this._lastProcessedChildren = children;
+            this._lastArgs = args;
+            
+            // Constructor is called every time children change
+            if (this._bondConstructor) {
+                this.validateArgs(args);
+                
+                const paramCount = this._parameters.filter(p => !p.rest).length;
+                const hasRest = this._parameters.length > 0 && this._parameters[this._parameters.length - 1].rest;
+                
+                if (hasRest) {
+                    const regular = args.slice(0, paramCount);
+                    const rest = args.slice(paramCount);
+                    this._bondConstructor.apply(this._chemical, [...regular, ...rest]);
+                } else {
+                    this._bondConstructor.apply(this._chemical, args);
                 }
             }
-        }
-
-        let valueToSet = newValue;
-
-        // Apply before interceptor
-        if (config.before) {
-            const beforeResult = config.before(className, key, 'field', () => { }, [newValue]);
-            if (beforeResult?.[1]) {
-                valueToSet = beforeResult[1][0];
-            }
-        }
-
-        // Reactify complex objects
-        if (valueToSet && typeof valueToSet === 'object' &&
-            !Object.isFrozen(valueToSet) &&
-            !Object.isSealed(valueToSet) &&
-            Object.isExtensible(valueToSet) &&
-            !(valueToSet instanceof $Chemical) &&
-            !Array.isArray(valueToSet) &&
-            !(valueToSet instanceof Date)) {
-            this.reactivateData(valueToSet, this);
-        }
-
-        this[backingFields][key] = valueToSet;
-
-        // Apply after interceptor
-        if (config.after) {
-            config.after(className, key, 'field', () => { }, [valueToSet], undefined);
-        }
-    };
-}
-
-/**
- * Determines if a value should use dynamic dirty-checking
- */
-function shouldUseDynamicChecking(value: any): boolean {
-    // Undefined values will be handled specially in decorateProperties
-    if (value === undefined) {
-        return false;  // Will be overridden to true in decorateProperties
-    }
-
-    const isChemicalProperty = value instanceof $Chemical ||
-        (Array.isArray(value) && value.length > 0 && value[0] instanceof $Chemical);
-
-    return !isChemicalProperty && (Array.isArray(value) ||
-        (typeof value === 'object' && value !== null && !(value instanceof Date)));
-}
-
-/**
- * Creates a placeholder Chemical that won't crash when accessed
- */
-function createPlaceholderChemical(ChildClass: any, isOptional: boolean = false): any {
-    if (isOptional) return undefined;
-    const placeholder = new ChildClass();
-    placeholder._isPlaceholder = true;
-    placeholder._optional = isOptional;
-
-    console.log('Created placeholder:', {
-        class: ChildClass.name,
-        hasView: typeof placeholder.view,
-        viewValue: placeholder.view
-    });
-
-    return placeholder;
-}
-
-/**
-* Checks if all required bindings for a Chemical are satisfied
-*/
-function checkAllBindingsSatisfied(instance: $Chemical): boolean {
-    const bindings = getBindings(instance);
-
-    for (const binding of bindings) {
-        if (binding.property === 'children') continue;
-
-        const value = (instance as any)[binding.property];
-
-        if (Array.isArray(value)) {
-            // Arrays are satisfied if they have at least one real element
-            if (value.length === 0 || value.some((v: any) => v._isPlaceholder)) {
-                return false;
-            }
         } else {
-            // For single values:
-            // - Required bindings: must have a non-placeholder value
-            // - Optional bindings: if present, must be non-placeholder
-            if (!binding.optional && (!value || value._isPlaceholder)) {
-                return false;
-            }
-            if (binding.optional && value && value._isPlaceholder) {
-                return false;
-            }
+            // Reuse cached processed children
+            children = this._lastProcessedChildren;
         }
+        
+        const augmentedProps = { ...props, children };
+        this._chemical.__children = augmentedProps.children;
+        
+        // Always update props
+        for (const key in augmentedProps) {
+            if (typeof key === 'symbol' || key === 'children' || key === 'key' || key === 'ref') continue;
+            (this._chemical as any)['$' + key] = augmentedProps[key];
+        }
+        
+        this._chemical.formula.refresh();
+        this._lastProps = augmentedProps;
+        return augmentedProps;
     }
 
+    render(): ReactNode {        
+        let view = this._chemical.view();
+        view = this.augmentView(view, this._chemical.Component);        
+        return view;
+    }
+    
+    private parseBondConstructor() {
+        if (!this._bondConstructor) return;
+        
+        const match = this._bondConstructor.toString().match(/\(([^)]*)\)/);
+        if (!match) throw new Error(`Cannot parse constructor for ${this._chemical.getType().name}`);
+        
+        const paramString = match[1].trim();
+        if (!paramString) return;
+        
+        this._parameters = paramString.split(',').map(p => p.trim()).map(p => ({ rest: p.startsWith('...') }));
+    }
+    
+    private validateArgs(args: any[]) {
+        if (!this._bondConstructor) return;
+        
+        const paramCount = this._parameters.filter(p => !p.rest).length;
+        const hasRest = this._parameters.length > 0 && this._parameters[this._parameters.length - 1].rest;
+        const expected = hasRest ? `at least ${paramCount}` : `${paramCount}`;
+        
+        if ((hasRest && args.length < paramCount) || (!hasRest && args.length !== paramCount))
+            throw new Error(`${this._chemical.getType().name} expects ${expected} arguments, got ${args.length}`);
+    }
+
+    private process(children: ReactNode): [ReactNode, any[]] {
+        const args: any[] = [];
+        
+        const augmented = React.Children.map(children, child => {
+            if (!React.isValidElement(child)) {
+                args.push(child);
+                return child;
+            }
+            
+            const [augmented, arg] = this.processElement(child as React.ReactElement<any>);
+            if (arg !== undefined) args.push(arg);
+            return augmented;
+        });
+        
+        return [augmented, args];
+    }
+    
+    private processElement(element: React.ReactElement<any>): [ReactNode, any] {
+        // Chemistry Fragment - extract the Component
+        if (element.type === React.Fragment && element.key?.toString().startsWith('chem-')) {
+            const cid = parseInt(element.key.toString().replace('chem-', ''));
+            const chemical = $chemicalRegistry.get(cid)!;
+            return [element, chemical.Component];
+        }
+        
+        const type = element.type as any;
+        if (type === $) return this.processArray(element);
+        if (typeof type === 'string') return [element, element];
+        return this.processComponent(element, type);
+    }
+    
+    private processArray(element: React.ReactElement<any>): [ReactNode, any] {
+        const [inner, innerArgs] = this.process(element.props.children);
+        return [inner, innerArgs];
+    }
+    
+    private processComponent(element: React.ReactElement<any>, type: any): [ReactNode, any] {
+        if (typeof type === 'function' && !type.$template) type = $(type);
+        if (!type?.$template || !(type.$template instanceof $Chemical)) 
+            return [element, element];
+        
+        const component: $$Component<$Chemical> = type;
+        if (!component.$bound) {
+            const bound = component.$bind(this._chemical);
+            return [
+                React.createElement(bound, {
+                    ...element.props,
+                    key: element.key,
+                    children: element.props.children
+                }),
+                bound 
+            ];
+        }
+        
+        return [element, component];
+    }
+
+    private augmentView(view: ReactNode, component: $Component<T>): ReactNode {
+        return React.createElement(
+            React.Fragment,
+            { key: `chem-${this._chemical.cid}` },
+            view,
+        );
+    }
+}
+
+function isReactiveProperty(property: string, value?: any): boolean {
+    if (property.startsWith('_')) return false;
+    if (isSpecial(property)) return true;
+    if ($Chemical.prototype.hasOwnProperty(property)) return false;
+    if (typeof value === 'function') return false;
     return true;
 }
 
-// Type definitions for decorator configuration
-type MemberType = 'method' | 'property' | 'field';
-type DecoratorConfig = {
-    before?: (
-        className: string,
-        memberName: string,
-        memberType: MemberType,
-        method: Function,
-        args: any[]
-    ) => [Function, any[]] | undefined;
-    after?: (
-        className: string,
-        memberName: string,
-        memberType: MemberType,
-        method: Function,
-        args: any[],
-        result: any
-    ) => any | undefined;
-    error?: (
-        className: string,
-        memberName: string,
-        memberType: MemberType,
-        method: Function,
-        args: any[],
-        error: any
-    ) => any | undefined;
-};
-
-/**
- * Decorates an object's methods and properties with interceptors
- */
-function decorate<T extends object>(instance: T, config: DecoratorConfig): T {
-    // Skip if already decorated - but check individual properties
-    // if ((instance as any)[reactivated]) {
-    //     return instance;
-    // }
-
-    const className: string = instance?.constructor?.name ?? "<UNKNOWN>";
-
-    // Initialize backing fields if not present
-    if (!(instance as any)[backingFields]) {
-        (instance as any)[backingFields] = {};
-    }
-    if (!(instance as any)[originalValues]) {
-        (instance as any)[originalValues] = {};
-    }
-
-    // Process properties and fields
-    decorateProperties(instance, className, config);
-
-    // Mark as reactified
-    (instance as any)[reactivated] = true;
-
-    return instance;
+function isSpecial(property: string): boolean {
+    return property.length > 2 && 
+        property[0] === '$' && 
+        property[1] === property[1].toLowerCase() && 
+        property[1] !== "$" && 
+        property[1] !== "_";
 }
 
-/**
- * Decorates properties of an object with interceptors
- */
-function decorateProperties(instance: any, className: string, config: DecoratorConfig): void {
-    const properties = getAllProperties(instance);
-
-    // Initialize backing fields if needed
-    if (!instance[backingFields]) {
-        instance[backingFields] = {};
+function isProp(property: string, value: any | PropertyDescriptor): boolean {
+    const isDescriptor = value & (value.get || value.set || value.value);
+    if (isDescriptor) {
+        if (value.get || value.set) return false;
+        value = value.value;
     }
-
-    for (const key of properties) {
-        const value = instance[key];
-
-        // Skip non-reactive properties
-        if (!isReactiveProperty(instance, key, value)) {
-            continue;
-        }
-
-        // Check if THIS INSTANCE already has a reactive property
-        const ownDescriptor = Object.getOwnPropertyDescriptor(instance, key);
-        if (ownDescriptor && (ownDescriptor.get || ownDescriptor.set)) {
-            continue;  // Already reactive on this instance
-        }
-
-        // Check if prototype has an accessor property we need to handle
-        const protoDescriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(instance), key);
-        if (protoDescriptor && (protoDescriptor.get || protoDescriptor.set)) {
-            decorateAccessorProperty(instance, key, protoDescriptor, className, config);
-            continue;
-        }
-
-        // Store current value (could be inherited from prototype)
-        instance[backingFields][key] = value;
-
-        // Determine checking strategy
-        // Check if this is a Chemical property from binding metadata
-        const constructor = instance.constructor as any;
-        const isChemicalProperty = constructor.__chemicalProperties?.has(key);
-
-        let shouldUseDynamic: boolean;
-        if (isChemicalProperty) {
-            // Chemical properties always use reference equality
-            shouldUseDynamic = false;
-        } else if (value === undefined) {
-            // Non-Chemical undefined properties use dynamic
-            shouldUseDynamic = true;
-        } else {
-            // Normal checking for defined values
-            shouldUseDynamic = shouldUseDynamicChecking(value);
-        }
-
-        // Create reactive property on instance (shadows prototype if inherited)
-        Object.defineProperty(instance, key, {
-            get: createReactiveGetter(key, className, shouldUseDynamic, config),
-            set: createReactiveSetter(key, className, shouldUseDynamic, config),
-            enumerable: true,
-            configurable: true
-        });
-    }
+    return isSpecial(property) && typeof value !== 'function';
 }
 
-/**
- * Decorates an accessor property (getter/setter)
- */
-function decorateAccessorProperty(
-    instance: any,
-    key: string,
-    descriptor: PropertyDescriptor,
-    className: string,
-    config: DecoratorConfig
-): void {
-    const originalGet = descriptor.get;
-    const originalSet = descriptor.set;
-
-    Object.defineProperty(instance, key, {
-        get: function () {
-            // Preserve original getter behavior
-            const value = originalGet?.call(this);
-
-            if (config.after) {
-                const afterResult = config.after(className, key, 'property', () => { }, [], value);
-                return afterResult ?? value;
-            }
-
-            return value;
-        },
-        set: function (newValue) {
-            if (!originalSet) return; // Read-only property
-
-            const oldValue = originalGet?.call(this);
-
-            // Skip update if values are equal
-            if (oldValue === newValue) {
-                return;
-            }
-
-            // Check for custom comparer
-            const proto = Object.getPrototypeOf(this);
-            const hasCustomComparer = proto &&
-                proto[comparerSymbol as any] &&
-                proto[comparerSymbol as any].has(key);
-
-            if (hasCustomComparer) {
-                const customComparer = proto[comparerSymbol as any].get(key);
-                if (customComparer(oldValue, newValue)) {
-                    return; // Skip update if custom comparer says they're equal
-                }
-            }
-
-            // Call original setter
-            originalSet.call(this, newValue);
-
-            // Apply after logic to trigger updates
-            if (config.after) {
-                config.after(className, key, 'field', () => { }, [newValue], undefined);
-            }
-        },
-        enumerable: descriptor.enumerable,
-        configurable: descriptor.configurable
-    });
-}
-
-/**
- * Creates a string representation for comparison
- */
-function represent(value: any): string {
-    return stringify(value, function (this: any, key: string, val: any): any {
-        // Root object
+function symbolize(value: any): string {
+    return stringify(value, function(this: any, key: string, val: any): any {
         if (key === '') return val;
-
-        // The 'this' context in replacer is the parent object containing the property
-        // Check if parent is a Chemical and if this property should be excluded
-        if (this && this instanceof $Chemical) {
-            if (!isReactiveProperty(this, key, val)) {
-                return undefined;
-            }
-        }
-
-        // Special handling for Chemical values
-        if (val instanceof $Chemical) {
-            const simplified: Record<string, any> = { _chemical: val.constructor.name };
-            // Only include $ props for Chemical instances
-            for (const prop in val) {
-                if (prop.startsWith('$') && typeof (val as any)[prop] !== 'function') {
-                    simplified[prop] = (val as any)[prop];
-                }
-            }
-            return simplified;
-        }
-
-        // Skip functions
-        if (typeof val === 'function') {
-            return undefined;
-        }
-
-        // Handle Next.js proxies
-        if (val && typeof val === 'object') {
-            try {
-                if (val.constructor?.name === 'Proxy') {
-                    return '[NextProxy]';
-                }
-            } catch {
-                return '[Inaccessible]';
-            }
-        }
-
+        if (val instanceof $Chemical) return val.cid;
+        if (this instanceof $Chemical) return this.cid;
+        if (typeof val === 'function') return undefined;
+        if (val?.constructor?.name === 'Proxy') return '[Proxy]';
         return val;
     });
 }
 
-/**
- * Determines if a property should be reactive (tracked for changes)
- */
-function isReactiveProperty(instance: any, key: string, value: any): boolean {
-    // Skip internal symbols and backing fields
-    if (key === String(reactivated) ||
-        key === String(deactivated) ||
-        key === String(backingFields) ||
-        key === String(originalValues) ||
-        key === String(comparerSymbol) ||
-        key === String(updateSymbol)) {
-        return false;
-    }
-
-
-    // Skip standard excluded properties
-    if (key === 'constructor' ||
-        key === 'state' ||
-        key === 'props' ||
-        key === 'Component' ||
-        key === 'parent' ||
-        key === 'children' ||
-        key === 'elements' ||
-        key === '__parentInstance' ||
-        key === '_isSetup') {
-        return false;
-    }
-
-    // Skip functions
-    if (typeof value === 'function') {
-        return false;
-    }
-
-    // Skip properties from $Chemical prototype
-    if ($Chemical.prototype.hasOwnProperty(key)) {
-        return false;
-    }
-
-    // Skip if marked as @inert
-    const proto = Object.getPrototypeOf(instance);
-    if (proto && proto[deactivated as any]?.has(key)) {
-        return false;
-    }
-
-    // Skip Chemical instances (they're handled specially)
-    if (value instanceof $Chemical) {
-        return false;
-    }
-
-    return true;
-}
-
-/**
- * Checks if an object is a base object method
- */
-function isBaseObjectMethod(methodName: string): boolean {
-    return Object.prototype.hasOwnProperty.call(Object.prototype, methodName);
-}
-
-/**
- * Gets all methods from an object and its prototype chain
- */
-function getAllMethods(obj: any): { [key: string]: Function } {
-    const methods: { [key: string]: Function } = {};
-    let proto = obj;
-
-    while (proto && proto !== Object.prototype) {
-        for (const key in proto) {
-            if (methods[key]) continue;
-            if (
-                typeof proto[key] === "function" &&
-                !key.startsWith("_") && // Skip private methods
-                !isBaseObjectMethod(key)
-            ) {
-                methods[key] = proto[key];
-            }
-        }
-        proto = proto.__proto__;
-    }
-
-    return methods;
-}
-
-/**
- * Gets all properties from an object
- */
-function getAllProperties(obj: any): string[] {
-    const properties = new Set<string>();
-
-    // Get own properties
-    Object.getOwnPropertyNames(obj).forEach(prop => {
-        properties.add(prop);
-    });
-
-    // Get properties from prototype chain
-    let proto = Object.getPrototypeOf(obj);
-    while (proto && proto !== Object.prototype) {
-        Object.getOwnPropertyNames(proto).forEach(prop => {
-            if (!prop.startsWith('_') && prop !== 'constructor') {
-                properties.add(prop);
-            }
-        });
-        proto = Object.getPrototypeOf(proto);
-    }
-
-    return Array.from(properties);
-}
+const Collection = new $Collection().Component; 
+export const $ = (Collection as any) as $;

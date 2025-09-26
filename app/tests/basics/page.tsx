@@ -1,7 +1,7 @@
 // app > tests > basics
 'use client'
-import { $Chemical, Children, Properties } from '@/chemistry2';
-import React, { Component, JSX, ReactElement, ReactNode } from 'react';
+import { $Chemical } from '@/chemistry';
+import React from 'react';
 
 // Test 1: Most basic - can we pass a prop and see it?
 class $Display extends $Chemical {
@@ -21,7 +21,7 @@ class $Display extends $Chemical {
 class $Counter extends $Chemical {
    count = 0;
    
-   increment() {
+   $increment() {
        console.log('Before increment:', this.count);
        this.count = this.count + 1;
        console.log('After increment:', this.count);
@@ -32,7 +32,7 @@ class $Counter extends $Chemical {
            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
                <div>Count: {this.count}</div>
                <button 
-                   onClick={() => this.increment()}
+                   onClick={() => this.$increment()}
                    style={{ 
                        border: '1px solid #ccc',
                        background: '#f5f5f5',
@@ -87,14 +87,14 @@ class $ComplexProps extends $Chemical {
        this._computedValue = val / 2;
    }
    
-   modifyRegularArray() {
+   $modifyRegularArray() {
        console.log('Before push:', this.regularArray);
        this.regularArrayCount++;
        this.regularArray.push('added ' + this.regularArrayCount);
        console.log('After push:', this.regularArray);
    }
    
-   modifyRegularObject() {
+   $modifyRegularObject() {
        console.log('Before modify:', this.regularObject);
        this.regularObject.count++;
        this.regularObject.status = 'modified';
@@ -102,7 +102,7 @@ class $ComplexProps extends $Chemical {
        console.log('After modify:', this.regularObject);
    }
    
-   modifyComputed() {
+   $modifyComputed() {
        console.log('Before computed change:', this.computedProp);
        this.computedProp = 300;
        console.log('After computed change:', this.computedProp);
@@ -124,7 +124,7 @@ class $ComplexProps extends $Chemical {
                    <div>Regular Array: {JSON.stringify(this.regularArray)}</div>
                    <div>Regular Object: {JSON.stringify(this.regularObject)}</div>
                    <button 
-                       onClick={() => this.modifyRegularArray()}
+                       onClick={() => this.$modifyRegularArray()}
                        style={{
                            padding: '5px 10px',
                            marginRight: '10px',
@@ -137,7 +137,7 @@ class $ComplexProps extends $Chemical {
                        Add to Array
                    </button>
                    <button 
-                       onClick={() => this.modifyRegularObject()}
+                       onClick={() => this.$modifyRegularObject()}
                        style={{
                            padding: '5px 10px',
                            border: '1px solid #ccc',
@@ -154,7 +154,7 @@ class $ComplexProps extends $Chemical {
                    <h4>Computed Property (getter/setter):</h4>
                    <div>Computed Value: {this.computedProp}</div>
                    <button 
-                       onClick={() => this.modifyComputed()}
+                       onClick={() => this.$modifyComputed()}
                        style={{
                            padding: '5px 10px',
                            border: '1px solid #ccc',
