@@ -11,22 +11,10 @@ const tests = [
         path: '/tests/basics'
     },
     {
-        id: 'children',
-        name: 'Children Tests',
-        description: 'Test viewing the children of a component',
-        path: '/tests/children'
-    },
-    {
-        id: 'view-methods',
-        name: 'View Method Tests',
-        description: 'Tests using multiple methods to display the view',
-        path: '/tests/view-methods'
-    },
-    {
-        id: 'child-binding',
-        name: 'Child Binding Test',
-        description: 'Test simple parent-child binding with @child decorator',
-        path: '/tests/child-binding'
+        id: 'child-bonding',
+        name: 'Child Bonding Tests',
+        description: 'Test simple parent-child binding with the bond constructor',
+        path: '/tests/child-bonding'
     },
 ];
 

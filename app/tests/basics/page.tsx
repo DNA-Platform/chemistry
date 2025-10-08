@@ -8,7 +8,6 @@ class $Display extends $Chemical {
    $text = 'initial';
    
    view() {
-       console.log('Display.view() - $text:', this.$text);
        return (
            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
                <div>Text: {this.$text}</div>
@@ -22,9 +21,7 @@ class $Counter extends $Chemical {
    count = 0;
    
    $increment() {
-       console.log('Before increment:', this.count);
        this.count = this.count + 1;
-       console.log('After increment:', this.count);
    }
    
    view() {
@@ -79,33 +76,25 @@ class $ComplexProps extends $Chemical {
    // Property with getter/setter
    private _computedValue = 100;
    get computedProp() {
-       console.log('Getter called, returning:', this._computedValue * 2);
        return this._computedValue * 2;
    }
    set computedProp(val: number) {
-       console.log('Setter called with:', val);
        this._computedValue = val / 2;
    }
    
    $modifyRegularArray() {
-       console.log('Before push:', this.regularArray);
        this.regularArrayCount++;
        this.regularArray.push('added ' + this.regularArrayCount);
-       console.log('After push:', this.regularArray);
    }
    
    $modifyRegularObject() {
-       console.log('Before modify:', this.regularObject);
        this.regularObject.count++;
        this.regularObject.status = 'modified';
        (this.regularObject as any)['property' + this.regularObject.count] = 'value ' + this.regularObject.count;
-       console.log('After modify:', this.regularObject);
    }
    
    $modifyComputed() {
-       console.log('Before computed change:', this.computedProp);
        this.computedProp = 300;
-       console.log('After computed change:', this.computedProp);
    }
    
    view() {

@@ -1,6 +1,6 @@
-// app > tests > child-binding
+// app/tests/child-binding/original-tests.tsx
 'use client'
-import { $Chemical, $ } from '@/chemistry';
+import { $Chemical, $, $use } from '@/chemistry';
 import React from 'react';
 
 // Test 1: Basic children as constructor arguments
@@ -41,8 +41,8 @@ export class $Book extends $Chemical {
                 <h3>Book with {this.chapters.length} chapters</h3>
                 <div>
                     {this.chapters.map((chapter, i) => {
-                        const Chapter = chapter.$Component;
-                        return <Chapter key={chapter.$key || chapter.$cid || i} />;
+                        const [Chapter, value] = $use(chapter, 'key');
+                        return <Chapter key={value} />;
                     })}
                 </div>
             </div>
@@ -110,9 +110,9 @@ export class $Document extends $Chemical {
                     footer={this.footer ? '✓' : '✗'}
                 </div>
                 {Title && <Title />}
-                {this.chapters.map((chapter, i) => {
-                    const Chapter = chapter.$Component;
-                    return <Chapter key={chapter.$key || chapter.$cid || i} />;
+                {this.chapters.map(chapter => {
+                    const [Chapter, value] = $use(chapter, 'key');
+                    return <Chapter key={value} />;
                 })}
                 {Footer && <Footer />}
             </div>
@@ -209,7 +209,8 @@ export class $Article extends $Chemical {
         this.sections = sections;
         
         this.sections.forEach((section, i) => {
-            section.addItem(`Auto-added by Article at index ${i}`);
+            if (section.items.length == 0)
+                section.addItem(`Auto-added by Article at index ${i}`);
         });
     }
     
@@ -243,8 +244,8 @@ export class $Article extends $Chemical {
                 </button>
                 <div>
                     {this.sections.map(section => {
-                        const Section = section.$Component;
-                        return <Section />;
+                        const [Section, value] = $use(section, 'key');
+                        return <Section key={value} />;
                     })}
                 </div>
             </div>
@@ -279,8 +280,7 @@ export class $StrictContainer extends $Chemical {
     }
     
     view() {
-        const Header = this.header?.$Component;
-        
+        const Header = $use(this.header);
         return (
             <div style={{
                 border: '2px solid red',
@@ -294,8 +294,8 @@ export class $StrictContainer extends $Chemical {
                 </div>
                 {Header && <Header />}
                 {this.content.map(chapter => {
-                    const Chapter = chapter.$Component;
-                    return <Chapter />;
+                    const [Chapter, value] = $use(chapter, 'key');
+                    return <Chapter key={value} />;
                 })}
             </div>
         );
@@ -333,7 +333,7 @@ export class $NestedContainer extends $Chemical {
         // Log what's in each group
         this.groups.forEach((group, i) => {
             console.log(`Group ${i}:`, group.map(item => 
-                item instanceof $Chemical ? `${item.constructor.name}[${item.$cid}]` : typeof item
+                item instanceof $Chemical ? item : typeof item
             ));
         });
     }
@@ -362,8 +362,8 @@ export class $NestedContainer extends $Chemical {
                             <div style={{ marginTop: '5px' }}>
                                 {group.map((item, j) => {
                                     if (item instanceof $Chemical) {
-                                        const ItemComponent = item.Component;
-                                        return <ItemComponent key={j} />;
+                                        const [Item, value] = $use(item, 'key');
+                                        return <Item key={value} />;
                                     }
                                     return <span key={j}>{String(item)}</span>;
                                 })}
@@ -390,7 +390,7 @@ const StrictContainer = new $StrictContainer().Component;
 const NestedChild = new $NestedChild().Component;
 const NestedContainer = new $NestedContainer().Component;
 
-export default function ChildBindingTest() {
+export default function BasicTests() {
     return (
         <div style={{ padding: '40px', fontFamily: 'system-ui' }}>
             <h1>Child Binding Tests</h1>
@@ -418,7 +418,7 @@ export default function ChildBindingTest() {
             
             {/* Test 2: Mixed types with $Array */}
             <div style={{ marginBottom: '40px' }}>
-                <h2>Test 2: Mixed Types with $ (Array) Structural Component</h2>
+                <h2>Test 2: Mixed Types with an $ (Array) Structural Component</h2>
                 <div style={{ marginBottom: '10px' }}>
                     <strong>Expected:</strong> Document receives title, array of chapters, and footer
                 </div>
