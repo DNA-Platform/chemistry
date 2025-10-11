@@ -536,6 +536,7 @@ export class $Catalogue extends $Chemical {
             b.chapters.every(ch => ch.$title && ch.$pageCount)
         );
         const allPass = booksPass && propsPass && chaptersPass && chapterPropsPass;
+        console.log(this.books)
         
         return (
             <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>

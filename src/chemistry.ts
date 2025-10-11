@@ -1,4 +1,4 @@
-import React, { ReactNode, ReactElement, useState, useRef, useEffect, JSX, useContext } from 'react';
+import React, { ReactNode, ReactElement, useState, useEffect, JSX } from 'react';
 import stringify from 'fast-safe-stringify'; 
 
 export type $Type<T = any> = $Constructor<T>;
@@ -349,8 +349,6 @@ class $ComponentFunction<T extends $Chemical> {
                 chemical = this._chemical!;
             }
 
-            console.log(`chemical: ${chemical[$cid]}, template: ${chemical[$template][$cid]}, destroyed: ${chemical[$destroyed]}`)
-
             chemical[$formula].refresh();
             if (newChemical)
                 setChemicalId(chemical[$cid]);
@@ -488,7 +486,7 @@ class $Formula {
     }
 
     bindUpdate(setState: (state: string) => void, update: () => any) {
-        this._setState = (state: string) => { console.log(`setState:${this._chemical[$cid]}`); setState(state); }
+        this._setState = setState;
         this._update = update;
         this.bindState();
     }
@@ -496,9 +494,7 @@ class $Formula {
     updateState() {
         if (!this._setState)
             throw new Error("The setSetate function has not been bound");
-        console.log(this.state);
         this._setState(this.state); 
-        console.log(`setState called: ${this._setState}`)
     }
 
     update() {
@@ -696,10 +692,7 @@ class $Bond<T extends $Chemical = any, P = any> {
 
     private bondCall(chemical: $Chemical, ...args: any[]): any {
         chemical[$formula].bindState();
-        console.log(`cid: ${chemical[$cid]}, template: ${chemical[$template] == chemical}, reactive: ${chemical[$reactive]}, before: ${chemical[$formula].state}`);
-        console.log(`${chemical[$formula].bonds.values().map(v => v.property).toArray()}`);
         let result = this._action!(...args);
-        console.log(`reactive: ${chemical[$reactive]}, after: ${chemical[$formula].state}`);
         chemical[$formula].updateState();
         chemical[$formula].unbind();
         if (result instanceof Promise) {
@@ -740,6 +733,7 @@ class $BondArguments {
     static equals(first: $BondArguments | any[], second: $BondArguments | any[]) {
         if (first instanceof $BondArguments) first = first.values;
         if (second instanceof $BondArguments) second = second.values;
+        if (first.length == 0 && second.length == 0) return false;
         if (first.length != second.length) return false;
         for (let i = 0; i < first.length; i++) {
             const firstArg = first[i];
@@ -827,7 +821,9 @@ class $BondOrchestrationContext {
 
     child(chemical: $Chemical, props: any): any {
         if (chemical[$lastProps] === props) return props;
-        return chemical[$binder].bond(props, this);
+        props = chemical[$binder].bond(props, this);
+        chemical[$lastProps] = props;
+        return props;
     }
 
     build(): any {
@@ -848,7 +844,6 @@ class $BondOrchestrator<T extends $Chemical> {
     private _chemical: T;
     private _bondConstructor?: Function;
     private _parameters: { isArray: boolean, isSpread: boolean }[] = [];
-    private _lastProps?: any;
     private _rendered: Map<Function, ReactElement> = new Map();
     private _lastAguments?: $BondArguments;
 
@@ -861,11 +856,10 @@ class $BondOrchestrator<T extends $Chemical> {
 
     bond(props: any, parentContext?: $BondOrchestrationContext): any {
         const chemical = this._chemical;
+        props = this.checkProps(props);
         let children: ReactNode = props.children;
         const context = new $BondOrchestrationContext(chemical, this._parameters);
         parentContext?.childContexts.push(context);
-        if (props === this._lastProps) 
-            return this._lastProps;
         
         this._rendered = new Map();
         this.bindProps(chemical, props);
@@ -873,15 +867,13 @@ class $BondOrchestrator<T extends $Chemical> {
         this.process(children, context);
         if (context.isModified) {
             children = context.build();
-            props = { ...props, children: children };
+            props = { ...props, children: children || [] };
         }
 
         chemical[$children] = props.children;
-        this._lastProps = props;
 
         if (this._bondConstructor && context.argsValid) {
             if (!this._lastAguments || !$BondArguments.equals(this._lastAguments, context.arguments))
-            console.log(`Constructor:`, this._bondConstructor?.name, `Args: ${symbolize(context.arguments.values)}`)
             this._bondConstructor!.apply(this._chemical, context.arguments.values);
             this._lastAguments = context.arguments;
         }
@@ -913,6 +905,15 @@ class $BondOrchestrator<T extends $Chemical> {
             }));
     }
 
+    private checkProps(props: any) {
+        props = props || {};
+        const isEmpty = Object.keys(props).length === 0;
+        if (isEmpty) props = this._chemical[$lastProps] || props;
+        if (!props.children && this._chemical[$lastProps].children) 
+            props.children = this._chemical[$lastProps].children || [];
+        return props;
+    }
+
     private bindProps(chemical: $Chemical, props: any) {
         const $chemical$: any = chemical;
         for (const prop in props) {
@@ -923,11 +924,7 @@ class $BondOrchestrator<T extends $Chemical> {
     }
 
     private process(children: ReactNode, context: $BondOrchestrationContext) {
-        console.log(`=== process() for ${this._chemical.constructor.name} ===`);
-        console.log('children:', children);
         const childArray = React.Children.toArray(children);
-        console.log('childArray:', childArray);
-        console.log('childArray.length:', childArray.length);
         context.singleton = !Array.isArray(children) && childArray.length === 1;
         childArray.map(child => {
             context = context.next(child);
@@ -945,12 +942,6 @@ class $BondOrchestrator<T extends $Chemical> {
 
     private processElement(element: React.ReactElement<any>, context: $BondOrchestrationContext) {
         let type = element.type as any;
-        console.log(`processElement:`, {
-            typeName: type.name || type,
-            props: element.props,
-            hasChildren: 'children' in element.props,
-            children: element.props.children
-        });
         if (type === React.Fragment && element.key?.toString().startsWith('chem-')) {
             const cid = parseInt(element.key.toString().replace('chem-', ''));
             const chemical = $chemicalRegistry.get(cid)!;
@@ -971,7 +962,6 @@ class $BondOrchestrator<T extends $Chemical> {
                 component = component.$bind(this._chemical);
 
             const chemical = component.$chemical;
-            //console.log("Child:", chemical.__getType().name, ", ", symbolize(element.props))
             const props = context.child(chemical, element.props);
             const key = `${chemical[$cid]}`;
             context.args.push(chemical);

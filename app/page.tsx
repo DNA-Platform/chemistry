@@ -21,10 +21,7 @@ const tests = [
 export default function TestRunner() {
     const [selectedTest, setSelectedTest] = useState<string | null>(null);
     const [testResults, setTestResults] = useState<Record<string, 'pass' | 'fail' | 'pending'>>({});
-    
-    const handleTestComplete = (testId: string, result: 'pass' | 'fail') => {
-        setTestResults(prev => ({ ...prev, [testId]: result }));
-    };
+
     
     const getStatusColor = (testId: string) => {
         const status = testResults[testId];
