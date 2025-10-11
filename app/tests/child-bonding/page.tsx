@@ -42,7 +42,9 @@ export default function Tests() {
                             style={{
                                 padding: '8px 16px',
                                 background: selectedTest === test.id ? 'white' : 'transparent',
-                                border: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
+                                borderTop: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
+                                borderRight: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
+                                borderLeft: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
                                 borderBottom: 'none',
                                 borderRadius: '4px 4px 0 0',
                                 cursor: 'pointer',

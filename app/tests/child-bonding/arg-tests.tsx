@@ -1,6 +1,6 @@
 // app/tests/child-binding/arg-tests.tsx
 'use client'
-import { $Chemical, $, $use, $Arg } from '@/chemistry';
+import { $Chemical, $, $use, $Function, $Html } from '@/chemistry';
 import React from 'react';
 
 // ============================================
@@ -18,8 +18,18 @@ export class $Label extends $Chemical {
 }
 
 // Simple functional components for testing
-const SimpleButton: React.FC<{ text?: string }> = ({ text = 'Click' }) => {
-    return <button style={{ padding: '5px 10px' }}>{text}</button>;
+const SimpleCard: React.FC<{ title?: string; color?: string }> = ({ title = 'Card Title', color = '#e0e0e0' }) => {
+    return (
+        <div style={{ 
+            padding: '10px 15px', 
+            background: color, 
+            borderRadius: '4px',
+            minWidth: '100px',
+            textAlign: 'center'
+        }}>
+            {title}
+        </div>
+    );
 };
 
 const InfoCard: React.FC<{ title?: string; children?: React.ReactNode }> = ({ title, children }) => {
@@ -37,38 +47,50 @@ const InfoCard: React.FC<{ title?: string; children?: React.ReactNode }> = ({ ti
 
 export class $MixedContainer extends $Chemical {
     label!: $Label;
-    button?: any;  // Will be $Function wrapping SimpleButton
-    card?: any;    // Will be $Function wrapping InfoCard
+    simpleCard!: $Function<typeof SimpleCard>;
+    infoCard!: $Function<typeof SimpleCard>;
     
     $MixedContainer(
         label: $Label,
-        button: any,  
-        card: any
-    ) {
-        console.log('$MixedContainer constructor received:');
-        console.log('  label:', label, 'instanceof $Chemical?', label instanceof $Chemical);
-        console.log('  button:', button, 'instanceof $Chemical?', button instanceof $Chemical);
-        console.log('  button constructor:', button?.constructor?.name);
-        console.log('  card:', card, 'instanceof $Chemical?', card instanceof $Chemical);
-        console.log('  card constructor:', card?.constructor?.name);
-        
+        simpleCard: $Function<typeof SimpleCard>,  
+        infoCard: $Function<typeof InfoCard>
+    ) {        
         this.label = label;
-        this.button = button;
-        this.card = card;
+        this.simpleCard = simpleCard;
+        this.infoCard = infoCard;
     }
     
     view() {
         const [Label] = $use(this.label, 'key');
-        const Button = this.button instanceof $Chemical ? $use(this.button) : null;
-        const Card = this.card instanceof $Chemical ? $use(this.card) : null;
+        const SimpleCard = this.simpleCard instanceof $Chemical ? $use(this.simpleCard) : null;
+        const InfoCard = this.infoCard instanceof $Chemical ? $use(this.infoCard) : null;
+        
+        // Check if test passes
+        const labelPass = this.label instanceof $Chemical && this.label.constructor.name === '$Label';
+        const simpleCardPass = this.simpleCard instanceof $Chemical && this.simpleCard.constructor.name === '$$Function';
+        const infoCardPass = this.infoCard instanceof $Chemical && this.infoCard.constructor.name === '$$Function';
+        const allPass = labelPass && simpleCardPass && infoCardPass;
         
         return (
-            <div style={{ border: '2px solid blue', padding: '15px', borderRadius: '8px' }}>
-                <h4>Mixed Container</h4>
-                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    {Label && <Label />}
-                    {Button ? <Button /> : <div>Button not Chemical</div>}
-                    {Card ? <Card /> : <div>Card not Chemical</div>}
+            <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>
+                <h4 style={{ color: allPass ? 'green' : 'red' }}>
+                    {allPass ? '✓ PASS' : '✗ FAIL'}: Mixed Container
+                </h4>
+                
+                <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
+                    <div><strong>Test:</strong> Constructor receives $Chemical and React.FC components correctly</div>
+                    <div><strong>Expected:</strong> label=$Label, simpleCard=$$Function, infoCard=$$Function</div>
+                    <div><strong>Received:</strong> label={this.label?.constructor?.name}, simpleCard={this.simpleCard?.constructor?.name}, infoCard={this.infoCard?.constructor?.name}</div>
+                </div>
+                
+                {/* Show all three components rendering */}
+                <div style={{ marginBottom: '15px', padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Rendered components:</strong></div>
+                    <div style={{ display: 'flex', gap: '15px', alignItems: 'center', marginTop: '10px' }}>
+                        {Label && <Label />}
+                        {SimpleCard && <SimpleCard />}
+                        {InfoCard && <InfoCard />}
+                    </div>
                 </div>
             </div>
         );
@@ -80,15 +102,15 @@ export class $MixedContainer extends $Chemical {
 // ============================================
 
 export class $FormBuilder extends $Chemical {
-    inputEl?: $Arg<'input'>;
-    buttonEl?: $Arg<'button'>;
-    divEl?: $Arg<'div'>;
+    inputEl!: $Html<'input'>;
+    buttonEl!: $Html<'button'>;
+    divEl!: $Html<'div'>;
     elements: any[] = [];
     
     $FormBuilder(
-        input: $Arg<'input'>,
-        button: $Arg<'button'>,
-        div: $Arg<'div'>,
+        input: $Html<'input'>,
+        button: $Html<'button'>,
+        div: $Html<'div'>,
         ...moreElements: any[]
     ) {
         console.log('$FormBuilder constructor:', {
@@ -105,18 +127,40 @@ export class $FormBuilder extends $Chemical {
     }
     
     view() {
+        // Check what we received
+        const inputPass = this.inputEl && typeof this.inputEl === 'object' && 'type' in this.inputEl;
+        const buttonPass = this.buttonEl && typeof this.buttonEl === 'object';
+        const divPass = this.divEl && typeof this.divEl === 'object';
+        const allPass = inputPass && buttonPass && divPass && this.elements.length === 2;
+        
         return (
-            <div style={{ border: '2px solid green', padding: '15px', borderRadius: '8px' }}>
-                <h4>Form Builder</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {this.inputEl && <input placeholder="From constructor" style={{ padding: '5px' }} />}
-                    {this.buttonEl && <button style={{ padding: '5px 10px' }}>Constructor Button</button>}
-                    {this.divEl && <div style={{ background: '#f0f0f0', padding: '10px' }}>Div from constructor</div>}
-                    {this.elements.map((el, i) => (
-                        <div key={i} style={{ padding: '5px', background: '#fafafa' }}>
-                            Extra element {i + 1}
+            <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>
+                <h4 style={{ color: allPass ? 'green' : 'red' }}>
+                    {allPass ? '✓ PASS' : '✗ FAIL'}: Intrinsic Elements
+                </h4>
+                
+                <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
+                    <div><strong>Test:</strong> Constructor receives HTML element objects (not strings, not components)</div>
+                    <div><strong>Expected:</strong> 3 element objects + 2 extra elements in rest params</div>
+                    <div><strong>Received:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>input: {inputPass ? '✓ React element object' : '✗ ' + typeof this.inputEl}</li>
+                        <li>button: {buttonPass ? '✓ React element object' : '✗ ' + typeof this.buttonEl}</li>
+                        <li>div: {divPass ? '✓ React element object' : '✗ ' + typeof this.divEl}</li>
+                        <li>rest params: {this.elements.length === 2 ? '✓ 2 elements' : `✗ ${this.elements.length} elements`}</li>
+                    </ul>
+                </div>
+                
+                <div style={{ marginBottom: '15px', padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - Elements render:</strong></div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
+                        <input placeholder="From constructor" style={{ padding: '5px' }} />
+                        <button style={{ padding: '5px 10px' }}>Constructor Button</button>
+                        <div style={{ background: '#f0f0f0', padding: '10px' }}>Div from constructor</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                            + {this.elements.length} extra elements in rest params
                         </div>
-                    ))}
+                    </div>
                 </div>
             </div>
         );
@@ -158,47 +202,77 @@ export class $CollectionManager extends $Chemical {
     }
     
     view() {
+        // Validate what we received
+        const labelsPass = this.labels.length === 3 && 
+                        this.labels.every(l => l instanceof $Chemical && l.constructor.name === '$Label');
+        const buttonsPass = this.buttons.length === 2 && 
+                            this.buttons.every(b => b instanceof $Chemical && b.constructor.name === '$$Function');
+        const mixedPass = this.mixed.length === 3;
+        const allPass = labelsPass && buttonsPass && mixedPass;
+        
         return (
-            <div style={{ border: '2px solid purple', padding: '15px', borderRadius: '8px' }}>
-                <h4>Collection Manager</h4>
+            <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>
+                <h4 style={{ color: allPass ? 'green' : 'red' }}>
+                    {allPass ? '✓ PASS' : '✗ FAIL'}: Arrays of Different Types
+                </h4>
                 
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Labels ({this.labels.length}):</strong>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        {this.labels.map(label => {
-                            const [Label, key] = $use(label, 'key');
-                            return <Label key={key} />;
-                        })}
-                    </div>
+                <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
+                    <div><strong>Test:</strong> Constructor receives 3 separate arrays created by {'<$>...</$>'}</div>
+                    <div><strong>Expected:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>Array 1: 3 $Label instances</li>
+                        <li>Array 2: 2 $$Function instances (wrapped SimpleCard)</li>
+                        <li>Array 3: 3 mixed items (Label + SimpleCard + div element)</li>
+                    </ul>
+                    <div><strong>Received:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>labels[]: {labelsPass ? '✓' : '✗'} {this.labels.length} items, all $Label? {this.labels.every(l => l instanceof $Chemical && l.constructor.name === '$Label') ? 'yes' : 'no'}</li>
+                        <li>buttons[]: {buttonsPass ? '✓' : '✗'} {this.buttons.length} items, all $$Function? {this.buttons.every(b => b instanceof $Chemical && b.constructor.name === '$$Function') ? 'yes' : 'no'}</li>
+                        <li>mixed[]: {mixedPass ? '✓' : '✗'} {this.mixed.length} items (mixed types expected)</li>
+                    </ul>
                 </div>
                 
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Buttons ({this.buttons.length}):</strong>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                        {this.buttons.map((button, i) => {
-                            if (button instanceof $Chemical) {
-                                const [Button, key] = $use(button, 'key');
-                                return <Button key={key} />;
-                            }
-                            return <div key={i}>Not Chemical</div>;
-                        })}
+                <div style={{ marginBottom: '15px', padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - All arrays render:</strong></div>
+                    
+                    <div style={{ marginTop: '10px' }}>
+                        <strong>Labels array:</strong>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                            {this.labels.map(label => {
+                                const [Label, key] = $use(label, 'key');
+                                return <Label key={key} />;
+                            })}
+                        </div>
                     </div>
-                </div>
-                
-                <div>
-                    <strong>Mixed ({this.mixed.length}):</strong>
-                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                        {this.mixed.map((item, i) => {
-                            if (item instanceof $Chemical) {
-                                const [Item, key] = $use(item, 'key');
-                                return <Item key={key} />;
-                            }
-                            return (
-                                <div key={i} style={{ padding: '5px', background: '#f0f0f0' }}>
-                                    {typeof item === 'object' ? 'Object' : `Item ${i}`}
-                                </div>
-                            );
-                        })}
+                    
+                    <div style={{ marginTop: '10px' }}>
+                        <strong>Buttons array:</strong>
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '5px' }}>
+                            {this.buttons.map((button, i) => {
+                                if (button instanceof $Chemical) {
+                                    const [Button, key] = $use(button, 'key');
+                                    return <Button key={key} />;
+                                }
+                                return <div key={i}>Not Chemical</div>;
+                            })}
+                        </div>
+                    </div>
+                    
+                    <div style={{ marginTop: '10px' }}>
+                        <strong>Mixed array:</strong>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '5px' }}>
+                            {this.mixed.map((item, i) => {
+                                if (item instanceof $Chemical) {
+                                    const [Item, key] = $use(item, 'key');
+                                    return <Item key={key} />;
+                                }
+                                return (
+                                    <div key={i} style={{ padding: '5px', background: '#f0f0f0', borderRadius: '3px' }}>
+                                        [element]
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -233,30 +307,60 @@ export class $SpreadCollector extends $Chemical {
     view() {
         const [First, firstKey] = $use(this.first, 'key');
         
+        // Validate
+        const firstPass = this.first instanceof $Chemical && this.first.constructor.name === '$Label';
+        const restPass = this.rest.length === 5;
+        const allPass = firstPass && restPass;
+        
         return (
-            <div style={{ border: '2px solid orange', padding: '15px', borderRadius: '8px' }}>
-                <h4>Spread Collector</h4>
-                <div>
-                    <strong>First:</strong> {First && <First key={firstKey} />}
+            <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>
+                <h4 style={{ color: allPass ? 'green' : 'red' }}>
+                    {allPass ? '✓ PASS' : '✗ FAIL'}: Spread Operations
+                </h4>
+                
+                <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
+                    <div><strong>Test:</strong> Constructor signature: (first: $Label, ...rest: any[])</div>
+                    <div><strong>Expected:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>first parameter: 1 $Label (strongly typed)</li>
+                        <li>rest parameters: 5 remaining children (mixed types)</li>
+                    </ul>
+                    <div><strong>Received:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>first: {firstPass ? '✓' : '✗'} {this.first?.constructor?.name}</li>
+                        <li>rest: {restPass ? '✓' : '✗'} {this.rest.length} items (types: {this.rest.map(r => 
+                            r instanceof $Chemical ? r.constructor.name : 
+                            React.isValidElement(r) ? 'element' : 
+                            typeof r
+                        ).join(', ')})</li>
+                    </ul>
                 </div>
-                <div style={{ marginTop: '10px' }}>
-                    <strong>Rest ({this.rest.length} items):</strong>
-                    <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
-                        {this.rest.map((item, i) => {
-                            if (item instanceof $Chemical) {
-                                const [Item, key] = $use(item, 'key');
-                                return Item ? <Item key={key} /> : null;
-                            }
-                            return (
-                                <div key={i} style={{ 
-                                    padding: '5px', 
-                                    background: '#e0e0e0',
-                                    borderRadius: '3px'
-                                }}>
-                                    {typeof item === 'function' ? 'Function' : `Item ${i}`}
-                                </div>
-                            );
-                        })}
+                
+                <div style={{ padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - All render:</strong></div>
+                    <div style={{ marginTop: '10px' }}>
+                        <strong>First param:</strong> {First && <First key={firstKey} />}
+                    </div>
+                    <div style={{ marginTop: '10px' }}>
+                        <strong>Rest params ({this.rest.length}):</strong>
+                        <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', marginTop: '5px' }}>
+                            {this.rest.map((item, i) => {
+                                if (item instanceof $Chemical) {
+                                    const [Item, key] = $use(item, 'key');
+                                    return Item ? <Item key={key} /> : null;
+                                }
+                                return (
+                                    <div key={i} style={{ 
+                                        padding: '5px', 
+                                        background: '#e0e0e0',
+                                        borderRadius: '3px',
+                                        fontSize: '12px'
+                                    }}>
+                                        [{React.isValidElement(item) ? 'element' : typeof item}]
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -271,12 +375,12 @@ export class $SpreadCollector extends $Chemical {
 export class $MatrixContainer extends $Chemical {
     header!: $Label;
     rows: any[][] = [];
-    footer?: $Arg<typeof InfoCard>;
+    footer?: $Function<typeof InfoCard>;
     
     $MatrixContainer(
         header: $Label,
         rows: any[][],
-        footer?: $Arg<typeof InfoCard>
+        footer?: $Function<typeof InfoCard>
     ) {
         console.log('$MatrixContainer constructor:', {
             header: header?.$text,
@@ -294,20 +398,45 @@ export class $MatrixContainer extends $Chemical {
         const [Header, headerKey] = $use(this.header, 'key');
         const Footer = this.footer ? $use(this.footer) : null;
         
+        // Validate
+        const headerPass = this.header instanceof $Chemical && this.header.constructor.name === '$Label';
+        const rowsPass = this.rows.length === 3 && this.rows.every(row => row.length === 3);
+        const footerPass = this.footer instanceof $Chemical && this.footer.constructor.name === '$$Function';
+        const allPass = headerPass && rowsPass && footerPass;
+        
         return (
-            <div style={{ border: '2px solid teal', padding: '15px', borderRadius: '8px' }}>
-                <h4>Matrix Container</h4>
-                {Header && <div style={{ marginBottom: '10px' }}><Header key={headerKey} /></div>}
+            <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>
+                <h4 style={{ color: allPass ? 'green' : 'red' }}>
+                    {allPass ? '✓ PASS' : '✗ FAIL'}: Nested Arrays (Matrix)
+                </h4>
                 
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Matrix ({this.rows.length}x{this.rows[0]?.length || 0}):</strong>
-                    <div style={{ display: 'table', marginTop: '5px' }}>
+                <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
+                    <div><strong>Test:</strong> Constructor receives 2D array structure created by nested {'<$>...</$>'}</div>
+                    <div><strong>Expected:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>header: 1 $Label</li>
+                        <li>rows: 3x3 array of $Labels (created by {'<$><$>...</$><$>...</$>...</$>'})</li>
+                        <li>footer: 1 $$Function (optional)</li>
+                    </ul>
+                    <div><strong>Received:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>header: {headerPass ? '✓' : '✗'} {this.header?.constructor?.name}</li>
+                        <li>rows: {rowsPass ? '✓' : '✗'} {this.rows.length}x{this.rows[0]?.length || 0} array</li>
+                        <li>footer: {footerPass ? '✓' : '✗'} {this.footer?.constructor?.name || 'none'}</li>
+                    </ul>
+                </div>
+                
+                <div style={{ padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - Matrix renders:</strong></div>
+                    {Header && <div style={{ marginTop: '10px', marginBottom: '10px' }}><Header key={headerKey} /></div>}
+                    
+                    <div style={{ display: 'table', marginTop: '5px', borderCollapse: 'collapse' }}>
                         {this.rows.map((row, i) => (
                             <div key={i} style={{ display: 'table-row' }}>
                                 {row.map((cell, j) => (
                                     <div key={j} style={{ 
                                         display: 'table-cell',
-                                        padding: '5px 10px',
+                                        padding: '8px 12px',
                                         border: '1px solid #ddd',
                                         background: (i + j) % 2 === 0 ? '#f5f5f5' : 'white'
                                     }}>
@@ -316,16 +445,152 @@ export class $MatrixContainer extends $Chemical {
                                                 const [Cell, cellKey] = $use(cell, 'key');
                                                 return Cell ? <Cell key={cellKey} /> : null;
                                             })() :
-                                            `${i},${j}`
+                                            '[not chemical]'
                                         }
                                     </div>
                                 ))}
                             </div>
                         ))}
                     </div>
+                    
+                    {Footer && <div style={{ marginTop: '10px' }}><Footer /></div>}
+                </div>
+            </div>
+        );
+    }
+}
+
+// ============================================
+// TEST 6: Accessing Child Properties & Nested Children
+// ============================================
+
+export class $Chapter extends $Chemical {
+    $title = 'Chapter';
+    $pageCount = 10;
+    
+    view() {
+        return (
+            <div style={{ padding: '5px', margin: '2px', background: '#f0f0f0', borderRadius: '3px', fontSize: '12px' }}>
+                {this.$title} ({this.$pageCount} pages)
+            </div>
+        );
+    }
+}
+
+export class $Book extends $Chemical {
+    $title = 'Untitled Book';
+    $author = 'Unknown';
+    chapters: $Chapter[] = [];
+    
+    $Book(...chapters: $Chapter[]) {
+        console.log('$Book constructor received:', chapters);
+        console.log('  chapters.length:', chapters.length);
+        console.log('  chapters types:', chapters.map(ch => ch?.constructor?.name));
+        this.chapters = chapters;
+    }
+    
+    view() {
+        return (
+            <div style={{ border: '1px solid #999', padding: '10px', borderRadius: '4px', background: '#fff' }}>
+                <strong>{this.$title}</strong> by {this.$author}
+                <div style={{ marginTop: '5px', fontSize: '11px', color: '#666' }}>
+                    {this.chapters.length} chapters
+                </div>
+                {/* Optionally render the chapters */}
+                <div style={{ marginTop: '5px' }}>
+                    {this.children}
+                </div>
+            </div>
+        );
+    }
+}
+
+export class $Catalogue extends $Chemical {
+    books: $Book[] = [];
+    
+    $Catalogue(...books: $Book[]) {
+        console.log('$Catalogue constructor received:', books.length, 'books');
+        books.forEach((book, i) => {
+            console.log(`  Book ${i}:`, {
+                title: book.$title,
+                author: book.$author,
+                chapters: book.chapters.length,
+                chapterTitles: book.chapters.map(ch => ch.$title)
+            });
+        });
+        this.books = books;
+    }
+    
+    view() {
+        // Calculate statistics by accessing book properties
+        const totalChapters = this.books.reduce((sum, book) => sum + book.chapters.length, 0);
+        const totalPages = this.books.reduce((sum, book) => 
+            sum + book.chapters.reduce((chSum, ch) => chSum + ch.$pageCount, 0), 0
+        );
+        
+        // Check if we can access everything
+        const booksPass = this.books.length === 2;
+        const propsPass = this.books.every(b => b.$title && b.$author);
+        const chaptersPass = this.books.every(b => b.chapters.length > 0);
+        const chapterPropsPass = this.books.every(b => 
+            b.chapters.every(ch => ch.$title && ch.$pageCount)
+        );
+        const allPass = booksPass && propsPass && chaptersPass && chapterPropsPass;
+        
+        return (
+            <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>
+                <h4 style={{ color: allPass ? 'green' : 'red' }}>
+                    {allPass ? '✓ PASS' : '✗ FAIL'}: Child Property Access & Nested Children
+                </h4>
+                
+                <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
+                    <div><strong>Test:</strong> Parent accesses properties and nested children of its children</div>
+                    <div><strong>Expected:</strong> Catalogue receives Books, reads their properties ($title, $author), AND accesses their chapters (nested children)</div>
+                    <div><strong>Received:</strong></div>
+                    <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
+                        <li>Books: {booksPass ? '✓' : '✗'} {this.books.length} books</li>
+                        <li>Book properties: {propsPass ? '✓' : '✗'} All have title & author</li>
+                        <li>Book children: {chaptersPass ? '✓' : '✗'} All have chapters</li>
+                        <li>Chapter properties: {chapterPropsPass ? '✓' : '✗'} All chapters have title & pageCount</li>
+                    </ul>
                 </div>
                 
-                {Footer && <Footer />}
+                <div style={{ marginBottom: '15px', padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - Catalogue Statistics (computed from child properties):</strong></div>
+                    <div style={{ marginTop: '10px', fontSize: '14px' }}>
+                        <div>📚 Total books: {this.books.length}</div>
+                        <div>📖 Total chapters: {totalChapters}</div>
+                        <div>📄 Total pages: {totalPages}</div>
+                    </div>
+                </div>
+                
+                <div style={{ marginBottom: '15px', padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - Detailed Book Info (accessed from properties):</strong></div>
+                    {this.books.map((book, i) => {
+                        const bookPages = book.chapters.reduce((sum, ch) => sum + ch.$pageCount, 0);
+                        return (
+                            <div key={i} style={{ marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '4px' }}>
+                                <div><strong>{book.$title}</strong> by {book.$author}</div>
+                                <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
+                                    {book.chapters.length} chapters, {bookPages} pages total
+                                </div>
+                                <div style={{ fontSize: '11px', marginTop: '5px' }}>
+                                    Chapters: {book.chapters.map(ch => ch.$title).join(', ')}
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+                
+                <div style={{ padding: '10px', background: '#fff', border: '1px solid #ddd', borderRadius: '4px' }}>
+                    <div><strong>Proof - Books render themselves independently:</strong></div>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '10px', flexWrap: 'wrap' }}>
+                        {this.books.map(book => {
+                            const [Book, key] = $use(book, 'key');
+                            return <Book key={key} />;
+                        })}
+                    </div>
+                </div>
             </div>
         );
     }
@@ -338,6 +603,9 @@ const FormBuilder = new $FormBuilder().Component;
 const CollectionManager = new $CollectionManager().Component;
 const SpreadCollector = new $SpreadCollector().Component;
 const MatrixContainer = new $MatrixContainer().Component;
+const Chapter = new $Chapter().Component;
+const Book = new $Book().Component;
+const Catalogue = new $Catalogue().Component;
 
 export default function ArgTests() {
     return (
@@ -354,13 +622,13 @@ export default function ArgTests() {
                     <strong>Expected:</strong> Constructor receives $Chemical, React.FC components wrapped by Chemistry
                 </div>
                 <MixedContainer>
-                    <Label text="Chemistry Label" color="blue" />
-                    <SimpleButton />
+                    <Label text="$Label Component" color="blue" />
+                    <SimpleCard />
                     <InfoCard />
                 </MixedContainer>
                 <div style={{ marginTop: '10px', color: '#666' }}>
                     ✓ Label is a $Chemical instance<br/>
-                    ✓ SimpleButton is a functional component<br/>
+                    ✓ SimpleCard is a functional component<br/>
                     ✓ InfoCard is a functional component<br/>
                     ✗ Fail if types aren't properly handled
                 </div>
@@ -401,12 +669,12 @@ export default function ArgTests() {
                         <Label text="Third" color="blue" />
                     </$>
                     <$>
-                        <SimpleButton />
-                        <SimpleButton />
+                        <SimpleCard />
+                        <SimpleCard />
                     </$>
                     <$>
                         <Label text="Mixed 1" />
-                        <SimpleButton />
+                        <SimpleCard />
                         <div>Mixed 3</div>
                     </$>
                 </CollectionManager>
@@ -427,7 +695,7 @@ export default function ArgTests() {
                 <SpreadCollector>
                     <Label text="First (typed)" color="purple" />
                     <Label text="Rest 1" />
-                    <SimpleButton />
+                    <SimpleCard />
                     <div>Rest 3</div>
                     <Label text="Rest 4" />
                     <InfoCard />
@@ -474,17 +742,32 @@ export default function ArgTests() {
                     ✗ Fail if nested arrays don't maintain structure
                 </div>
             </div>
-            
-            <div style={{ marginTop: '40px', padding: '20px', background: '#f0f8ff', borderRadius: '8px' }}>
-                <h3>🔍 Type System Notes</h3>
-                <p>
-                    The <code>$Arg&lt;T&gt;</code> type helper allows Chemistry to accept:<br/>
-                    • <code>React.FC</code> → wrapped as <code>$Function</code><br/>
-                    • Intrinsic elements → typed as <code>JSX.IntrinsicElements</code><br/>
-                    • Other types → passed through as-is<br/>
-                    <br/>
-                    Check console for detailed type information logged by constructors!
-                </p>
+
+            {/* Test 6 */}
+            <div style={{ marginBottom: '40px' }}>
+                <h2>Test 6: Accessing Child Properties & Nested Children</h2>
+                <div style={{ marginBottom: '10px' }}>
+                    <strong>Expected:</strong> Catalogue reads Book properties AND their nested Chapter children
+                </div>
+                <Catalogue>
+                    <Book title="The Great Gatsby" author="F. Scott Fitzgerald">
+                        <Chapter title="Chapter 1" pageCount={15} />
+                        <Chapter title="Chapter 2" pageCount={20} />
+                        <Chapter title="Chapter 3" pageCount={18} />
+                    </Book>
+                    <Book title="1984" author="George Orwell">
+                        <Chapter title="Part 1" pageCount={25} />
+                        <Chapter title="Part 2" pageCount={30} />
+                        <Chapter title="Part 3" pageCount={22} />
+                    </Book>
+                </Catalogue>
+                <div style={{ marginTop: '10px', color: '#666' }}>
+                    ✓ Parent accesses child properties ($title, $author)<br/>
+                    ✓ Parent accesses nested children (chapters array)<br/>
+                    ✓ Parent reads nested child properties ($title, $pageCount)<br/>
+                    ✓ Parent computes statistics from deep hierarchy<br/>
+                    ✗ Fail if properties aren't accessible
+                </div>
             </div>
         </div>
     );

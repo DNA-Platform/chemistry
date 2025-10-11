@@ -393,7 +393,7 @@ const NestedContainer = new $NestedContainer().Component;
 export default function BasicTests() {
     return (
         <div style={{ padding: '40px', fontFamily: 'system-ui' }}>
-            <h1>Child Binding Tests</h1>
+            <h1>Child Bonding Tests</h1>
             <p style={{ color: '#666', marginBottom: '30px' }}>
                 Testing Chemistry's revolutionary children-as-constructor-arguments system.
             </p>
