@@ -26,7 +26,7 @@ export class $Book extends $Chemical {
     chapters: $Chapter[] = [];
     
     $Book(...chapters: $Chapter[]) {
-        console.log('$Book constructor called with', chapters.length, 'chapters');
+        console.log('$Book constructor called with', chapters.length, 'chapters', 'with child:', chapters && chapters[0]);
         chapters.forEach(ch => console.log('Chapter title:', ch.$title));
         this.chapters = chapters;
     }
