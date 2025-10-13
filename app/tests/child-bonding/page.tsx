@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import BasicTests from './basic-tests';
 import ArgTests from './arg-tests';
+import DynamicArgTests from './dynamic-arg-tests';
 
 const subTests = [
     {
@@ -16,6 +17,12 @@ const subTests = [
         name: 'Arg Tests',
         description: 'Different parameter types',
         component: ArgTests
+    },
+    {
+        id: 'dynamic-arg-tests',
+        name: 'Dynamic Arg Tests',
+        description: 'Dynamic arguments that match the bond constructor signature',
+        component: DynamicArgTests
     },
 ];
 

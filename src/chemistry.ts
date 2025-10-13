@@ -75,6 +75,7 @@ export function $use<T extends $Chemical>(chemical?: T): $$Component<T>
 export function $use<T extends $Chemical>(chemical: T, key: 'key'): [$$Component<T>, string]
 export function $use<T extends $Chemical>(chemical?: T, key?: 'key'): [$$Component<T> | undefined, string | undefined] | ($$Component<T> | undefined) {
     if (!chemical) return key == 'key' ? [undefined, undefined] : undefined;
+    if (!chemical.$Component) throw new Error(`Chemical ${chemical.constructor.name} has no $Component`);
     return key == 'key' ? [chemical.$Component, `${chemical[$cid]}`] : chemical.$Component;
 }
 
@@ -225,9 +226,14 @@ export class $Chemical {
 
     /** @internal */
     __render(props: any): ReactNode | Promise<ReactNode> {
-        const binder = this[$binder];
-        binder.bond(props);
-        return binder.render();
+        try {
+            const binder = this[$binder];
+            binder.bond(props);
+            return binder.render();
+        } catch (e) {
+            console.log(`Error rendering ${this.__getType().name}[${this[$cid]}]:`);
+            console.log(e);
+        }
     }
 
     /** @internal */
@@ -331,45 +337,49 @@ class $ComponentFunction<T extends $Chemical> {
         const isCollection = this._template.__getType().name === $Collection.name;
 
         this.Component = ((props: any) => {
-            if (isCollection && typeof props === 'function') return new $$Function(props);
+            try {
+                if (isCollection && typeof props === 'function') return new $$Function(props);
 
-            const [cid, setChemicalId] = useState(-1);
-            const initialCid = -1;
+                const [cid, setChemicalId] = useState(-1);
+                const initialCid = -1;
 
-            let chemical: T;
-            let newChemical = false;
-            if (!this.$bound) {
-                newChemical = cid === initialCid;
-                chemical = newChemical ? this.createChemical() : $chemicalRegistry.get(cid) as T;
-                if (!chemical) throw new Error(`$Chemical[${cid}] not found`);
-                if (newChemical) {
-                    $chemicalRegistry.set(chemical[$cid], chemical);
-                }
-            } else {
-                chemical = this._chemical!;
-            }
-
-            chemical[$formula].refresh();
-            if (newChemical)
-                setChemicalId(chemical[$cid]);
-
-            const [_, update] = useState({});
-            const [__, setState] = useState(symbolize({ cid: chemical[$cid] }));
-            chemical[$formula].bindUpdate(setState, () => update({}));
-
-            useEffect(() => {
-                if (chemical && chemical[$formula])
-                    chemical[$formula].updateState();
-                return () => {
-                    if (!this.$bound) {
-                        // Two checks to handle strict mode render after unmount
-                        if (!chemical[$remove]) chemical[$remove] = true;
-                        else if (!chemical[$destroyed]) chemical.__destroy();
+                let chemical: T;
+                let newChemical = false;
+                if (!this.$bound) {
+                    newChemical = cid === initialCid;
+                    chemical = newChemical ? this.createChemical() : $chemicalRegistry.get(cid) as T;
+                    if (!chemical) throw new Error(`$Chemical[${cid}] not found`);
+                    if (newChemical) {
+                        $chemicalRegistry.set(chemical[$cid], chemical);
                     }
-                };
-            }, [chemical]);
+                } else {
+                    chemical = this._chemical!;
+                }
 
-            return chemical.__render(props);
+                chemical[$formula].refresh();
+                if (newChemical)
+                    setChemicalId(chemical[$cid]);
+
+                const [_, update] = useState({});
+                const [__, setState] = useState(symbolize({ cid: chemical[$cid] }));
+                chemical[$formula].bindUpdate(setState, () => update({}));
+
+                useEffect(() => {
+                    if (chemical && chemical[$formula])
+                        chemical[$formula].updateState();
+                    return () => {
+                        if (!this.$bound) {
+                            // Two checks to handle strict mode render after unmount
+                            if (!chemical[$remove]) chemical[$remove] = true;
+                            else if (!chemical[$destroyed]) chemical.__destroy();
+                        }
+                    };
+                }, [chemical]);
+
+                return chemical.__render(props);
+            } catch (e) {
+                console.log(e);
+            }
         }) as any;
 
         if (this._chemical) {
@@ -675,8 +685,14 @@ class $Bond<T extends $Chemical = any, P = any> {
                         this.bondForm(item);
                 });
             }
-            if (this.reactive && state) 
+            if (this.reactive && state) {
+                const wasReactive = this._chemical[$reactive];
+                this._chemical[$reactive] = false;
+                
                 state[this.bid] = symbolize(value);
+                
+                this._chemical[$reactive] = wasReactive;
+            }
         }
 
         return value;
@@ -1064,7 +1080,12 @@ function isProp(property: string, value: any | PropertyDescriptor): boolean {
 }
 
 function symbolize(value: any): string {
-    return stringify(value, function(this: any, key: string, val: any): any {
+    let wasReactive: boolean | undefined;
+    if (value instanceof $Chemical) {
+        wasReactive = value[$reactive];
+        value[$reactive] = false;
+    }
+    var symbol = stringify(value, function(this: any, key: string, val: any): any {
         if (key === '') return val;
         if (val instanceof $Chemical) return val[$cid];
         if (this instanceof $Chemical) return this[$cid];
@@ -1072,7 +1093,10 @@ function symbolize(value: any): string {
         if (val?.constructor?.name === 'Proxy') return '[Proxy]';
         return val;
     });
+    if (value instanceof $Chemical && wasReactive !== undefined) {
+        value[$reactive] = wasReactive;
+    }
+    return symbol;
 }
-
 const Collection = new $Collection().Component; 
 export const $ = (Collection as any) as $Chemistry;
