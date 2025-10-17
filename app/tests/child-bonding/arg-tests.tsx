@@ -1,6 +1,6 @@
 // app/tests/child-binding/arg-tests.tsx
 'use client'
-import { $Chemical, List, $use, $Function, $Html } from '@/chemistry';
+import { $Chemical, List, $use, $Function, $Html, $check } from '@/chemistry';
 import React from 'react';
 
 // ============================================
@@ -54,7 +54,11 @@ export class $MixedContainer extends $Chemical {
         label: $Label,
         simpleCard: $Function<typeof SimpleCard>,  
         infoCard: $Function<typeof InfoCard>
-    ) {        
+    ) {
+        $check(label, $Label);
+        $check(simpleCard, SimpleCard);
+        $check(infoCard, InfoCard);
+        
         this.label = label;
         this.simpleCard = simpleCard;
         this.infoCard = infoCard;
@@ -113,6 +117,11 @@ export class $FormBuilder extends $Chemical {
         div: $Html<'div'>,
         ...moreElements: any[]
     ) {
+        $check(input, 'input');
+        $check(button, 'button');
+        $check(div, 'div');
+        $check(moreElements, ['any']);
+        
         console.log('$FormBuilder constructor:', {
             input: input ? 'input element' : 'none',
             button: button ? 'button element' : 'none',
@@ -181,6 +190,10 @@ export class $CollectionManager extends $Chemical {
         buttons: any[],
         mixed: any[]
     ) {
+        $check(labels, [$Label]);
+        $check(buttons, [Function]);
+        $check(mixed, ['any']);
+        
         console.log('$CollectionManager constructor:');
         console.log('  labels:', labels);
         labels?.forEach((l, i) => console.log(`  label[${i}] instanceof $Chemical:`, l instanceof $Chemical));
@@ -289,6 +302,9 @@ export class $SpreadCollector extends $Chemical {
     rest: any[] = [];
     
     $SpreadCollector(first: $Label, ...rest: any[]) {
+        $check(first, $Label);
+        $check(rest, ['any']);
+        
         console.log('$SpreadCollector constructor:', {
             first: first?.$text,
             restCount: rest.length,
@@ -382,6 +398,10 @@ export class $MatrixContainer extends $Chemical {
         rows: any[][],
         footer?: $Function<typeof InfoCard>
     ) {
+        $check(header, $Label);
+        $check(rows, [['any']]);
+        $check(footer, InfoCard, undefined);
+        
         console.log('$MatrixContainer constructor:', {
             header: header?.$text,
             rows: rows?.length || 0,
@@ -483,6 +503,8 @@ export class $Book extends $Chemical {
     chapters: $Chapter[] = [];
     
     $Book(...chapters: $Chapter[]) {
+        $check(chapters, [$Chapter]);
+        
         console.log('$Book constructor received:', chapters);
         console.log('  chapters.length:', chapters.length);
         console.log('  chapters types:', chapters.map(ch => ch?.constructor?.name));
@@ -509,6 +531,8 @@ export class $Catalogue extends $Chemical {
     books: $Book[] = [];
     
     $Catalogue(...books: $Book[]) {
+        $check(books, [$Book]);
+        
         console.log('$Catalogue constructor received:', books.length, 'books');
         books.forEach((book, i) => {
             console.log(`  Book ${i}:`, {

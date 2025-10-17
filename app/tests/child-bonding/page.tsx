@@ -4,6 +4,7 @@ import { useState } from 'react';
 import BasicTests from './basic-tests';
 import ArgTests from './arg-tests';
 import DynamicArgTests from './dynamic-arg-tests';
+import ValidationTests from './validation-tests';
 
 const subTests = [
     {
@@ -23,6 +24,12 @@ const subTests = [
         name: 'Dynamic Arg Tests',
         description: 'Dynamic arguments that match the bond constructor signature',
         component: DynamicArgTests
+    },
+    {
+        id: 'validation-tests',
+        name: 'Validation Tests',
+        description: 'Using the $check method to validate the arguments of a $Chemical',
+        component: ValidationTests
     },
 ];
 

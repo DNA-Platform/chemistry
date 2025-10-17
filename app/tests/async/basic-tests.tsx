@@ -45,7 +45,7 @@ export class $AutoLoader extends $Chemical {
     loadTime: string | null = null;
 
     $AutoLoader() {
-        this.$loadData();
+        //this.$loadData();
     }
     
     async $loadData() {
@@ -70,7 +70,6 @@ export class $AutoLoader extends $Chemical {
     }
     
     view() {
-        this.$loadData();
         return (
             <div style={{ padding: '15px', border: '1px solid #2196f3', borderRadius: '8px' }}>
                 <h4>Test 2: Async in Constructor</h4>
@@ -221,10 +220,10 @@ export class $ListLoader extends $Chemical {
     loading = false;
     
     $ListLoader() {
-        this.loadItems();
+        //this.$loadItems();
     }
     
-    async loadItems() {
+    async $loadItems() {
         this.loading = true;
         
         // Simulate loading items one by one
@@ -242,7 +241,7 @@ export class $ListLoader extends $Chemical {
     
     async $reload() {
         this.items = [];
-        await this.loadItems();
+        await this.$loadItems();
     }
     
     view() {

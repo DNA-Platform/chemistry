@@ -65,10 +65,22 @@ export type $Function<T> = T extends React.FC<infer P>
 
 export type $Html<T extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[T];
 
-export interface $Chemistry {
-    (props: Record<string, any> & { children?: ReactNode}): ReactNode;
-    <P>(Component: React.FC<P>): $Function<React.FC<P>>;
-}
+type $ParameterType = 
+    | $Constructor<$Chemical>
+    | React.FC
+    | Function
+    | StringConstructor
+    | NumberConstructor
+    | BooleanConstructor
+    | FunctionConstructor
+    | ObjectConstructor
+    | null
+    | undefined
+    | keyof JSX.IntrinsicElements
+    | 'any'
+    | [$ParameterType]
+    | [[$ParameterType]]
+    | [[[$ParameterType]]];
 
 export function $<P>(Component: React.FC<P>): $Function<React.FC<P>> {
     if (!(typeof Component === "function")) 
@@ -83,6 +95,35 @@ export function $use<T extends $Chemical>(chemical?: T, key?: 'key'): [$$Compone
     if (!chemical) return key == 'key' ? [undefined, undefined] : undefined;
     if (!chemical.$Component) throw new Error(`Chemical ${chemical.constructor.name} has no $Component`);
     return key == 'key' ? [chemical.$Component, `${chemical[$cid]}`] : chemical.$Component;
+}
+
+export function $check(arg: any, ...types: $ParameterType[]): void {
+    const paramNumber = paramValidation.paramIndex++;
+    const typeDescription = types.map(type => {
+        if (Array.isArray(type))
+            return `${$ParamValidation.describeType(type[0])}[]`;
+        return $ParamValidation.describeType(type);
+    }).join(' | ');
+    
+    paramValidation.paramTypes[paramNumber] = typeDescription;
+    let valid = false;
+    
+    for (const type of types) {
+        if ($ParamValidation.validateArgument(arg, type)) {
+            valid = true;
+            break;
+        }
+    }
+    
+    if (!valid)
+        paramValidation.paramErrors.push(
+            `Parameter ${paramNumber + 1}: expected ${typeDescription}, received ${$ParamValidation.describeActual(arg)}`
+        );
+    
+    // Auto-evaluate on last parameter
+    if (paramValidation.paramCount !== -1 && 
+        paramValidation.paramIndex === paramValidation.paramCount)
+        paramValidation.eval();
 }
 
 // Global registry for Chemical instances by key
@@ -221,11 +262,6 @@ export class $Chemical {
         return this.children;
     }
 
-    check<T extends $Chemical>(chemical: T, type: $Type) {
-        if (chemical.__getType() !== type)
-            throw new Error(`Expected a ${type.name}, got ${chemical.__getType().name}`);
-    }
-
     toString() {
         return `${this.__getType().name}[${this[$cid]}]`;
     }
@@ -304,6 +340,9 @@ class $Undefined extends $Chemical {
 
 class $$Function<P = any> extends $Chemical {
     private _component: React.FC<P>;
+
+    /** @internal */
+    get $Function() { return this._component; }
 
     get props() { return this.gatherProps(); }
 
@@ -901,9 +940,14 @@ class $BondOrchestrator<T extends $Chemical> {
         chemical[$children] = props.children;
 
         if (this._bondConstructor && context.argsValid) {
-            if (!this._lastAguments || !$BondArguments.equals(this._lastAguments, context.arguments))
-            this._bondConstructor!.apply(this._chemical, context.arguments.values);
-            this._lastAguments = context.arguments;
+            if (!this._lastAguments || !$BondArguments.equals(this._lastAguments, context.arguments)) {
+                paramValidation.reset();
+                paramValidation.chemical = this._chemical;
+                paramValidation.paramCount = this._parameters.length;
+                this._bondConstructor!.apply(this._chemical, context.arguments.values);
+                this._lastAguments = context.arguments;
+                paramValidation.eval();
+            }
         }
 
         chemical[$formula].refresh();
@@ -1085,6 +1129,215 @@ class $BondOrchestrator<T extends $Chemical> {
     }
 }
 
+class $ParamValidation {
+    paramIndex = 0;
+    paramCount = -1;
+    paramTypes: string[] = [];
+    paramErrors: string[] = [];
+    chemical: $Chemical | null = null;
+    validated = false;
+
+    reset() {
+        this.paramIndex = 0;
+        this.paramCount = -1;
+        this.paramTypes = [];
+        this.paramErrors = [];
+        this.chemical = null;
+        this.validated = false;
+    }
+
+    eval() {
+        if (this.validated) return;
+        this.validated = true;
+        
+        if (this.paramErrors.length === 0) {
+            this.reset();
+            return;
+        }
+        
+        const className = this.chemical ? this.chemical.constructor.name : 'Unknown';
+        
+        let message = `\n$Chemistry Constructor Validation Failed: ${className}\n\n`;
+        message += `Expected signature:\n`;
+        message += `  ${className}(\n`;
+        this.paramTypes.forEach((type, i) => {
+            message += `    ${type}${i < this.paramTypes.length - 1 ? ',' : ''}\n`;
+        });
+        message += `  )\n\n`;
+        message += this.paramErrors.join('\n');
+        
+        this.reset();
+        throw new Error(message);
+    }
+
+    static describeType(type: any): string {
+        if (Array.isArray(type)) {
+            // Handle nested arrays recursively
+            return `${$ParamValidation.describeType(type[0])}[]`;
+        }
+        if (type === 'any') return 'any';
+        if (type === undefined) return 'undefined';
+        if (type === null) return 'null';
+        if (type === String) return 'string';
+        if (type === Number) return 'number';
+        if (type === Boolean) return 'boolean';
+        if (type === Function) return 'function';
+        if (type === Object) return 'object';
+        if (typeof type === 'string') return type;
+        if (type?.prototype instanceof $Chemical) return type.name;
+        if (typeof type === 'function') return type.name;
+        return 'unknown';
+    }
+
+    static describeActual(arg: any, depth: number = 0): string {
+        if (arg === null) return 'null';
+        if (arg === undefined) return 'undefined';
+        
+        if (Array.isArray(arg)) {
+            if (arg.length === 0) return '[]';
+            
+            // For nested arrays, don't go too deep
+            if (depth > 2) return `array(${arg.length})`;
+            
+            // Sample first few elements to describe the array
+            const maxSample = 3;
+            const samples = arg.slice(0, maxSample).map(el => {
+                // Recursive call for nested arrays
+                return $ParamValidation.describeActual(el, depth + 1);
+            });
+            
+            // Check if all elements are same type
+            const allSame = samples.every(s => s === samples[0]);
+            
+            if (allSame && arg.length <= maxSample) {
+                // Short array, all same type
+                return `${samples[0]}[${arg.length}]`;
+            } else if (allSame && arg.length > maxSample) {
+                // Long array, all sampled elements same type
+                return `${samples[0]}[${arg.length}]`;
+            } else {
+                // Mixed types - show what we found
+                const preview = samples.join(', ');
+                if (arg.length > maxSample) {
+                    return `[${preview}, ...](${arg.length} total)`;
+                } else {
+                    return `[${preview}]`;
+                }
+            }
+        }
+        
+        if (arg instanceof $Chemical) return arg.constructor.name;
+        if (arg instanceof $$Function) return `Function<${arg.$Function?.name || 'unknown'}>`;
+        if (React.isValidElement(arg)) {
+            const elementType = arg.type;
+            if (typeof elementType === 'string') return `<${elementType}>`;
+            if (typeof elementType === 'function') return `<${elementType.name || 'Component'}>`;
+            return 'ReactElement';
+        }
+        
+        if (typeof arg === 'object') {
+            const constructor = arg?.constructor?.name;
+            if (constructor && constructor !== 'Object') {
+                return `${constructor}`;
+            }
+            return 'object';
+        }
+        
+        // For primitives in arrays, just return the type
+        if (typeof arg === 'string' && depth > 0) return 'string';
+        if (typeof arg === 'number' && depth > 0) return 'number';
+        if (typeof arg === 'boolean' && depth > 0) return 'boolean';
+        
+        return typeof arg;
+    }
+
+    static isPrimitiveType(type: string): boolean {
+        return ['string', 'number', 'boolean', 'object', 'function', 'undefined', 'bigint', 'symbol'].includes(type);
+    }
+
+    static isValidReactNode(arg: any): boolean {
+        if (arg === null || arg === undefined) return true;
+        if (typeof arg === 'string' || typeof arg === 'number') return true;
+        if (typeof arg === 'boolean' || typeof arg === 'bigint') return true;
+        if (arg instanceof $Chemical) return true;
+        if (arg instanceof $$Function) return true;
+        if (React.isValidElement(arg)) {
+            // We accept most React elements, but the processElement method 
+            // in BondOrchestrator will handle specific rejections
+            return true;
+        }
+        if (Array.isArray(arg)) return arg.every($ParamValidation.isValidReactNode);
+        return false;
+    }
+
+    static validateArgument(arg: any, type: any): boolean {
+        if (Array.isArray(type)) {
+            if (!Array.isArray(arg)) return false;
+            
+            const elementType = type[0];
+            
+            // Handle nested array types
+            if (Array.isArray(elementType)) {
+                // Type is [[T]] or deeper - validate each element as [T]
+                return arg.every(el => $ParamValidation.validateArgument(el, elementType));
+            }
+            
+            // Handle single array level
+            if (elementType === 'any') {
+                return arg.every(el => $ParamValidation.isValidReactNode(el));
+            } else if (elementType === String || elementType === Number || elementType === Boolean || 
+                      elementType === Function || elementType === Object) {
+                return arg.every(el => $ParamValidation.validatePrimitive(el, elementType));
+            } else if (typeof elementType === 'string') {
+                // Either primitive type name or HTML element
+                if ($ParamValidation.isPrimitiveType(elementType)) {
+                    return arg.every(el => typeof el === elementType);
+                } else {
+                    // HTML element - check props object
+                    return arg.every(el => typeof el === 'object' && el !== null);
+                }
+            } else if (elementType?.prototype instanceof $Chemical) {
+                return arg.every(el => el instanceof elementType);
+            } else if (typeof elementType === 'function') {
+                // Check if each element is a $Function wrapping the specific function component
+                return arg.every(el => el instanceof $$Function && el.$Function === elementType);
+            }
+        } else if (type === 'any') {
+            return $ParamValidation.isValidReactNode(arg);
+        } else if (type === undefined) {
+            return arg === undefined;
+        } else if (type === null) {
+            return arg === null;
+        } else if (type === String || type === Number || type === Boolean || 
+                   type === Function || type === Object) {
+            return $ParamValidation.validatePrimitive(arg, type);
+        } else if (typeof type === 'string') {
+            // Either primitive type name or HTML element
+            if ($ParamValidation.isPrimitiveType(type)) {
+                return typeof arg === type;
+            } else {
+                // HTML element - check props object
+                return typeof arg === 'object' && arg !== null;
+            }
+        } else if (type?.prototype instanceof $Chemical) {
+            return arg instanceof type;
+        } else if (typeof type === 'function') {
+            // Check if arg is a $Function wrapping the specific function component
+            return arg instanceof $$Function && arg.$Function === type;
+        }
+        return false;
+    }
+    
+    static validatePrimitive(arg: any, type: any): boolean {
+        if (type === String) return typeof arg === 'string';
+        if (type === Number) return typeof arg === 'number';
+        if (type === Boolean) return typeof arg === 'boolean';
+        if (type === Function) return typeof arg === 'function' || arg instanceof $$Function;
+        if (type === Object) return typeof arg === 'object' && arg !== null;
+        return false;
+    }
+}
+
 function isReactiveProperty(property: string, value?: any): boolean {
     if (property.startsWith('_')) return false;
     if (isSpecial(property)) return true;
@@ -1132,5 +1385,6 @@ function symbolize(value: any): string {
     return symbol;
 }
 
+const paramValidation = new $ParamValidation();
 export const List = new $List().Component; 
 export const Undefined = new $Undefined().Component;
