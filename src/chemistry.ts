@@ -70,6 +70,12 @@ export interface $Chemistry {
     <P>(Component: React.FC<P>): $Function<React.FC<P>>;
 }
 
+export function $<P>(Component: React.FC<P>): $Function<React.FC<P>> {
+    if (!(typeof Component === "function")) 
+        throw new Error(`Expected a function component, got ${Component}`);
+    return new $$Function(Component) as any;
+}
+
 export function $use<T extends $Chemical>(chemical: T): $$Component<T>
 export function $use<T extends $Chemical>(chemical?: T): $$Component<T>
 export function $use<T extends $Chemical>(chemical: T, key: 'key'): [$$Component<T>, string]
@@ -284,12 +290,15 @@ export class $Chemical {
     private static nextCid = 1;
 }
 
-class $Collection extends $Chemical {
-    get elements(): any[] { return this._elements; }
-    private _elements: any[] = [];
+class $List extends $Chemical {
+    view(): ReactNode {
+        return this.children;
+    }
+}
 
-    $Collection(...elements: any[]) {
-        this._elements = elements;
+class $Undefined extends $Chemical {
+    view(): ReactNode {
+        return undefined;
     }
 }
 
@@ -334,12 +343,9 @@ class $ComponentFunction<T extends $Chemical> {
         this._template = template;
         this._chemical = chemical;
         this._parent = parent;
-        const isCollection = this._template.__getType().name === $Collection.name;
-
+        
         this.Component = ((props: any) => {
             try {
-                if (isCollection && typeof props === 'function') return new $$Function(props);
-
                 const [cid, setChemicalId] = useState(-1);
                 const initialCid = -1;
 
@@ -710,11 +716,17 @@ class $Bond<T extends $Chemical = any, P = any> {
         chemical[$formula].bindState();
         let result = this._action!(...args);
         chemical[$formula].updateState();
-        chemical[$formula].unbind();
+        
         if (result instanceof Promise) {
+            const state = chemical[$formula].state;
             result = result.then(() => {
-                chemical[$formula].update();
+                const newState = chemical[$formula].state;
+                if (state !== newState)
+                    chemical[$formula].update();
+                chemical[$formula].unbind();
             })
+        } else {
+            chemical[$formula].unbind();
         }
 
         return result;
@@ -964,10 +976,12 @@ class $BondOrchestrator<T extends $Chemical> {
             context.args.push(chemical);
             context.children.push({ type: chemical.Component, props: {}, key: element.key })
             this._rendered.set(chemical.Component, element);
-        } else if (type === $) {
+        } else if (type === List) {
             context.isModified = true;
             const arrayContext = context.array();
             this.processArray(React.Children.toArray(element.props?.children || []), arrayContext);
+        } else if (type == Undefined) {
+            context.args.push(undefined);
         } else if (typeof type === 'function') {
             let component: $$Component = type; 
             if (!component.$bind) {
@@ -989,6 +1003,23 @@ class $BondOrchestrator<T extends $Chemical> {
             const arrayContext = context.array();
             this.processArray(element, arrayContext);
         } else {
+            const isFragment = type === React.Fragment && !element.key?.toString().startsWith('chem-');
+            const isPortal = (element as any).$$typeof === Symbol.for('react.portal');
+            const isLazy = type && type.$$typeof === Symbol.for('react.lazy');
+            const isIterable = element && typeof (element as any)[Symbol.iterator] === 'function';
+            
+            if (isFragment || isPortal || isLazy || isIterable) {
+                const invalidType = 
+                    isFragment ? 'React Fragment' : 
+                    isPortal ? 'React Portal' : 
+                    isLazy ? 'Lazy/Async Component' : 
+                    'Iterable (non-array)';
+
+                throw new Error(
+                    `Chemistry Error: ${invalidType} cannot be used as child in ${this._chemical.__getType().name}. ` +
+                    `Only Chemistry components, function components, arrays, and primitives are supported.`
+                );
+            }
             context.args.push(element.props);
             context.children.push(element);
         }
@@ -1085,6 +1116,7 @@ function symbolize(value: any): string {
         wasReactive = value[$reactive];
         value[$reactive] = false;
     }
+
     var symbol = stringify(value, function(this: any, key: string, val: any): any {
         if (key === '') return val;
         if (val instanceof $Chemical) return val[$cid];
@@ -1093,10 +1125,12 @@ function symbolize(value: any): string {
         if (val?.constructor?.name === 'Proxy') return '[Proxy]';
         return val;
     });
+
     if (value instanceof $Chemical && wasReactive !== undefined) {
         value[$reactive] = wasReactive;
     }
     return symbol;
 }
-const Collection = new $Collection().Component; 
-export const $ = (Collection as any) as $Chemistry;
+
+export const List = new $List().Component; 
+export const Undefined = new $Undefined().Component;

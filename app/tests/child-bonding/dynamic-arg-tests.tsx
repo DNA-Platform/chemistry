@@ -1,6 +1,6 @@
 // app/tests/dynamic-children/page.tsx
 'use client'
-import { $Chemical, $, $use } from '@/chemistry';
+import { $Chemical, $use, Undefined } from '@/chemistry';
 import React, { useState } from 'react';
 import styled from 'styled-components';
 
@@ -206,7 +206,7 @@ export class $Chapter extends $Chemical {
 export class $Book extends $Chemical {
     $author = 'Unknown Author';
     cover?: $Cover;
-    title?: $Title;
+    title!: $Title;
     chapters: $Chapter[] = [];
     
     private _isOpen = false;
@@ -315,7 +315,7 @@ export class $Book extends $Chemical {
         padding: 20px;
     `;
     
-    $Book(cover: $Cover, title: $Title, ...chapters: $Chapter[]) {
+    $Book(cover: $Cover | undefined, title: $Title, ...chapters: $Chapter[]) {
         this.cover = cover;
         this.title = title;
         this.chapters = chapters;
@@ -389,22 +389,25 @@ export class $Book extends $Chemical {
         const Author = this.StandaloneAuthor;
         const Chapters = this.ChaptersSection;
         const Label = this.ChaptersSectionLabel;
-        const List = this.ChapterList;
+        const ChapterList = this.ChapterList;
         const Empty = this.EmptyMessage;
-        
-        // Ensure we have the required components
-        if (!this.cover || !this.title) {
-            return <Container>Missing cover or title</Container>;
-        }
-        
-        const [Cover, coverKey] = $use(this.cover, 'key');
+
+        const ThisCover = $use(this.cover);
         const [Title, titleKey] = $use(this.title, 'key');
         
         return (
             <Container>
                 <CoverSection>
                     <div style={{ width: '100%', height: '100%' }}>
-                        <Cover key={coverKey} />
+                        {ThisCover ? (
+                            <ThisCover />
+                        ) : (
+                            <Cover 
+                                color="#667eea" 
+                                title={this.title?.$text || 'Untitled'} 
+                                author={this.$author}
+                            />
+                        )}
                     </div>
                 </CoverSection>
                 
@@ -416,12 +419,12 @@ export class $Book extends $Chemical {
                     
                     <Chapters>
                         <Label>Table of Contents</Label>
-                        <List>
+                        <ChapterList>
                             {this.chapters.map(ch => {
                                 const [Chapter, key] = $use(ch, 'key');
                                 return <Chapter key={key} />;
                             })}
-                        </List>
+                        </ChapterList>
                         {this.chapters.length === 0 && (
                             <Empty>No chapters yet</Empty>
                         )}
@@ -920,9 +923,10 @@ function Test5MixedPolymorphicArray() {
                             </Book>
                         );
                     } else if (mode === 'full') {
+                        const colors = ['#e91e63', '#9c27b0', '#2196f3'];
                         return (
                             <Book key={i} author={`Author ${i + 1}`}>
-                                <Cover color={`hsl(${i * 90}, 60%, 50%)`} title={`Full Book ${i}`} author={`Author ${i + 1}`} />
+                                <Cover color={colors[i % colors.length]} title={`Full Book ${i}`} author={`Author ${i + 1}`} />
                                 <Title text={`Full Book ${i}`} subtitle="Complete Edition" />
                                 <Chapter number={1} title="Part 1" pages={15} />
                                 <Chapter number={2} title="Part 2" pages={20} />
@@ -956,6 +960,64 @@ function Test5MixedPolymorphicArray() {
     );
 }
 
+// Test 6: Optional Cover with Default
+function Test6OptionalCover() {
+    const [showCover, setShowCover] = useState(false);
+    const [bookTitle, setBookTitle] = useState('Mystery Book');
+    
+    return (
+        <div style={{ border: '2px solid indigo', padding: '15px', borderRadius: '8px' }}>
+            <h4>Test 6: Optional Cover with Default</h4>
+            <div style={{ marginBottom: '10px', fontSize: '12px' }}>
+                Book constructor handles undefined cover and creates a default
+            </div>
+            
+            <div style={{ marginBottom: '10px' }}>
+                <button onClick={() => setShowCover(!showCover)} style={{ marginRight: '5px', padding: '5px 10px' }}>
+                    {showCover ? 'Remove' : 'Add'} Custom Cover
+                </button>
+                <button onClick={() => setBookTitle(bookTitle === 'Mystery Book' ? 'Adventure Book' : 'Mystery Book')} style={{ padding: '5px 10px' }}>
+                    Change Title
+                </button>
+            </div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div>
+                    <h5 style={{ marginBottom: '10px' }}>With Custom Cover:</h5>
+                    <Book author="Test Author">
+                        {showCover ? (
+                            <Cover color="#ff5722" title={bookTitle} author="Test Author" />
+                        ) : (
+                            <Undefined />
+                        )}
+                        <Title text={bookTitle} />
+                        <Chapter number={1} title="Opening" pages={12} />
+                        <Chapter number={2} title="Middle" pages={18} />
+                        <Chapter number={3} title="Ending" pages={15} />
+                    </Book>
+                </div>
+                
+                <div>
+                    <h5 style={{ marginBottom: '10px' }}>Always Using Default:</h5>
+                    <Book author="Default Author">
+                        <Undefined />
+                        <Title text="Book with Default Cover" />
+                        <Chapter number={1} title="Chapter One" pages={20} />
+                        <Chapter number={2} title="Chapter Two" pages={25} />
+                    </Book>
+                </div>
+            </div>
+            
+            <div style={{ marginTop: '10px', fontSize: '11px', color: '#666' }}>
+                ✓ Undefined component passes undefined to constructor<br/>
+                ✓ Book creates default cover when undefined<br/>
+                ✓ Default cover uses book's title and author<br/>
+                ✓ Can toggle between custom and default cover
+            </div>
+        </div>
+    );
+}
+
 // Main test page
 export default function DynamicArgTests() {
     return (
@@ -971,6 +1033,7 @@ export default function DynamicArgTests() {
                 <Test3ContextAwareRendering />
                 <Test4DynamicObjectGraph />
                 <Test5MixedPolymorphicArray />
+                <Test6OptionalCover />
             </div>
             
             <div style={{ 

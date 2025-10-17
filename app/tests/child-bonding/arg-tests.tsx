@@ -1,6 +1,6 @@
 // app/tests/child-binding/arg-tests.tsx
 'use client'
-import { $Chemical, $, $use, $Function, $Html } from '@/chemistry';
+import { $Chemical, List, $use, $Function, $Html } from '@/chemistry';
 import React from 'react';
 
 // ============================================
@@ -664,20 +664,20 @@ export default function ArgTests() {
                     <strong>Expected:</strong> Constructor receives arrays of Chemicals, functions wrapped by Chemistry, mixed types
                 </div>
                 <CollectionManager>
-                    <$>
+                    <List>
                         <Label text="First" color="red" />
                         <Label text="Second" color="green" />
                         <Label text="Third" color="blue" />
-                    </$>
-                    <$>
+                    </List>
+                    <List>
                         <SimpleCard />
                         <SimpleCard />
-                    </$>
-                    <$>
+                    </List>
+                    <List>
                         <Label text="Mixed 1" />
                         <SimpleCard />
                         <div>Mixed 3</div>
-                    </$>
+                    </List>
                 </CollectionManager>
                 <div style={{ marginTop: '10px', color: '#666' }}>
                     ✓ First array contains $Chemical instances<br/>
@@ -717,23 +717,23 @@ export default function ArgTests() {
                 </div>
                 <MatrixContainer>
                     <Label text="Matrix Header" color="#333" />
-                    <$>
-                        <$>
+                    <List>
+                        <List>
                             <Label text="1,1" />
                             <Label text="1,2" />
                             <Label text="1,3" />
-                        </$>
-                        <$>
+                        </List>
+                        <List>
                             <Label text="2,1" />
                             <Label text="2,2" />
                             <Label text="2,3" />
-                        </$>
-                        <$>
+                        </List>
+                        <List>
                             <Label text="3,1" />
                             <Label text="3,2" />
                             <Label text="3,3" />
-                        </$>
-                    </$>
+                        </List>
+                    </List>
                     <InfoCard />
                 </MatrixContainer>
                 <div style={{ marginTop: '10px', color: '#666' }}>

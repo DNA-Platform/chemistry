@@ -16,6 +16,12 @@ const tests = [
         description: 'Test simple parent-child binding with the bond constructor',
         path: '/tests/child-bonding'
     },
+    {
+        id: 'async',
+        name: 'Async Tests',
+        description: 'Tests usage of async methods in several contexts',
+        path: '/tests/async'
+    },
 ];
 
 export default function TestRunner() {

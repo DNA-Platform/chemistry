@@ -1,6 +1,6 @@
 // app/tests/child-binding/original-tests.tsx
 'use client'
-import { $Chemical, $, $use } from '@/chemistry';
+import { $Chemical, List, $use } from '@/chemistry';
 import React from 'react';
 
 // Test 1: Basic children as constructor arguments
@@ -424,11 +424,11 @@ export default function BasicTests() {
                 </div>
                 <Document>
                     <Title text="My Document" />
-                    <$>
+                    <List>
                         <Chapter title="Chapter 1" page={1} />
                         <Chapter title="Chapter 2" page={20} />
                         <Chapter title="Chapter 3" page={40} />
-                    </$>
+                    </List>
                     <Footer copyright="© 2024 Chemistry Framework" />
                 </Document>
                 <div style={{ marginTop: '10px', color: '#666' }}>
@@ -517,18 +517,18 @@ export default function BasicTests() {
                     <strong>Expected:</strong> Container receives multiple array groups
                 </div>
                 <NestedContainer>
-                    <$>
+                    <List>
                         <NestedChild value="Group1-Item1" />
                         <NestedChild value="Group1-Item2" />
                         <NestedChild value="Group1-Item3" />
-                    </$>
-                    <$>
+                    </List>
+                    <List>
                         <NestedChild value="Group2-Item1" />
                         <NestedChild value="Group2-Item2" />
-                    </$>
-                    <$>
+                    </List>
+                    <List>
                         <NestedChild value="Group3-Item1" />
-                    </$>
+                    </List>
                 </NestedContainer>
                 <div style={{ marginTop: '10px', color: '#666' }}>
                     ✓ Container receives 3 separate arrays<br/>
