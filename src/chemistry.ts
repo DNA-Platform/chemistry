@@ -1410,23 +1410,23 @@ export function $check<T>(arg: T, ...types: $ParameterType[]): T {
 }
 
 /**
- * Loads Chemistry classes from JavaScript modules and instantiates them.
+ * Looks up Chemistry classes from JavaScript modules and instantiates them.
  * Automatically detects ES modules, CommonJS, and bundler formats.
  * 
  * @example
  * // Single module
  * import AppleModule from './apple';
- * const apple = $load<$Apple>(AppleModule);
+ * const apple = $lookup<$Apple>(AppleModule);
  * 
  * @example
  * // Vite
  * const modules = import.meta.glob('./entries/*.tsx', { eager: true });
- * const entries = $load<$DictionaryEntry>(modules);
+ * const entries = $lookup<$DictionaryEntry>(modules);
  * 
  * @example
  * // Webpack/Next.js
  * const ctx = require.context('./entries', false, /\.tsx$/);
- * const entries = $load<$DictionaryEntry>(ctx);
+ * const entries = $lookup<$DictionaryEntry>(ctx);
  * 
  * @example
  * // Plain ESM
@@ -1434,14 +1434,14 @@ export function $check<T>(arg: T, ...types: $ParameterType[]): T {
  *   'apple': await import('./apple.js'),
  *   'banana': await import('./banana.js')
  * };
- * const entries = $load<$DictionaryEntry>(modules);
+ * const entries = $lookup<$DictionaryEntry>(modules);
  * 
  * @param moduleOrModules - Single module, Webpack context, or Record<path, module> 
  * @param parent - Optional parent Chemical for binding
  */
-export function $load<T extends $Chemical>(module: any, parent?: $Chemical): T;
-export function $load<T extends $Chemical>(modules: Record<string, any>, parent?: $Chemical): T[];
-export function $load<T extends $Chemical>(moduleOrModules: any, parent?: $Chemical): T | T[] {
+export function $lookup<T extends $Chemical>(module: any, parent?: $Chemical): T;
+export function $lookup<T extends $Chemical>(modules: Record<string, any>, parent?: $Chemical): T[];
+export function $lookup<T extends $Chemical>(moduleOrModules: any, parent?: $Chemical): T | T[] {
     // Check if it's a Webpack require.context
     if (typeof moduleOrModules === 'function' && moduleOrModules.keys) {
         const chemicals: T[] = [];
@@ -1483,6 +1483,65 @@ export function $load<T extends $Chemical>(moduleOrModules: any, parent?: $Chemi
     const instance = new ChemicalClass() as T;
     if (parent) instance[$parent] = parent;
     return instance;
+}
+
+/**
+ * Asynchronously loads Chemistry classes from modules with lazy loading support.
+ * Handles loader functions and promises automatically.
+ * 
+ * @example
+ * // Vite lazy loading
+ * const loaders = import.meta.glob('./entries/*.tsx');
+ * const entries = await $load<$DictionaryEntry>(loaders);
+ * 
+ * @example
+ * // Webpack/Next.js with async loader
+ * const ctx = require.context('./entries', false, /\.tsx$/);
+ * const entries = await $load<$DictionaryEntry>(ctx);
+ * 
+ * @example
+ * // Dynamic imports
+ * const modules = {
+ *   'apple': () => import('./apple.js'),
+ *   'banana': () => import('./banana.js')
+ * };
+ * const entries = await $load<$DictionaryEntry>(modules);
+ */
+export async function $load<T extends $Chemical>(module: any, parent?: $Chemical): Promise<T>;
+export async function $load<T extends $Chemical>(modules: Record<string, any>, parent?: $Chemical): Promise<T[]>;
+export async function $load<T extends $Chemical>(moduleOrModules: any, parent?: $Chemical): Promise<T | T[]> {
+    // Handle single loader function
+    if (typeof moduleOrModules === 'function' && !moduleOrModules.keys) {
+        const module = await moduleOrModules();
+        return $lookup<T>(module, parent);
+    }
+    
+    // Handle Webpack require.context (already sync, just pass through)
+    if (typeof moduleOrModules === 'function' && moduleOrModules.keys) {
+        return $lookup<T>(moduleOrModules, parent);
+    }
+    
+    // Handle objects that might contain loader functions
+    if (typeof moduleOrModules === 'object' && 
+        !moduleOrModules.default && 
+        !moduleOrModules.prototype) {
+        const keys = Object.keys(moduleOrModules);
+        if (keys.length > 0 && keys.some(k => k.includes('/') || k.includes('.'))) {
+            // Resolve any loader functions
+            const resolved: Record<string, any> = {};
+            for (const [path, moduleOrLoader] of Object.entries(moduleOrModules)) {
+                if (typeof moduleOrLoader === 'function') {
+                    resolved[path] = await moduleOrLoader();
+                } else {
+                    resolved[path] = moduleOrLoader;
+                }
+            }
+            return $lookup<T>(resolved, parent);
+        }
+    }
+    
+    // Already resolved - just use $load
+    return $lookup<T>(moduleOrModules, parent);
 }
 
 function extract(module: any): typeof $Chemical | null {
