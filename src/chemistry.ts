@@ -91,52 +91,6 @@ type $ParameterType =
     | [[$ParameterType]]
     | [[[$ParameterType]]];
 
-export function $<P>(Component: React.FC<P>): $Function<React.FC<P>> {
-    if (!(typeof Component === "function")) 
-        throw new Error(`Expected a function component, got ${Component}`);
-    return new $$Function(Component) as any;
-}
-
-export function $use<T extends $Chemical>(chemical: T): $$Component<T>
-export function $use<T extends $Chemical>(chemical?: T): $$Component<T>
-export function $use<T extends $Chemical>(chemical: T, key: 'key'): [$$Component<T>, string]
-export function $use<T extends $Chemical>(chemical?: T, key?: 'key'): [$$Component<T> | undefined, string | undefined] | ($$Component<T> | undefined) {
-    if (!chemical) return key == 'key' ? [undefined, undefined] : undefined;
-    if (!chemical.$Component) throw new Error(`Chemical ${chemical.constructor.name} has no $Component`);
-    return key == 'key' ? [chemical.$Component, `${chemical[$cid]}`] : chemical.$Component;
-}
-
-export function $check<T>(arg: T, ...types: $ParameterType[]): T {
-    const paramNumber = paramValidation.paramIndex++;
-    const typeDescription = types.map(type => {
-        if (Array.isArray(type))
-            return `${$ParamValidation.describeType(type[0])}[]`;
-        return $ParamValidation.describeType(type);
-    }).join(' | ');
-    
-    paramValidation.paramTypes[paramNumber] = typeDescription;
-    let valid = false;
-    
-    for (const type of types) {
-        if ($ParamValidation.validateArgument(arg, type)) {
-            valid = true;
-            break;
-        }
-    }
-    
-    if (!valid)
-        paramValidation.paramErrors.push(
-            `Parameter ${paramNumber + 1}: expected ${typeDescription}, received ${$ParamValidation.describeActual(arg)}`
-        );
-    
-    // Auto-evaluate on last parameter
-    if (paramValidation.paramCount !== -1 && 
-        paramValidation.paramIndex === paramValidation.paramCount)
-        paramValidation.eval();
-
-    return arg;
-}
-
 // Global registry for Chemical instances by key
 const $chemicalRegistry = new Map<number, $Chemical>();
 
@@ -1406,6 +1360,146 @@ function symbolize(value: any): string {
         value[$reactive] = wasReactive;
     }
     return symbol;
+}
+
+export function $<P>(Component: React.FC<P>): $Function<React.FC<P>> {
+    if (!(typeof Component === "function")) 
+        throw new Error(`Expected a function component, got ${Component}`);
+    return new $$Function(Component) as any;
+}
+
+export function $use<T extends $Chemical>(chemical: T): $$Component<T>
+export function $use<T extends $Chemical>(chemical?: T): $$Component<T>
+export function $use<T extends $Chemical>(chemical: T, key: 'key'): [$$Component<T>, string]
+export function $use<T extends $Chemical>(chemical?: T, key?: 'key'): [$$Component<T> | undefined, string | undefined] | ($$Component<T> | undefined) {
+    if (!chemical) return key == 'key' ? [undefined, undefined] : undefined;
+    if (!chemical.$Component) throw new Error(`Chemical ${chemical.constructor.name} has no $Component`);
+    return key == 'key' ? [chemical.$Component, `${chemical[$cid]}`] : chemical.$Component;
+}
+
+export function $check<T>(arg: T, ...types: $ParameterType[]): T {
+    const paramNumber = paramValidation.paramIndex++;
+    const typeDescription = types.map(type => {
+        if (Array.isArray(type))
+            return `${$ParamValidation.describeType(type[0])}[]`;
+        return $ParamValidation.describeType(type);
+    }).join(' | ');
+    
+    paramValidation.paramTypes[paramNumber] = typeDescription;
+    let valid = false;
+    
+    for (const type of types) {
+        if ($ParamValidation.validateArgument(arg, type)) {
+            valid = true;
+            break;
+        }
+    }
+    
+    if (!valid) {
+        paramValidation.paramErrors.push(
+            `Parameter ${paramNumber + 1}: expected ${typeDescription}, received ${$ParamValidation.describeActual(arg)}`
+        );
+    }
+    
+    // Auto-evaluate on last parameter
+    if (paramValidation.paramCount !== -1 && 
+        paramValidation.paramIndex === paramValidation.paramCount)
+        paramValidation.eval();
+
+    return arg;
+}
+
+/**
+ * Loads Chemistry classes from JavaScript modules and instantiates them.
+ * Automatically detects ES modules, CommonJS, and bundler formats.
+ * 
+ * @example
+ * // Single module
+ * import AppleModule from './apple';
+ * const apple = $load<$Apple>(AppleModule);
+ * 
+ * @example
+ * // Vite
+ * const modules = import.meta.glob('./entries/*.tsx', { eager: true });
+ * const entries = $load<$DictionaryEntry>(modules);
+ * 
+ * @example
+ * // Webpack/Next.js
+ * const ctx = require.context('./entries', false, /\.tsx$/);
+ * const entries = $load<$DictionaryEntry>(ctx);
+ * 
+ * @example
+ * // Plain ESM
+ * const modules = {
+ *   'apple': await import('./apple.js'),
+ *   'banana': await import('./banana.js')
+ * };
+ * const entries = $load<$DictionaryEntry>(modules);
+ * 
+ * @param moduleOrModules - Single module, Webpack context, or Record<path, module> 
+ * @param parent - Optional parent Chemical for binding
+ */
+export function $load<T extends $Chemical>(module: any, parent?: $Chemical): T;
+export function $load<T extends $Chemical>(modules: Record<string, any>, parent?: $Chemical): T[];
+export function $load<T extends $Chemical>(moduleOrModules: any, parent?: $Chemical): T | T[] {
+    // Check if it's a Webpack require.context
+    if (typeof moduleOrModules === 'function' && moduleOrModules.keys) {
+        const chemicals: T[] = [];
+        for (const key of moduleOrModules.keys()) {
+            const module = moduleOrModules(key);
+            const ChemicalClass = extract(module);
+            if (ChemicalClass) {
+                const instance = new ChemicalClass() as T;
+                if (parent) instance[$parent] = parent;
+                chemicals.push(instance);
+            }
+        }
+        return chemicals;
+    }
+    
+    // Check if it's a record of modules by looking for path-like keys
+    if (typeof moduleOrModules === 'object' && 
+        !moduleOrModules.default && 
+        !moduleOrModules.prototype) {
+        const keys = Object.keys(moduleOrModules);
+        if (keys.length > 0 && keys.some(k => k.includes('/') || k.includes('.'))) {
+            // Multiple modules
+            const chemicals: T[] = [];
+            for (const [path, module] of Object.entries(moduleOrModules)) {
+                const ChemicalClass = extract(module);
+                if (ChemicalClass) {
+                    const instance = new ChemicalClass() as T;
+                    if (parent) instance[$parent] = parent;
+                    chemicals.push(instance);
+                }
+            }
+            return chemicals;
+        }
+    }
+    
+    // Single module
+    const ChemicalClass = extract(moduleOrModules);
+    if (!ChemicalClass) throw new Error('No Chemical class found in module');
+    const instance = new ChemicalClass() as T;
+    if (parent) instance[$parent] = parent;
+    return instance;
+}
+
+function extract(module: any): typeof $Chemical | null {
+    if (module?.prototype instanceof $Chemical) return module;
+    if (module?.default?.prototype instanceof $Chemical) return module.default;
+    
+    const keys = module ? Object.keys(module) : [];
+    for (const key of keys) {
+        if (module[key]?.prototype instanceof $Chemical) return module[key];
+    }
+    
+    if (typeof module === 'function') {
+        const result = module();
+        if (result?.prototype instanceof $Chemical) return result;
+    }
+    
+    return null;
 }
 
 const paramValidation = new $ParamValidation();
