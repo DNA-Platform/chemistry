@@ -2,6 +2,7 @@
 'use client'
 import { useState } from 'react';
 import BasicTests from './basic-tests';
+import LoadingTests from './loading-tests';
 
 const subTests = [
     {
@@ -9,6 +10,12 @@ const subTests = [
         name: 'Basic Tests',
         description: 'Tests that async programming works',
         component: BasicTests
+    },
+    {
+        id: 'loading',
+        name: 'Loading Tests',
+        description: 'Tests that module works in sync and async contexts',
+        component: LoadingTests
     },
 ];
 

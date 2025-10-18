@@ -192,7 +192,8 @@ export class $Chemical {
     /** @internal */
     [$children]: ReactNode;
 
-    get parent() { return this[$parent]; }
+    get parent(): $Chemical | undefined { return this[$parent]; }
+    set parent(chemical: $Chemical) { this[$parent] = chemical; }
 
     get children() { return this[$children]; }
 
@@ -1416,17 +1417,17 @@ export function $check<T>(arg: T, ...types: $ParameterType[]): T {
  * @example
  * // Single module
  * import AppleModule from './apple';
- * const apple = $lookup<$Apple>(AppleModule);
+ * const apple = $lookup<$Apple>(AppleModule, '{}');
  * 
  * @example
  * // Vite
  * const modules = import.meta.glob('./entries/*.tsx', { eager: true });
- * const entries = $lookup<$DictionaryEntry>(modules);
+ * const entries = $lookup<$DictionaryEntry>(modules, '[]');
  * 
  * @example
  * // Webpack/Next.js
  * const ctx = require.context('./entries', false, /\.tsx$/);
- * const entries = $lookup<$DictionaryEntry>(ctx);
+ * const entries = $lookup<$DictionaryEntry>(ctx, '[]');
  * 
  * @example
  * // Plain ESM
@@ -1434,55 +1435,93 @@ export function $check<T>(arg: T, ...types: $ParameterType[]): T {
  *   'apple': await import('./apple.js'),
  *   'banana': await import('./banana.js')
  * };
- * const entries = $lookup<$DictionaryEntry>(modules);
+ * const entries = $lookup<$DictionaryEntry>(modules, '[]');
  * 
  * @param moduleOrModules - Single module, Webpack context, or Record<path, module> 
+ * @param type - '{}' for single result, '[]' for array
  * @param parent - Optional parent Chemical for binding
  */
-export function $lookup<T extends $Chemical>(module: any, parent?: $Chemical): T;
-export function $lookup<T extends $Chemical>(modules: Record<string, any>, parent?: $Chemical): T[];
-export function $lookup<T extends $Chemical>(moduleOrModules: any, parent?: $Chemical): T | T[] {
-    // Check if it's a Webpack require.context
-    if (typeof moduleOrModules === 'function' && moduleOrModules.keys) {
-        const chemicals: T[] = [];
-        for (const key of moduleOrModules.keys()) {
-            const module = moduleOrModules(key);
-            const ChemicalClass = extract(module);
-            if (ChemicalClass) {
-                const instance = new ChemicalClass() as T;
-                if (parent) instance[$parent] = parent;
-                chemicals.push(instance);
+export function $lookup<T extends $Chemical>(module: any, type: '{}', parent?: $Chemical): T;
+export function $lookup<T extends $Chemical>(modules: any, type: '[]', parent?: $Chemical): T[];
+export function $lookup<T extends $Chemical>(modules: any, type: string, parent?: $Chemical): T | T[] {
+    // Force single result
+    if (type === '{}') {
+        // Check if it's require.context first
+        if (typeof modules === 'function' && modules.keys) {
+            const keys = modules.keys();
+            if (keys.length > 1) {
+                throw new Error(`Expected single module but found ${keys.length} modules`);
+            }
+            if (keys.length === 0) {
+                throw new Error('No modules found');
+            }
+            const module = modules(keys[0]);
+            const chemical = extract(module, parent);
+            if (!chemical) throw new Error('No Chemical class found in module');
+            return chemical as T;
+        }
+        
+        // If it's a collection, extract first and error if multiple
+        const results: T[] = [];
+        
+        if (typeof modules === 'function' && modules.keys) {
+            // Webpack context
+            for (const key of modules.keys()) {
+                const module = modules(key);
+                const chemical = extract(module, parent);
+                if (chemical) {
+                    results.push(chemical as T);
+                }
+            }
+        } else if (typeof modules === 'object') {
+            // Record of modules
+            for (const [path, module] of Object.entries(modules)) {
+                const chemical = extract(module, parent);
+                if (chemical) {
+                    results.push(chemical as T);
+                }
             }
         }
-        return chemicals;
+        
+        if (results.length > 1) {
+            throw new Error(`Expected single module but found ${results.length} modules`);
+        }
+        if (results.length === 0) {
+            throw new Error('No Chemical class found in module');
+        }
+        return results[0];
     }
     
-    // Check if it's a record of modules by looking for path-like keys
-    if (typeof moduleOrModules === 'object' && 
-        !moduleOrModules.default && 
-        !moduleOrModules.prototype) {
-        const keys = Object.keys(moduleOrModules);
-        if (keys.length > 0 && keys.some(k => k.includes('/') || k.includes('.'))) {
-            // Multiple modules
-            const chemicals: T[] = [];
-            for (const [path, module] of Object.entries(moduleOrModules)) {
-                const ChemicalClass = extract(module);
-                if (ChemicalClass) {
-                    const instance = new ChemicalClass() as T;
-                    if (parent) instance[$parent] = parent;
-                    chemicals.push(instance);
+    // Force array result
+    if (type === '[]') {
+        const chemicals: T[] = [];
+        
+        // Webpack require.context
+        if (typeof modules === 'function' && modules.keys) {
+            for (const key of modules.keys()) {
+                const module = modules(key);
+                const chemical = extract(module, parent);
+                if (chemical) {
+                    chemicals.push(chemical as T);
                 }
             }
             return chemicals;
         }
+        
+        // Record of modules
+        if (typeof modules === 'object') {
+            for (const [path, module] of Object.entries(modules)) {
+                const chemical = extract(module, parent);
+                if (chemical) {
+                    chemicals.push(chemical as T);
+                }
+            }
+        }
+        
+        return chemicals;
     }
     
-    // Single module
-    const ChemicalClass = extract(moduleOrModules);
-    if (!ChemicalClass) throw new Error('No Chemical class found in module');
-    const instance = new ChemicalClass() as T;
-    if (parent) instance[$parent] = parent;
-    return instance;
+    throw new Error(`Invalid type parameter: ${type}`);
 }
 
 /**
@@ -1492,12 +1531,12 @@ export function $lookup<T extends $Chemical>(moduleOrModules: any, parent?: $Che
  * @example
  * // Vite lazy loading
  * const loaders = import.meta.glob('./entries/*.tsx');
- * const entries = await $load<$DictionaryEntry>(loaders);
+ * const entries = await $load<$DictionaryEntry>(loaders, '[]');
  * 
  * @example
  * // Webpack/Next.js with async loader
  * const ctx = require.context('./entries', false, /\.tsx$/);
- * const entries = await $load<$DictionaryEntry>(ctx);
+ * const entries = await $load<$DictionaryEntry>(ctx, '[]');
  * 
  * @example
  * // Dynamic imports
@@ -1505,20 +1544,28 @@ export function $lookup<T extends $Chemical>(moduleOrModules: any, parent?: $Che
  *   'apple': () => import('./apple.js'),
  *   'banana': () => import('./banana.js')
  * };
- * const entries = await $load<$DictionaryEntry>(modules);
+ * const entries = await $load<$DictionaryEntry>(modules, '[]');
  */
-export async function $load<T extends $Chemical>(module: any, parent?: $Chemical): Promise<T>;
-export async function $load<T extends $Chemical>(modules: Record<string, any>, parent?: $Chemical): Promise<T[]>;
-export async function $load<T extends $Chemical>(moduleOrModules: any, parent?: $Chemical): Promise<T | T[]> {
+export async function $load<T extends $Chemical>(module: any, type: '{}', parent?: $Chemical): Promise<T>;
+export async function $load<T extends $Chemical>(modules: any, type: '[]', parent?: $Chemical): Promise<T[]>;
+export async function $load<T extends $Chemical>(moduleOrModules: any, type: '{}' | '[]', parent?: $Chemical): Promise<T | T[]> {
     // Handle single loader function
     if (typeof moduleOrModules === 'function' && !moduleOrModules.keys) {
         const module = await moduleOrModules();
-        return $lookup<T>(module, parent);
+        if (type === '{}') {
+            return $lookup<T>(module, '{}', parent);
+        } else {
+            return $lookup<T>({ 'single': module }, '[]', parent);
+        }
     }
     
     // Handle Webpack require.context (already sync, just pass through)
     if (typeof moduleOrModules === 'function' && moduleOrModules.keys) {
-        return $lookup<T>(moduleOrModules, parent);
+        if (type === '{}') {
+            return $lookup<T>(moduleOrModules, '{}', parent);
+        } else {
+            return $lookup<T>(moduleOrModules, '[]', parent);
+        }
     }
     
     // Handle objects that might contain loader functions
@@ -1526,7 +1573,7 @@ export async function $load<T extends $Chemical>(moduleOrModules: any, parent?: 
         !moduleOrModules.default && 
         !moduleOrModules.prototype) {
         const keys = Object.keys(moduleOrModules);
-        if (keys.length > 0 && keys.some(k => k.includes('/') || k.includes('.'))) {
+        if (keys.length > 0) {
             // Resolve any loader functions
             const resolved: Record<string, any> = {};
             for (const [path, moduleOrLoader] of Object.entries(moduleOrModules)) {
@@ -1536,26 +1583,50 @@ export async function $load<T extends $Chemical>(moduleOrModules: any, parent?: 
                     resolved[path] = moduleOrLoader;
                 }
             }
-            return $lookup<T>(resolved, parent);
+            if (type === '{}') {
+                return $lookup<T>(resolved, '{}', parent);
+            } else {
+                return $lookup<T>(resolved, '[]', parent);
+            }
         }
     }
     
-    // Already resolved - just use $load
-    return $lookup<T>(moduleOrModules, parent);
+    // Already resolved - direct module
+    if (type === '{}') {
+        return $lookup<T>(moduleOrModules, '{}', parent);
+    } else {
+        // Wrap single module in object for array return
+        const wrapped = { 'module': moduleOrModules };
+        return $lookup<T>(wrapped, '[]', parent);
+    }
 }
 
-function extract(module: any): typeof $Chemical | null {
-    if (module?.prototype instanceof $Chemical) return module;
-    if (module?.default?.prototype instanceof $Chemical) return module.default;
+function extract(module: any, parent?: $Chemical): $Chemical | null {
+    let Component: Component<any> | null = null;
     
-    const keys = module ? Object.keys(module) : [];
-    for (const key of keys) {
-        if (module[key]?.prototype instanceof $Chemical) return module[key];
+    // Check for default export (Component)
+    if (module?.default?.$bind) {
+        Component = module.default;
+    }
+    // Check if module itself is a Component
+    else if (module?.$bind) {
+        Component = module;
+    }
+    // Check named exports for Components
+    else {
+        const keys = module ? Object.keys(module) : [];
+        for (const key of keys) {
+            if (module[key]?.$bind) {
+                Component = module[key];
+                break;
+            }
+        }
     }
     
-    if (typeof module === 'function') {
-        const result = module();
-        if (result?.prototype instanceof $Chemical) return result;
+    // If we found a Component, bind it and get the chemical
+    if (Component) {
+        const bound = Component.$bind(parent);
+        return bound.$chemical;
     }
     
     return null;
