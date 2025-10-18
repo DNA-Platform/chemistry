@@ -55,13 +55,9 @@ export class $MixedContainer extends $Chemical {
         simpleCard: $Function<typeof SimpleCard>,  
         infoCard: $Function<typeof InfoCard>
     ) {
-        $check(label, $Label);
-        $check(simpleCard, SimpleCard);
-        $check(infoCard, InfoCard);
-        
-        this.label = label;
-        this.simpleCard = simpleCard;
-        this.infoCard = infoCard;
+        this.label = $check(label, $Label);
+        this.simpleCard = $check(simpleCard, SimpleCard);
+        this.infoCard = $check(infoCard, InfoCard);
     }
     
     view() {
@@ -117,22 +113,10 @@ export class $FormBuilder extends $Chemical {
         div: $Html<'div'>,
         ...moreElements: any[]
     ) {
-        $check(input, 'input');
-        $check(button, 'button');
-        $check(div, 'div');
-        $check(moreElements, ['any']);
-        
-        console.log('$FormBuilder constructor:', {
-            input: input ? 'input element' : 'none',
-            button: button ? 'button element' : 'none',
-            div: div ? 'div element' : 'none',
-            moreElements: moreElements.length
-        });
-        
-        this.inputEl = input;
-        this.buttonEl = button;
-        this.divEl = div;
-        this.elements = moreElements;
+        this.inputEl = $check(input, 'input');
+        this.buttonEl = $check(button, 'button');
+        this.divEl = $check(div, 'div');
+        this.elements = $check(moreElements, ['any']);
     }
     
     view() {
@@ -193,16 +177,6 @@ export class $CollectionManager extends $Chemical {
         $check(labels, [$Label]);
         $check(buttons, [Function]);
         $check(mixed, ['any']);
-        
-        console.log('$CollectionManager constructor:');
-        console.log('  labels:', labels);
-        labels?.forEach((l, i) => console.log(`  label[${i}] instanceof $Chemical:`, l instanceof $Chemical));
-        
-        console.log('  buttons:', buttons);
-        buttons?.forEach((b, i) => console.log(`  button[${i}] instanceof $Chemical:`, b instanceof $Chemical, 'constructor:', b?.constructor?.name));
-        
-        console.log('  mixed:', mixed);
-        mixed?.forEach((m, i) => console.log(`  mixed[${i}] instanceof $Chemical:`, m instanceof $Chemical));
         
         this.labels = labels || [];
         this.buttons = buttons || [];
@@ -305,17 +279,6 @@ export class $SpreadCollector extends $Chemical {
         $check(first, $Label);
         $check(rest, ['any']);
         
-        console.log('$SpreadCollector constructor:', {
-            first: first?.$text,
-            restCount: rest.length,
-            restTypes: rest.map(r => {
-                if (r instanceof $Chemical) return r.constructor.name;
-                if (typeof r === 'function') return 'Function';
-                if (Array.isArray(r)) return `Array(${r.length})`;
-                return typeof r;
-            })
-        });
-        
         this.first = first;
         this.rest = rest;
     }
@@ -400,14 +363,7 @@ export class $MatrixContainer extends $Chemical {
     ) {
         $check(header, $Label);
         $check(rows, [['any']]);
-        $check(footer, InfoCard, undefined);
-        
-        console.log('$MatrixContainer constructor:', {
-            header: header?.$text,
-            rows: rows?.length || 0,
-            totalCells: rows?.reduce((sum, row) => sum + row.length, 0) || 0,
-            footer: footer ? 'InfoCard' : 'none'
-        });
+        $check(footer, InfoCard, undefined); 
         
         this.header = header;
         this.rows = rows || [];
@@ -504,11 +460,6 @@ export class $Book extends $Chemical {
     
     $Book(...chapters: $Chapter[]) {
         $check(chapters, [$Chapter]);
-        
-        console.log('$Book constructor received:', chapters);
-        console.log('  chapters.length:', chapters.length);
-        console.log('  chapters types:', chapters.map(ch => ch?.constructor?.name));
-        this.chapters = chapters;
     }
     
     view() {
@@ -532,16 +483,6 @@ export class $Catalogue extends $Chemical {
     
     $Catalogue(...books: $Book[]) {
         $check(books, [$Book]);
-        
-        console.log('$Catalogue constructor received:', books.length, 'books');
-        books.forEach((book, i) => {
-            console.log(`  Book ${i}:`, {
-                title: book.$title,
-                author: book.$author,
-                chapters: book.chapters.length,
-                chapterTitles: book.chapters.map(ch => ch.$title)
-            });
-        });
         this.books = books;
     }
     
@@ -560,7 +501,6 @@ export class $Catalogue extends $Chemical {
             b.chapters.every(ch => ch.$title && ch.$pageCount)
         );
         const allPass = booksPass && propsPass && chaptersPass && chapterPropsPass;
-        console.log(this.books)
         
         return (
             <div style={{ border: `2px solid ${allPass ? 'green' : 'red'}`, padding: '15px', borderRadius: '8px' }}>

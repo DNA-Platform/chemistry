@@ -26,8 +26,6 @@ export class $Book extends $Chemical {
     chapters: $Chapter[] = [];
     
     $Book(...chapters: $Chapter[]) {
-        console.log('$Book constructor called with', chapters.length, 'chapters', 'with child:', chapters && chapters[0]);
-        chapters.forEach(ch => console.log('Chapter title:', ch.$title));
         this.chapters = chapters;
     }
     
@@ -83,11 +81,6 @@ export class $Document extends $Chemical {
     footer?: $Footer;
     
     $Document(title: $Title, chapters: $Chapter[], footer: $Footer) {
-        console.log('$Document constructor:', { 
-            titleText: title?.$text,
-            chapterCount: chapters?.length,
-            footerText: footer?.$copyright
-        });
         this.title = title;
         this.chapters = chapters || [];
         this.footer = footer;
@@ -144,14 +137,7 @@ export class $PolyBook extends $Chemical {
     chapters: $Chapter[] = [];
     
     $PolyBook(...chapters: $Chapter[]) {
-        console.log('$PolyBook received chapters:', chapters);
         this.chapters = chapters;
-        
-        this.chapters.forEach((ch, i) => {
-            if (ch instanceof $FancyChapter) {
-                console.log(`Chapter ${i} is fancy!`);
-            }
-        });
     }
     
     view() {
@@ -178,7 +164,6 @@ export class $Section extends $Chemical {
     items: string[] = [];
     
     addItem(item: string) {
-        console.log(`Adding "${item}" to section ${this.$name}`);
         this.items.push(item);
     }
     
@@ -205,9 +190,7 @@ export class $Article extends $Chemical {
     sections: $Section[] = [];
     
     $Article(...sections: $Section[]) {
-        console.log('$Article constructor with', sections.length, 'sections');
         this.sections = sections;
-        
         this.sections.forEach((section, i) => {
             if (section.items.length == 0)
                 section.addItem(`Auto-added by Article at index ${i}`);
@@ -259,18 +242,7 @@ export class $StrictContainer extends $Chemical {
     content: $Chapter[] = [];
     
     $StrictContainer(header: $Title, ...content: $Chapter[]) {
-        console.log('$StrictContainer validating inputs...');
-        
-        if (!header) {
-            console.error('Warning: No header provided!');
-        }
-        
-        if (content.length === 0) {
-            console.error('Warning: No content provided!');
-        }
-        
         if (content.length > 3) {
-            console.warn('Warning: More than 3 chapters, only taking first 3');
             this.content = content.slice(0, 3);
         } else {
             this.content = content;
@@ -325,17 +297,8 @@ export class $NestedContainer extends $Chemical {
     groups: any[][] = [];
     
     $NestedContainer(...groups: any[]) {
-        console.log('$NestedContainer received:', groups);
         // Arrays of Chemicals from $ structural component
         this.groups = groups.filter(g => Array.isArray(g));
-        console.log('Filtered to', this.groups.length, 'groups');
-        
-        // Log what's in each group
-        this.groups.forEach((group, i) => {
-            console.log(`Group ${i}:`, group.map(item => 
-                item instanceof $Chemical ? item : typeof item
-            ));
-        });
     }
     
     view() {

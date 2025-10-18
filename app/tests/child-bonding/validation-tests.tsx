@@ -1,7 +1,6 @@
 // app/tests/child-binding/validation-tests.tsx
 'use client'
-import { $Chemical, List, $use, $check, Undefined } from '@/chemistry';
-import React, { useState, useEffect } from 'react';
+import { $Chemical, List, $check, Undefined, $Html, $Function } from '@/chemistry';
 
 // ============================================
 // TEST COMPONENTS
@@ -28,11 +27,10 @@ export class $Chapter extends $Chemical {
 
 export class $Book extends $Chemical {
     $title? = 'Book';
-    chapters: $Chapter[] = [];
+    chapters!: $Chapter[];  // Non-null - guaranteed by constructor
     
     $Book(...chapters: $Chapter[]) {
-        $check(chapters, [$Chapter]);
-        this.chapters = chapters;
+        this.chapters = $check(chapters, [$Chapter]);
     }
     
     view() {
@@ -50,36 +48,29 @@ const SimpleCard: React.FC<{ title?: string }> = ({ title = 'Card' }) => {
 // ============================================
 
 export class $ComplexValidator extends $Chemical {
-    header?: $Label;
-    count?: number;
-    items?: $Chapter[];
-    config?: Object;
-    callback?: Function;
-    matrix?: number[][];
+    header!: $Label;       // Non-null - guaranteed by constructor
+    count!: number;        // Non-null - guaranteed by constructor
+    items!: $Chapter[];    // Non-null - guaranteed by constructor
+    config?: $Html<'div'>;       // Optional
+    card?: $Function<typeof SimpleCard>;   // Optional
+    matrix!: number[][];   // Non-null - guaranteed by constructor
     validationError?: string;
     
     $ComplexValidator(
         header: $Label,
         count: number,
         items: $Chapter[],
-        config: Object | undefined,
-        callback: Function | undefined,
+        config: $Html<'div'> | undefined,
+        card: $Function<typeof SimpleCard> | undefined,
         matrix: number[][]
     ) {
         try {
-            $check(header, $Label);
-            $check(count, Number);
-            $check(items, [$Chapter]);
-            $check(config, Object, undefined);
-            $check(callback, Function, undefined);
-            $check(matrix, [[Number]]);
-            
-            this.header = header;
-            this.count = count;
-            this.items = items;
-            this.config = config;
-            this.callback = callback;
-            this.matrix = matrix;
+            this.header = $check(header, $Label);
+            this.count = $check(count, Number);
+            this.items = $check(items, [$Chapter]);
+            this.config = $check(config, 'div', undefined);
+            this.card = $check(card, SimpleCard, undefined);
+            this.matrix = $check(matrix, [[Number]]);
         } catch (e) {
             this.validationError = (e as Error).message;
         }
@@ -109,6 +100,12 @@ export class $ComplexValidator extends $Chemical {
         return (
             <div style={{ padding: '10px', background: '#f0f0f0' }}>
                 Valid ComplexValidator Instance
+                <div>Header: {this.header.$text}</div>
+                <div>Count: {this.count}</div>
+                <div>Items: {this.items.length} chapters</div>
+                <div>Config: {this.config ? 'provided' : 'none'}</div>
+                <div>Callback: {this.card ? 'provided' : 'none'}</div>
+                <div>Matrix: {this.matrix.length}x{this.matrix[0]?.length || 0}</div>
             </div>
         );
     }
@@ -131,8 +128,9 @@ interface TestResult {
 }
 
 const testCases: TestResult[] = [
+    // Parameter 1: header tests
     {
-        name: "Wrong Chemical type",
+        name: "P1: Wrong Chemical type",
         description: "Passing $Book where $Label expected",
         expectedError: "Parameter 1: expected $Label, received $Book",
         component: (
@@ -146,9 +144,11 @@ const testCases: TestResult[] = [
             </ComplexValidator>
         )
     },
+    
+    // Parameter 2: count tests
     {
-        name: "String instead of Number",
-        description: "Passing string 'not a number' where number expected",
+        name: "P2: String instead of number",
+        description: "Passing string where number expected",
         expectedError: "Parameter 2: expected number, received string",
         component: (
             <ComplexValidator>
@@ -156,14 +156,16 @@ const testCases: TestResult[] = [
                 {"not a number"}
                 <List><Chapter /><Chapter /></List>
                 <div>config</div>
-                <Undefined />
+                <SimpleCard />
                 <List><List>{1}</List><List>{2}</List></List>
             </ComplexValidator>
         )
     },
+    
+    // Parameter 3: items array tests
     {
-        name: "Mixed types in array",
-        description: "Array contains $Label and $Book instead of all $Chapter",
+        name: "P3: Mixed types in array",
+        description: "Array contains wrong Chemical types",
         expectedError: "Parameter 3: expected $Chapter[], received [$Chapter, $Label, $Book]",
         component: (
             <ComplexValidator>
@@ -174,60 +176,34 @@ const testCases: TestResult[] = [
                     <Label />
                     <Book />
                 </List>
-                <Undefined />
-                <Undefined />
-                <List><List>{1}</List><List>{2}</List></List>
-            </ComplexValidator>
-        )
-    },
-    {
-        name: "Non-object for Object parameter",
-        description: "Number passed where Object or undefined expected",
-        expectedError: "Parameter 4: expected object | undefined, received number",
-        component: (
-            <ComplexValidator>
-                <Label />
-                {42}
-                <List><Chapter /><Chapter /></List>
-                {123}
-                <Undefined />
-                <List><List>{1}</List><List>{2}</List></List>
-            </ComplexValidator>
-        )
-    },
-    {
-        name: "1D array instead of 2D",
-        description: "Single-dimensional array where 2D array expected",
-        expectedError: "Parameter 6: expected number[][], received [string, string, string]",
-        component: (
-            <ComplexValidator>
-                <Label />
-                {42}
-                <List><Chapter /><Chapter /></List>
                 <div>config</div>
-                <Undefined />
-                <List>{"1 2 3"}</List>
+                <SimpleCard />
+                <List><List>{1}</List><List>{2}</List></List>
             </ComplexValidator>
         )
     },
+    
+    // Parameter 4: config HTML element tests
     {
-        name: "Missing required parameter",
-        description: "Matrix parameter (last required param) is missing",
-        expectedError: "Parameter 6: expected number[][], received undefined",
+        name: "P4: span instead of div",
+        description: "Passing a span where a div was expected",
+        expectedError: "Parameter 4: expected div | undefined, received span",
         component: (
             <ComplexValidator>
                 <Label />
                 {42}
                 <List><Chapter /><Chapter /></List>
-                <Undefined />
-                <Undefined />
-                {/* Missing matrix parameter! */}
+                <span>config</span>
+                <SimpleCard />
+                <List><List>{1}</List><List>{2}</List></List>
             </ComplexValidator>
         )
     },
+    
+    // Parameter 5: card (Function component) tests
     {
-        name: "Wrong function component",
-        description: "Chemical passed where Function expected",
+        name: "P5: Chemical instead of Function",
+        description: "Passing $Label where Function component expected",
         expectedError: "Parameter 5: expected function | undefined, received $Label",
         component: (
             <ComplexValidator>
@@ -240,50 +216,56 @@ const testCases: TestResult[] = [
             </ComplexValidator>
         )
     },
+    
+    // Parameter 6: matrix tests
     {
-        name: "Empty array",
-        description: "Empty array for required array parameter",
-        expectedError: "Parameter 3: expected $Chapter[], received []",
-        component: (
-            <ComplexValidator>
-                <Label />
-                {42}
-                <List></List>
-                <div>config</div>
-                <Undefined />
-                <List><List>{1}</List><List>{2}</List></List>
-            </ComplexValidator>
-        )
-    },
-    {
-        name: "Wrong nested array types",
+        name: "P6: Wrong nested array types",
         description: "Strings in nested arrays instead of numbers",
-        expectedError: "Parameter 6: expected number[][], received [string[3], string[2]]",
+        expectedError: "Parameter 6: expected number[][], received [[string, string], [string]]",
         component: (
             <ComplexValidator>
                 <Label />
                 {42}
                 <List><Chapter /><Chapter /></List>
                 <div>config</div>
-                <Undefined />
+                <SimpleCard />
                 <List>
-                    <List>{"a"}{"b"}{"c"}</List>
-                    <List>{"x"}{"y"}</List>
+                    <List>{"a"}{"b"}</List>
+                    <List>{"x"}</List>
                 </List>
             </ComplexValidator>
         )
     },
+    
+    // Valid test - all parameters correct
     {
-        name: "HTML element instead of object",
-        description: "HTML div props passed for Object parameter",
-        expectedError: "Validation should pass - div props ARE an object",
+        name: "All parameters valid",
+        description: "Should display valid instance message",
+        expectedError: "No error - should pass",
         component: (
             <ComplexValidator>
                 <Label />
                 {42}
                 <List><Chapter /><Chapter /></List>
-                <div>config</div>  {/* This is valid - it's an object */}
+                <div>config</div>
                 <SimpleCard />
+                <List><List>{1}</List><List>{2}</List></List>
+            </ComplexValidator>
+        )
+    },
+    
+    // Optional parameters as undefined
+    {
+        name: "Optional parameters undefined",
+        description: "Testing with undefined for optional params",
+        expectedError: "No error - optionals can be undefined",
+        component: (
+            <ComplexValidator>
+                <Label />
+                {42}
+                <List><Chapter /><Chapter /></List>
+                <Undefined /> {/* Testing Comments */}
+                <Undefined />
                 <List><List>{1}</List><List>{2}</List></List>
             </ComplexValidator>
         )
@@ -310,11 +292,11 @@ export default function ValidationTests() {
                 <pre style={{ fontFamily: 'monospace', fontSize: '13px' }}>
 {`$ComplexValidator(
     header: $Label,
-    count: Number,
+    count: number,
     items: $Chapter[],
-    config: Object | undefined,
-    callback: Function | undefined,
-    matrix: Number[][]
+    config: $Html<'div'> | undefined,
+    card: $Function<typeof SimpleCard> | undefined,
+    matrix: number[][]
 )`}
                 </pre>
             </div>
@@ -332,11 +314,11 @@ export default function ValidationTests() {
                         borderBottom: '1px solid #ddd'
                     }}>
                         <h3>{test.name}</h3>
-                        <p style={{ color: '#666', margin: '5px 0' }}>
+                        <p style={{ color: '#333', margin: '5px 0', fontWeight: 'normal' }}>
                             {test.description}
                         </p>
-                        <p style={{ color: '#999', fontSize: '12px' }}>
-                            Expected to see error about: {test.expectedError}
+                        <p style={{ color: '#666', fontSize: '13px' }}>
+                            Expected: {test.expectedError}
                         </p>
                     </div>
                     

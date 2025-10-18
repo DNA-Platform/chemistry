@@ -63,7 +63,16 @@ export type $Function<T> = T extends React.FC<infer P>
       }
     : never;
 
-export type $Html<T extends keyof JSX.IntrinsicElements> = JSX.IntrinsicElements[T];
+export class $Html<T extends keyof JSX.IntrinsicElements = any> { 
+    element!: T; 
+    attributes!: JSX.IntrinsicElements[T];
+    content?: ReactNode
+    constructor(element: T, attributes: JSX.IntrinsicElements[T]) {
+        this.element = element;
+        this.attributes = attributes;
+        this.content = this.attributes.children;
+    }
+}
 
 type $ParameterType = 
     | $Constructor<$Chemical>
@@ -97,7 +106,7 @@ export function $use<T extends $Chemical>(chemical?: T, key?: 'key'): [$$Compone
     return key == 'key' ? [chemical.$Component, `${chemical[$cid]}`] : chemical.$Component;
 }
 
-export function $check(arg: any, ...types: $ParameterType[]): void {
+export function $check<T>(arg: T, ...types: $ParameterType[]): T {
     const paramNumber = paramValidation.paramIndex++;
     const typeDescription = types.map(type => {
         if (Array.isArray(type))
@@ -124,6 +133,8 @@ export function $check(arg: any, ...types: $ParameterType[]): void {
     if (paramValidation.paramCount !== -1 && 
         paramValidation.paramIndex === paramValidation.paramCount)
         paramValidation.eval();
+
+    return arg;
 }
 
 // Global registry for Chemical instances by key
@@ -268,14 +279,9 @@ export class $Chemical {
 
     /** @internal */
     __render(props: any): ReactNode | Promise<ReactNode> {
-        try {
-            const binder = this[$binder];
-            binder.bond(props);
-            return binder.render();
-        } catch (e) {
-            console.log(`Error rendering ${this.__getType().name}[${this[$cid]}]:`);
-            console.log(e);
-        }
+        const binder = this[$binder];
+        binder.bond(props);
+        return binder.render();
     }
 
     /** @internal */
@@ -384,47 +390,43 @@ class $ComponentFunction<T extends $Chemical> {
         this._parent = parent;
         
         this.Component = ((props: any) => {
-            try {
-                const [cid, setChemicalId] = useState(-1);
-                const initialCid = -1;
+            const [cid, setChemicalId] = useState(-1);
+            const initialCid = -1;
 
-                let chemical: T;
-                let newChemical = false;
-                if (!this.$bound) {
-                    newChemical = cid === initialCid;
-                    chemical = newChemical ? this.createChemical() : $chemicalRegistry.get(cid) as T;
-                    if (!chemical) throw new Error(`$Chemical[${cid}] not found`);
-                    if (newChemical) {
-                        $chemicalRegistry.set(chemical[$cid], chemical);
-                    }
-                } else {
-                    chemical = this._chemical!;
+            let chemical: T;
+            let newChemical = false;
+            if (!this.$bound) {
+                newChemical = cid === initialCid;
+                chemical = newChemical ? this.createChemical() : $chemicalRegistry.get(cid) as T;
+                if (!chemical) throw new Error(`$Chemical[${cid}] not found`);
+                if (newChemical) {
+                    $chemicalRegistry.set(chemical[$cid], chemical);
                 }
-
-                chemical[$formula].refresh();
-                if (newChemical)
-                    setChemicalId(chemical[$cid]);
-
-                const [_, update] = useState({});
-                const [__, setState] = useState(symbolize({ cid: chemical[$cid] }));
-                chemical[$formula].bindUpdate(setState, () => update({}));
-
-                useEffect(() => {
-                    if (chemical && chemical[$formula])
-                        chemical[$formula].updateState();
-                    return () => {
-                        if (!this.$bound) {
-                            // Two checks to handle strict mode render after unmount
-                            if (!chemical[$remove]) chemical[$remove] = true;
-                            else if (!chemical[$destroyed]) chemical.__destroy();
-                        }
-                    };
-                }, [chemical]);
-
-                return chemical.__render(props);
-            } catch (e) {
-                console.log(e);
+            } else {
+                chemical = this._chemical!;
             }
+
+            chemical[$formula].refresh();
+            if (newChemical)
+                setChemicalId(chemical[$cid]);
+
+            const [_, update] = useState({});
+            const [__, setState] = useState(symbolize({ cid: chemical[$cid] }));
+            chemical[$formula].bindUpdate(setState, () => update({}));
+
+            useEffect(() => {
+                if (chemical && chemical[$formula])
+                    chemical[$formula].updateState();
+                return () => {
+                    if (!this.$bound) {
+                        // Two checks to handle strict mode render after unmount
+                        if (!chemical[$remove]) chemical[$remove] = true;
+                        else if (!chemical[$destroyed]) chemical.__destroy();
+                    }
+                };
+            }, [chemical]);
+
+            return chemical.__render(props);
         }) as any;
 
         if (this._chemical) {
@@ -999,12 +1001,15 @@ class $BondOrchestrator<T extends $Chemical> {
         const childArray = React.Children.toArray(children);
         context.singleton = !Array.isArray(children) && childArray.length === 1;
         childArray.map(child => {
+            let lastContext = context;
             context = context.next(child);
             if (context.isElement) {
                 this.processElement(child as React.ReactElement<any>, context)
             } else if (Array.isArray(child)) {
                 const arrayContext = context.array();
                 this.processArray(child, arrayContext);
+            } else if (typeof child === 'string') {
+                context = lastContext; 
             } else {
                 context.args.push(child);
                 context.children.push(child);
@@ -1046,6 +1051,11 @@ class $BondOrchestrator<T extends $Chemical> {
         } else if (Array.isArray(element)) {
             const arrayContext = context.array();
             this.processArray(element, arrayContext);
+        } else if (typeof type === 'string') {
+            // Intrinsic HTML elements (div, span, input, etc.)
+            const intrinsicElement = new $Html(type as any, element.props);
+            context.args.push(intrinsicElement);
+            context.children.push(element);
         } else {
             const isFragment = type === React.Fragment && !element.key?.toString().startsWith('chem-');
             const isPortal = (element as any).$$typeof === Symbol.for('react.portal');
@@ -1064,6 +1074,7 @@ class $BondOrchestrator<T extends $Chemical> {
                     `Only Chemistry components, function components, arrays, and primitives are supported.`
                 );
             }
+
             context.args.push(element.props);
             context.children.push(element);
         }
@@ -1183,7 +1194,18 @@ class $ParamValidation {
         if (type === Boolean) return 'boolean';
         if (type === Function) return 'function';
         if (type === Object) return 'object';
-        if (typeof type === 'string') return type;
+        
+        // Handle HTML element types
+        if (typeof type === 'string') {
+            // Check if it's a primitive type name or an HTML element
+            if ($ParamValidation.isPrimitiveType(type)) {
+                return type;
+            } else {
+                // It's an HTML element type like 'div', 'span', etc.
+                return `$Html<'${type}'>`;
+            }
+        }
+        
         if (type?.prototype instanceof $Chemical) return type.name;
         if (typeof type === 'function') return type.name;
         return 'unknown';
@@ -1225,9 +1247,10 @@ class $ParamValidation {
                 }
             }
         }
-        
+
         if (arg instanceof $Chemical) return arg.constructor.name;
         if (arg instanceof $$Function) return `Function<${arg.$Function?.name || 'unknown'}>`;
+        if (arg instanceof $Html) return `$Html<'${arg.element}'>`; 
         if (React.isValidElement(arg)) {
             const elementType = arg.type;
             if (typeof elementType === 'string') return `<${elementType}>`;
@@ -1261,6 +1284,7 @@ class $ParamValidation {
         if (typeof arg === 'boolean' || typeof arg === 'bigint') return true;
         if (arg instanceof $Chemical) return true;
         if (arg instanceof $$Function) return true;
+        if (arg instanceof $Html) return true;
         if (React.isValidElement(arg)) {
             // We accept most React elements, but the processElement method 
             // in BondOrchestrator will handle specific rejections
@@ -1273,7 +1297,6 @@ class $ParamValidation {
     static validateArgument(arg: any, type: any): boolean {
         if (Array.isArray(type)) {
             if (!Array.isArray(arg)) return false;
-            
             const elementType = type[0];
             
             // Handle nested array types
@@ -1286,7 +1309,7 @@ class $ParamValidation {
             if (elementType === 'any') {
                 return arg.every(el => $ParamValidation.isValidReactNode(el));
             } else if (elementType === String || elementType === Number || elementType === Boolean || 
-                      elementType === Function || elementType === Object) {
+                    elementType === Function || elementType === Object) {
                 return arg.every(el => $ParamValidation.validatePrimitive(el, elementType));
             } else if (typeof elementType === 'string') {
                 // Either primitive type name or HTML element
@@ -1294,7 +1317,7 @@ class $ParamValidation {
                     return arg.every(el => typeof el === elementType);
                 } else {
                     // HTML element - check props object
-                    return arg.every(el => typeof el === 'object' && el !== null);
+                    return arg.every(el => el instanceof $Html && el.element === elementType);
                 }
             } else if (elementType?.prototype instanceof $Chemical) {
                 return arg.every(el => el instanceof elementType);
@@ -1309,15 +1332,15 @@ class $ParamValidation {
         } else if (type === null) {
             return arg === null;
         } else if (type === String || type === Number || type === Boolean || 
-                   type === Function || type === Object) {
+                type === Function || type === Object) {
             return $ParamValidation.validatePrimitive(arg, type);
         } else if (typeof type === 'string') {
             // Either primitive type name or HTML element
             if ($ParamValidation.isPrimitiveType(type)) {
                 return typeof arg === type;
             } else {
-                // HTML element - check props object
-                return typeof arg === 'object' && arg !== null;
+                // HTML element - check if arg is $Html with matching element
+                return arg instanceof $Html && arg.element === type;
             }
         } else if (type?.prototype instanceof $Chemical) {
             return arg instanceof type;
@@ -1327,7 +1350,7 @@ class $ParamValidation {
         }
         return false;
     }
-    
+        
     static validatePrimitive(arg: any, type: any): boolean {
         if (type === String) return typeof arg === 'string';
         if (type === Number) return typeof arg === 'number';
