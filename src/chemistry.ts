@@ -1,5 +1,4 @@
 import React, { ReactNode, ReactElement, useState, useEffect, JSX } from 'react';
-import stringify from 'fast-safe-stringify'; 
 
 export type $Type<T = any> = $Constructor<T>;
 export type $Constructor<T = {}> = new (...args: any[]) => T;
@@ -175,9 +174,6 @@ export class $Chemical {
     [$formula]: $Formula;
 
     /** @internal */
-    [$template]: this;
-
-    /** @internal */
     [$parent]: $Chemical | undefined;
 
     /** @internal */
@@ -192,6 +188,19 @@ export class $Chemical {
     /** @internal */
     [$children]: ReactNode;
 
+    /** @internal */
+    static [$template]: $Chemical;
+
+    /** @internal */
+    get __template(): this {
+        return this[$type][$template] as any;
+    }
+
+    /** @internal */
+    get __isTemplate() { 
+        return this === this.__template; 
+    }
+
     get parent(): $Chemical | undefined { return this[$parent]; }
     set parent(chemical: $Chemical) { this[$parent] = chemical; }
 
@@ -200,10 +209,10 @@ export class $Chemical {
     /** @internal */
     get Component(): $Component<this> {
         if (!this[$component]) {
-            if (!this[$template][$component])
-                this[$template][$component] = this[$template].createComponent();
+            if (!this.__template[$component])
+                this.__template[$component] = this.__template.createComponent();
         }
-        return this[$component] ?? this[$template][$component]!;
+        return this[$component] ?? this.__template[$component]!;
     }
 
     /** @internal */
@@ -216,10 +225,9 @@ export class $Chemical {
 
     constructor() {
         this[$cid] = $Chemical.getNextCid();
-        this[$type] = this.__getType();
-        if (!(this[$type] as any)[$template]) 
-            (this[$type] as any)[$template] = this;
-        this[$template] = this;
+        this[$type] = this.constructor as any;
+        if (!this[$type][$template]) 
+            this[$type][$template] = this;
         this[$formula] = new $Formula(this);
         this[$binder] = new $BondOrchestrator(this);
     }
@@ -229,7 +237,7 @@ export class $Chemical {
     }
 
     toString() {
-        return `${this.__getType().name}[${this[$cid]}]`;
+        return `${this[$type].name}[${this[$cid]}]`;
     }
 
     /** @internal */
@@ -251,22 +259,17 @@ export class $Chemical {
         $chemicalRegistry.delete(this[$cid]); // Consider replacing with a cleanup phase
     }
 
-    /** @internal */
-    __getType<T extends $Type<$Chemical> = typeof $Chemical>(): T {
-        return this.constructor as any;
-    }
-
     private createComponent(): $Component<this> {
         if (this[$component]) 
-            throw new Error(`The Component for ${this.__getType().name}[${this[$cid]}] has already been created`);
+            throw new Error(`The Component for ${this} has already been created`);
 
         this.assertViewConstructors();
-        this[$template][$formula].init();
-        return new $ComponentFunction(this[$template]) as any;
+        this.__template[$formula].init();
+        return new $ComponentFunction(this.__template) as any;
     }
 
     private assertViewConstructors(prototype?: any, childConstructor?: any) {
-        if (!prototype) prototype = Object.getPrototypeOf(this[$template]);
+        if (!prototype) prototype = Object.getPrototypeOf(this.__template);
         if (!prototype || prototype === $Chemical.prototype) return;
         
         const className = prototype.constructor.name;
@@ -280,11 +283,52 @@ export class $Chemical {
     }
 
     /** @internal */
-    static [$template]: $Chemical;
-
-    /** @internal */
     static getNextCid(): number { return $Chemical.nextCid++; }
     private static nextCid = 1;
+}
+
+const $formed = Symbol("$Arom.formed");
+const $formation = Symbol("$Arom.formation");
+
+export class $Atom extends $Chemical {
+
+    /** @internal */
+    [$formed] = false;
+
+    /** @internal */
+    [$formation]!: Promise<void>;
+
+    protected get formed() { return this[$formed]; }
+    async formation() {
+        if (!this[$formed])
+            await this[$formation];
+    }
+
+    protected constructor() {
+        super();
+        if (this.__isTemplate) {
+            this[$formation] = this.reform().then(async (formed) => {
+                this[$formed] = formed;
+                if (!this[$formed])
+                    await this.form();
+                    await this.remember();
+                    this[$formula] = new $Formula(this);
+                    this[$formula].init();
+                    this[$formed] = true;
+            })
+        }
+        return this.__template;
+    }
+
+    protected async form() { }
+    protected async reform(): Promise<boolean> { return true; }
+    protected async remember(): Promise<void> { }
+
+    static particle<T extends $Atom = $Atom>(): T {
+        if (!this[$template]) new this();
+        return this[$template] as any;
+    }
+
 }
 
 class $List extends $Chemical {
@@ -366,7 +410,8 @@ class $ComponentFunction<T extends $Chemical> {
                 setChemicalId(chemical[$cid]);
 
             const [_, update] = useState({});
-            const [__, setState] = useState(symbolize({ cid: chemical[$cid] }));
+            const [__, setState] = useState($Represent.symbolize({ cid: chemical[$cid] }, 'fast'));
+            console.log($Represent.symbolize({ cid: chemical[$cid] }, 'fast'), chemical.toString())
             chemical[$formula].bindUpdate(setState, () => update({}));
 
             useEffect(() => {
@@ -400,7 +445,7 @@ class $ComponentFunction<T extends $Chemical> {
         if (chemical && parent && !chemical.parent) chemical[$parent] = parent; 
         if (chemical && chemical.parent && !parent) parent = chemical[$parent]; 
         chemical = !chemical ? this.createChemical(parent ?? this._parent) : this.ensureChemical(chemical);
-        return new $ComponentFunction(chemical[$template], chemical, parent ?? this._parent) as any;
+        return new $ComponentFunction(chemical.__template, chemical, parent ?? this._parent) as any;
     }
 
     private createChemical(parent?: $Chemical): T {
@@ -435,7 +480,7 @@ class $Formula {
     get bonds() { return this._bonds; }
     private _bonds: Map<string, $Bond> = new Map();
     
-    get state() { return symbolize(this._state); }
+    get state() { return $Represent.symbolize(this._state, 'fast'); }
     private _state: $State;
 
     get render() { return this._state.render; }
@@ -464,6 +509,10 @@ class $Formula {
             return;
         }
 
+        const template = this.chemical.__template;
+        if (!this.chemical.__isTemplate && !template[$formula]._initialized)
+            template[$formula].init();
+
         this.chemical[$reactive] = false;
         this._createBonds();
         this._initialized = true;
@@ -478,7 +527,7 @@ class $Formula {
         }
 
         this.chemical[$reactive] = false;
-        const chain = [Object.getPrototypeOf(this._chemical), this._chemical[$template], this._chemical];
+        const chain = [Object.getPrototypeOf(this._chemical), this._chemical.__template, this._chemical];
         this._createBonds(chain);
         this.chemical[$reactive] = true;
     }
@@ -585,7 +634,7 @@ class $Bond<T extends $Chemical = any, P = any> {
     private _bid?: string;
     get bid() { 
         if (!this._bid) 
-            this._bid = `${this._chemical.__getType().name}[${this.chemical[$cid]}].${this._property}`; 
+            this._bid = `${this._chemical[$type].name}[${this.chemical[$cid]}].${this._property}`; 
         return this._bid 
     }
     
@@ -651,7 +700,7 @@ class $Bond<T extends $Chemical = any, P = any> {
             };
         }
 
-        if (this._chemical[$template] !== this._chemical)
+        if (!this._chemical.__isTemplate)
             Object.defineProperty(this._chemical, property, this._propertyDescriptor);
     }
 
@@ -691,7 +740,7 @@ class $Bond<T extends $Chemical = any, P = any> {
                 const wasReactive = this._chemical[$reactive];
                 this._chemical[$reactive] = false;
                 
-                state[this.bid] = symbolize(value);
+                state[this.bid] = $Represent.symbolize(value);
                 
                 this._chemical[$reactive] = wasReactive;
             }
@@ -873,7 +922,7 @@ class $BondOrchestrator<T extends $Chemical> {
 
     constructor(chemical: T) {
         this._chemical = chemical;
-        const name = chemical.__getType().name;
+        const name = chemical[$type].name;
         this._bondConstructor = (chemical as any)[name];
         this.parseBondConstructor();
     }
@@ -921,7 +970,7 @@ class $BondOrchestrator<T extends $Chemical> {
         if (!this._bondConstructor) return;
         
         const match = this._bondConstructor.toString().match(/\(([^)]*)\)/);
-        if (!match) throw new Error(`Cannot parse constructor for ${this._chemical.__getType().name}`);
+        if (!match) throw new Error(`Cannot parse constructor for ${this._chemical[$type].name}`);
         
         const paramString = match[1].trim();
         if (!paramString) return;
@@ -1025,7 +1074,7 @@ class $BondOrchestrator<T extends $Chemical> {
                     'Iterable (non-array)';
 
                 throw new Error(
-                    `Chemistry Error: ${invalidType} cannot be used as child in ${this._chemical.__getType().name}. ` +
+                    `Chemistry Error: ${invalidType} cannot be used as child in ${this._chemical[$type].name}. ` +
                     `Only Chemistry components, function components, arrays, and primitives are supported.`
                 );
             }
@@ -1316,6 +1365,200 @@ class $ParamValidation {
     }
 }
 
+export class $Represent {
+    static symbolize(value: any, mode: 'safe' | 'fast' = 'safe'): string {
+        return mode === 'fast' 
+            ? JSON.stringify(value, $Represent.replacer)
+            : $Represent.safe(value);
+    }
+    
+    static literalize<T = any>(symbolization: string): T {
+        const parsed = JSON.parse(symbolization);
+        
+        // Check for ref structure ['$Symbol', constructor, unique, refs]
+        if (Array.isArray(parsed) && parsed[0] === '$Symbol') {
+            const [, constructorName, unique, refs] = parsed;
+            const resolved = new Map<string, any>();
+            
+            // Create shells (use prototype if constructor provided)
+            for (const [key, val] of Object.entries(refs)) {
+                if (Array.isArray(val)) {
+                    resolved.set(key, []);
+                } else if (typeof val === 'object' && val !== null) {
+                    // Try to use constructor prototype if available, fallback to plain object
+                    let proto = null;
+                    if (constructorName && constructorName !== 'Object') {
+                        proto = (globalThis as any)[constructorName]?.prototype;
+                    }
+                    resolved.set(key, proto ? Object.create(proto) : {});
+                } else {
+                    resolved.set(key, val);
+                }
+            }
+            
+            // Fill shells
+            for (const [key, val] of Object.entries(refs)) {
+                const target = resolved.get(key)!;
+                if (Array.isArray(val)) {
+                    for (let i = 0; i < val.length; i++)
+                        target[i] = $Represent.resolve(val[i], unique, resolved);
+                } else if (typeof val === 'object' && val !== null) {
+                    for (const k in val)
+                        target[k] = $Represent.resolve((val as any)[k], unique, resolved);
+                }
+            }
+            
+            // Return last ref (root) - refs should never be empty
+            const keys = Object.keys(refs);
+            if (keys.length === 0) 
+                throw new Error('Invalid serialization: empty refs object');
+            return resolved.get(keys[keys.length - 1]);
+        }
+        
+        return $Represent.processLiteral(parsed);
+    }
+    
+    private static safe(value: any): string {
+        const stack: any[] = [];
+        const seen = new Map<any, string>();
+        let unique: string | undefined;
+        let refs: Record<string, any> | undefined;
+        let counter = 0;
+        let constructorName: string | undefined;
+        
+        const processed = process(value);
+        
+        // Return with ['$Symbol', constructor, unique, refs] format
+        if (refs) {
+            return JSON.stringify(['$Symbol', constructorName || 'Object', unique, refs]);
+        }
+        return JSON.stringify(processed);
+        
+        function process(val: any): any {
+            if (val === null || typeof val !== 'object') 
+                return typeof val === 'function' ? undefined : val;
+            
+            // Chemical reference
+            if (val instanceof $Chemical) 
+                return val.toString();
+            
+            if (val?.constructor?.name === 'Proxy') return '[Proxy]';
+            
+            // Check if seen (already has ref)
+            const existing = seen.get(val);
+            if (existing) return existing;
+            
+            // Check constructor for non-basic objects
+            const ctor = val.constructor?.name;
+            if (!refs && ctor && !$Represent.isBasicConstructor(ctor)) {
+                unique = `[${Date.now()},${Math.random()}]`;
+                refs = {};
+                constructorName = ctor;
+            }
+            
+            // Check if circular
+            for (const obj of stack) {
+                if (obj === val) {
+                    // Init refs if needed
+                    if (!refs) {
+                        unique = `[${Date.now()},${Math.random()}]`;
+                        refs = {};
+                    }
+                    const ref = `${unique}[${counter++}]`;
+                    seen.set(val, ref);
+                    refs[ref] = null; // Will be filled later
+                    return ref;
+                }
+            }
+            
+            stack.push(val);
+            
+            let hasRefs = false;
+            const result = Array.isArray(val) 
+                ? val.map(v => {
+                    const processed = process(v);
+                    if (typeof processed === 'string' && unique && processed.startsWith(unique))
+                        hasRefs = true;
+                    return processed === null ? undefined : processed;
+                  })
+                : (() => {
+                    const res: any = {};
+                    for (const k in val) {
+                        const processed = process(val[k]);
+                        if (processed !== undefined) {
+                            res[k] = processed;
+                            if (typeof processed === 'string' && unique && processed.startsWith(unique))
+                                hasRefs = true;
+                        }
+                    }
+                    return res;
+                  })();
+            
+            stack.pop();
+            
+            // Store ref if contains refs or has custom constructor
+            if (refs && (hasRefs || constructorName)) {
+                const ref = `${unique}[${counter++}]`;
+                seen.set(val, ref);
+                refs[ref] = result;
+                return ref;
+            }
+            
+            return result;
+        }
+    }
+    
+    private static basicConstructors = new Set(['Object', 'Array', 'Date', 'RegExp', 'Map', 'Set', 
+                                                  'WeakMap', 'WeakSet', 'Error', 'Promise']);
+    
+    private static isBasicConstructor(name: string): boolean {
+        return $Represent.basicConstructors.has(name);
+    }
+    
+    private static iterate(val: any, fn: (item: any) => any): any {
+        if (Array.isArray(val)) return val.map(fn);
+        const res: any = {};
+        for (const k in val) {
+            const v = fn(val[k]);
+            if (v !== undefined) res[k] = v;
+        }
+        return res;
+    }
+    
+    private static resolve(val: any, unique: string, resolved: Map<string, any>): any {
+        if (typeof val === 'string' && val.startsWith(unique)) {
+            if (!resolved.has(val))
+                throw new Error(`Invalid serialization: reference ${val} not found in refs`);
+            return resolved.get(val);
+        }
+        return $Represent.processLiteral(val);
+    }
+    
+    private static processLiteral(val: any): any {
+        if (val === null || typeof val !== 'object') 
+            return typeof val === 'string' ? $Represent.getChemical(val) : val;
+        
+        return $Represent.iterate(val, v => $Represent.processLiteral(v));
+    }
+    
+    private static chemicalPattern = /^$(\w+)\[(\d+)\]$/;
+    
+    private static getChemical(str: string): any {
+        const match = str.match($Represent.chemicalPattern);
+        if (!match) return str;
+        const cid = parseInt(match[2]);
+        return $chemicalRegistry.get(cid) || str;
+    }
+    
+    private static replacer(key: string, val: any): any {
+        if (key === '') return val;
+        if (val instanceof $Chemical) return val.toString();
+        if (typeof val === 'function') return undefined;
+        if (val?.constructor?.name === 'Proxy') return '[Proxy]';
+        return val;
+    }
+}
+
 function isReactiveProperty(property: string, value?: any): boolean {
     if (property.startsWith('_')) return false;
     if (isSpecial(property)) return true;
@@ -1341,27 +1584,27 @@ function isProp(property: string, value: any | PropertyDescriptor): boolean {
     return isSpecial(property) && typeof value !== 'function';
 }
 
-function symbolize(value: any): string {
-    let wasReactive: boolean | undefined;
-    if (value instanceof $Chemical) {
-        wasReactive = value[$reactive];
-        value[$reactive] = false;
-    }
+// function symbolize(value: any): string {
+//     let wasReactive: boolean | undefined;
+//     if (value instanceof $Chemical) {
+//         wasReactive = value[$reactive];
+//         value[$reactive] = false;
+//     }
 
-    var symbol = stringify(value, function(this: any, key: string, val: any): any {
-        if (key === '') return val;
-        if (val instanceof $Chemical) return val[$cid];
-        if (this instanceof $Chemical) return this[$cid];
-        if (typeof val === 'function') return undefined;
-        if (val?.constructor?.name === 'Proxy') return '[Proxy]';
-        return val;
-    });
+//     var symbol = stringify(value, function(this: any, key: string, val: any): any {
+//         if (key === '') return val;
+//         if (val instanceof $Chemical) return val[$cid];
+//         if (this instanceof $Chemical) return this[$cid];
+//         if (typeof val === 'function') return undefined;
+//         if (val?.constructor?.name === 'Proxy') return '[Proxy]';
+//         return val;
+//     });
 
-    if (value instanceof $Chemical && wasReactive !== undefined) {
-        value[$reactive] = wasReactive;
-    }
-    return symbol;
-}
+//     if (value instanceof $Chemical && wasReactive !== undefined) {
+//         value[$reactive] = wasReactive;
+//     }
+//     return symbol;
+// }
 
 export function $<P>(Component: React.FC<P>): $Function<React.FC<P>> {
     if (!(typeof Component === "function")) 
