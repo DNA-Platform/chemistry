@@ -1,3 +1,4 @@
+import { exec } from 'child_process';
 import React, { ReactNode, ReactElement, useState, useEffect, JSX } from 'react';
 
 export type $Type<T = any> = $Constructor<T>;
@@ -140,7 +141,7 @@ const $type = Symbol("$Chemical.type");
 const $formula = Symbol("$Chemical.formula");
 const $template = Symbol("$Chemical.template");
 const $parent = Symbol("$Chemical.parent");
-const $binder = Symbol("$Chemical.binder");
+const $orchestrator = Symbol("$Chemical.orchestrator");
 const $component = Symbol("$Chemical.component");
 const $reactive = Symbol("$Chemical.reactive");
 const $children = Symbol("$Chemical.children");
@@ -180,7 +181,7 @@ export class $Chemical {
     [$component]?: $Component<this>;
 
     /** @internal */
-    [$binder]: $BondOrchestrator<this>;
+    [$orchestrator]: $BondOrchestrator<this>;
 
     /** @internal */
     [$reactive] = true;
@@ -201,6 +202,11 @@ export class $Chemical {
         return this === this.__template; 
     }
 
+    /** @internal */
+    get __isBound() { 
+        return this?.[$component]?.$chemical == this; 
+    }
+
     get parent(): $Chemical | undefined { return this[$parent]; }
     set parent(chemical: $Chemical) { this[$parent] = chemical; }
 
@@ -210,7 +216,7 @@ export class $Chemical {
     get Component(): $Component<this> {
         if (!this[$component]) {
             if (!this.__template[$component])
-                this.__template[$component] = this.__template.createComponent();
+                this.__template[$component] = this.__template.__createComponent();
         }
         return this[$component] ?? this.__template[$component]!;
     }
@@ -229,7 +235,7 @@ export class $Chemical {
         if (!this[$type][$template]) 
             this[$type][$template] = this;
         this[$formula] = new $Formula(this);
-        this[$binder] = new $BondOrchestrator(this);
+        this[$orchestrator] = new $BondOrchestrator(this);
     }
 
     view(): ReactNode {
@@ -242,7 +248,7 @@ export class $Chemical {
 
     /** @internal */
     __render(props: any): ReactNode | Promise<ReactNode> {
-        const binder = this[$binder];
+        const binder = this[$orchestrator];
         binder.bond(props);
         return binder.render();
     }
@@ -259,7 +265,8 @@ export class $Chemical {
         $chemicalRegistry.delete(this[$cid]); // Consider replacing with a cleanup phase
     }
 
-    private createComponent(): $Component<this> {
+    /** @internal */
+    protected __createComponent(): $Component<this> {
         if (this[$component]) 
             throw new Error(`The Component for ${this} has already been created`);
 
@@ -289,6 +296,7 @@ export class $Chemical {
 
 const $formed = Symbol("$Arom.formed");
 const $formation = Symbol("$Arom.formation");
+const $remembered = Symbol("$Arom.remembered");
 
 export class $Atom extends $Chemical {
 
@@ -304,16 +312,23 @@ export class $Atom extends $Chemical {
             await this[$formation];
     }
 
+    /** @internal */
+    [$remembered] = false;
+    get remembered() { return this[$remembered]; }
+
     protected constructor() {
         super();
         if (this.__isTemplate) {
-            this[$formation] = this.reform().then(async (formed) => {
-                this[$formed] = formed;
+            if (!this[$component])
+                this[$component] = this.__createComponent().$bind(this.parent, this);
+            this[$formation] = this.reform().then(async (remembered) => {
+                this[$formed] = remembered;
+                this[$remembered] = remembered;
                 if (!this[$formed])
                     await this.form();
                     await this.remember();
-                    this[$formula] = new $Formula(this);
                     this[$formula].init();
+                    
                     this[$formed] = true;
             })
         }
@@ -321,8 +336,31 @@ export class $Atom extends $Chemical {
     }
 
     protected async form() { }
-    protected async reform(): Promise<boolean> { return true; }
-    protected async remember(): Promise<void> { }
+
+    protected async reform(): Promise<boolean> {
+        try {
+            const key = `chemistry.atom.${this[$type].name}`;
+            const stored = localStorage.getItem(key);
+            if (stored) {
+                const diagram = JSON.parse(stored);
+                this[$formula].read(diagram);
+                return true;
+            }
+        } catch (e) {
+            console.error(`Failed to reform ${this[$type].name}:`, e);
+        }
+        return false;
+    }
+
+    protected async remember(): Promise<void> {
+        try {
+            const key = `chemistry.atom.${this[$type].name}`;
+            const diagram = this[$formula].diagram;
+            localStorage.setItem(key, diagram);
+        } catch (e) {
+            console.error(`Failed to remember ${this[$type].name}:`, e);
+        }
+    }
 
     static particle<T extends $Atom = $Atom>(): T {
         if (!this[$template]) new this();
@@ -347,22 +385,26 @@ class $$Function<P = any> extends $Chemical {
     private _component: React.FC<P>;
 
     /** @internal */
-    get $Function() { return this._component; }
+    get __$Function() { return this._component; }
 
-    get props() { return this.gatherProps(); }
+    /** @internal */
+    get __name() { return this.__$Function.name; }
+
+    /** @internal */
+    get __props() { return this.gatherProps(); }
 
     constructor(component: React.FC<P>) {
         super();
         this._component = component;
+        this[$component] = new $ComponentFunction(this) as any;
     }
 
     view() { 
-        return React.createElement(this._component as any, this.props);
+        return React.createElement(this._component as any, this.__props);
     }
 
     protected gatherProps(): any {
         this[$formula].init();
-        this[$formula].refresh();
         const props: Record<string, any> = this.children ? { children: this.children } : { };
         for (const bond of this[$formula].bonds.values()) {
             if (bond.isProp) props[bond.property.slice(1)] = bond.value();
@@ -409,14 +451,21 @@ class $ComponentFunction<T extends $Chemical> {
             if (newChemical)
                 setChemicalId(chemical[$cid]);
 
-            const [_, update] = useState({});
-            const [__, setState] = useState($Represent.symbolize({ cid: chemical[$cid] }, 'fast'));
-            console.log($Represent.symbolize({ cid: chemical[$cid] }, 'fast'), chemical.toString())
+            const [__, update] = useState({});
+            const [_, setState] = useState($Represent.symbolize({ cid: chemical[$cid] }, 'fast'));
             chemical[$formula].bindUpdate(setState, () => update({}));
 
             useEffect(() => {
+                const orchestrator = chemical[$orchestrator];
+                orchestrator.activate();
+                while (orchestrator.actions.length > 0) {
+                    const action = orchestrator.actions.shift()!;
+                    action();
+                }
+
                 if (chemical && chemical[$formula])
                     chemical[$formula].updateState();
+
                 return () => {
                     if (!this.$bound) {
                         // Two checks to handle strict mode render after unmount
@@ -454,7 +503,7 @@ class $ComponentFunction<T extends $Chemical> {
         chemical[$parent] = parent;
         chemical[$cid] = $Chemical.getNextCid();
         chemical[$formula] = new $Formula(chemical);
-        chemical[$binder] = new $BondOrchestrator(chemical);
+        chemical[$orchestrator] = new $BondOrchestrator(chemical);
         chemical[$formula].init();
         chemical[$reactive] = true;
         return chemical;
@@ -463,7 +512,7 @@ class $ComponentFunction<T extends $Chemical> {
     private ensureChemical(chemical: T): T {
         if (!chemical[$formula]) {
             chemical[$formula] = new $Formula(chemical);
-            chemical[$binder] = new $BondOrchestrator(chemical);
+            chemical[$orchestrator] = new $BondOrchestrator(chemical);
             chemical[$formula].init();
         }
         return chemical as any;
@@ -483,8 +532,14 @@ class $Formula {
     get state() { return $Represent.symbolize(this._state, 'fast'); }
     private _state: $State;
 
-    get render() { return this._state.render; }
-    set render(value: number) { this._state.render = value; }
+    get diagram(): string {
+        const result: Record<string, any> = {};
+        for (const [property, bond] of this._bonds) {
+            if (bond.isMethod) continue; 
+            result[property] = $Represent.symbolize(bond.getter ? bond.getter() : bond.backingField);
+        }
+        return $Represent.symbolize(result, 'fast');
+    }
     
     private _setState?: (state: string) => void;
     private _update?: () => any;
@@ -519,6 +574,53 @@ class $Formula {
         this.chemical[$reactive] = true;
     }
 
+    read(diagram: string) {
+        this.refresh();
+        const symnbolized = JSON.parse(diagram);
+        const literalized = $Represent.literalize(symnbolized);
+        
+        if (!literalized || typeof literalized !== 'object')
+            throw new Error(`Could not read the specified diagram: ${diagram}`);
+        
+        for (const [property, value] of Object.entries(literalized)) {
+            const bond = this._bonds.get(property);
+            if (bond) {
+                if (bond.setter) {
+                    bond.setter(value);
+                } else if (!bond.getter && !bond.setter) {
+                    bond.backingField = value;
+                }
+            } else {
+                const descriptor = {
+                    value: value,
+                    writable: true,
+                    enumerable: true,
+                    configurable: true
+                };
+                const newBond = new $Bond(this._chemical, property, descriptor);
+                this._bonds.set(property, newBond);
+                newBond.init();
+            }
+        }
+    }
+
+    track() {
+        this._bonds.forEach(bond => bond.accessed = false);
+    }
+
+    check() {
+        const $chemical$ = this.chemical as any;
+        this._bonds.forEach(bond => {
+            if (bond.accessed) {
+                console.log($chemical$.toString(), bond.property)
+                const value = $chemical$[bond.property];
+                if (value instanceof $Chemical)
+                    value[$formula].check();
+            }
+            bond.accessed = false;
+        })
+    }
+ 
     refresh() {
         if (this._destroyed) return;
         if (!this._initialized) {
@@ -623,13 +725,14 @@ class $Formula {
 }
 
 class $Bond<T extends $Chemical = any, P = any> {
-    private _getter?: () => any;
-    private _setter?: (value: any) => void;
-    private _action?: Function;
-    private _backingField: any;
-    private _propertyDescriptor?: PropertyDescriptor;
+    accessed = false;
+    getter?: () => any;
+    setter?: (value: any) => void;
+    action?: Function;
+    isMethod = false;
+    backingField: any;
+    propertyDescriptor?: PropertyDescriptor;
     private _unbind = () => {};
-    private _isMethod = false;
 
     private _bid?: string;
     get bid() { 
@@ -656,16 +759,6 @@ class $Bond<T extends $Chemical = any, P = any> {
     get isProp() { return this._isProp; }
     private _isProp: boolean;
 
-    get reactive() { return this._reactive; }
-    get inactive() { return !this._reactive; }
-    private _reactive = true;
-    reactivate() { this._reactive = true && !this._frozen; }
-    deactivate() { this._reactive = false; }
-
-    get frozen() { return this._frozen; }
-    crystallize() { this.deactivate(); this._frozen = true;  }
-    private _frozen = false;
-
     constructor(chemical: T, property: string, descriptor: PropertyDescriptor) {
         this._chemical = chemical;
         this._property = property;
@@ -677,10 +770,10 @@ class $Bond<T extends $Chemical = any, P = any> {
         const property = this._property;
         const descriptor = this._descriptor;
 
-        this._isMethod = typeof descriptor.value === 'function' && !descriptor.get && !descriptor.set;
-        if (this._isMethod) {
-            this._action = descriptor.value.bind(this._chemical);
-            this._propertyDescriptor = {
+        this.isMethod = typeof descriptor.value === 'function' && !descriptor.get && !descriptor.set;
+        if (this.isMethod) {
+            this.action = descriptor.value.bind(this._chemical);
+            this.propertyDescriptor = {
                 value: (...args: any[]) => {
                     return this.bondCall(this._chemical, ...args);
                 },
@@ -689,10 +782,10 @@ class $Bond<T extends $Chemical = any, P = any> {
                 configurable: true,
             };
         } else {
-            this._getter = descriptor.get?.bind(this._chemical);
-            this._setter = descriptor.set?.bind(this._chemical);
-            this._backingField = descriptor.value;
-            this._propertyDescriptor = {
+            this.getter = descriptor.get?.bind(this._chemical);
+            this.setter = descriptor.set?.bind(this._chemical);
+            this.backingField = descriptor.value;
+            this.propertyDescriptor = {
                 get: () => this.bondGet(),
                 set: (value: any) => this.bondSet(value),
                 enumerable: true,
@@ -700,8 +793,8 @@ class $Bond<T extends $Chemical = any, P = any> {
             };
         }
 
-        if (!this._chemical.__isTemplate)
-            Object.defineProperty(this._chemical, property, this._propertyDescriptor);
+        if (!this._chemical.__isTemplate || this instanceof $Atom)
+            Object.defineProperty(this._chemical, property, this.propertyDescriptor);
     }
 
     unbind() {
@@ -709,21 +802,22 @@ class $Bond<T extends $Chemical = any, P = any> {
     }
 
     cleanup() {
-        if (this._isMethod) return;
-        if (this._backingField instanceof $Chemical)
-            this._backingField = undefined;
-        if (this._getter && this._setter) {
-            const value = this._getter();
+        if (this.isMethod) return;
+        if (this.backingField instanceof $Chemical)
+            this.backingField = undefined;
+        if (this.getter && this.setter) {
+            const value = this.getter();
             if (value instanceof $Chemical)
-                this._setter(undefined);
+                this.setter(undefined);
         }
     }
 
     private bondGet() {
+        this.accessed = true;
         const state = this._chemical[$state];
-        let value = this._getter ? this._getter() : this._backingField;
+        let value = this.getter ? this.getter() : this.backingField;
         if (value instanceof $Chemical && value[$destroyed]) {
-            if (this._setter) this._setter(value);
+            if (this.setter) this.setter(value);
             return undefined;
         }
         if (this._chemical[$reactive]) {
@@ -736,12 +830,10 @@ class $Bond<T extends $Chemical = any, P = any> {
                         this.bondForm(item);
                 });
             }
-            if (this.reactive && state) {
+            if (state) {
                 const wasReactive = this._chemical[$reactive];
                 this._chemical[$reactive] = false;
-                
                 state[this.bid] = $Represent.symbolize(value);
-                
                 this._chemical[$reactive] = wasReactive;
             }
         }
@@ -751,33 +843,64 @@ class $Bond<T extends $Chemical = any, P = any> {
 
     private bondSet(value: any) {
         if (value instanceof $Chemical && value[$destroyed]) value = undefined;
-        if (this._setter) this._setter(value);
-        else if (this._getter) throw new Error(`${this._property} property not settable`);
-        else this._backingField = value;
+        if (this.setter) this.setter(value);
+        else if (this.getter) throw new Error(`${this._property} property not settable`);
+        else this.backingField = value;
         this.bondGet();
     }
 
     private bondCall(chemical: $Chemical, ...args: any[]): any {
-        chemical[$formula].bindState();
-        let result = this._action!(...args);
-        chemical[$formula].updateState();
-        
-        if (result instanceof Promise) {
-            const state = chemical[$formula].state;
-            result = result.then(() => {
-                const newState = chemical[$formula].state;
-                if (state !== newState)
-                    chemical[$formula].update();
-                chemical[$formula].unbind();
-            })
-        } else {
-            chemical[$formula].unbind();
+        let id: string | undefined;
+        const context = $Bond.context;
+        const formula = chemical[$formula];
+        if (context) {
+            // Handle idempotency of reactive functions
+            id = $BondExecutionContext.executionId(chemical, this);
+            if (context.actions.has(id)) {
+                if (context.resolved.get(id) && !context.reacted.get(id)) {
+                    // Update when the promise resolves, but don't call the idempotent function again 
+                    context.react(id!);
+                    return;
+                } else if (context.reacted.get(id)) {
+                    // During that update, if this method is called, simply remove and assume it's idempotent
+                    console.log("bondCall: context: removed");
+                    context.remove(id);
+                    return;
+                }
+                return;
+            }
         }
 
-        return result;
+        formula.bindState();
+        formula.track()
+        let result = this.action!(...args);
+
+        const isAsync = result instanceof Promise;
+        if (!isAsync) {
+            formula.updateState();
+        }
+
+        formula.unbind();
+        if (!isAsync) return result;
+        if (!context) {
+            result.then(() => {
+                console.log("bondCall: context-free: update");
+                formula.update();
+            });
+            return;
+        }
+
+        id = $BondExecutionContext.executionId(chemical, this);
+        context.add(this, result.then(() => {
+            console.log("bondCall: context: async complete");
+            this.schedule(chemical, context, () => {
+                context.resolve(id!);
+            });
+        }));
     }
 
     private bondForm(value: $Chemical) {
+        value[$formula].track();
         const lastState = value[$lastState];
         value[$lastState] = value[$state];
         value[$state] = this._chemical[$state];
@@ -786,6 +909,76 @@ class $Bond<T extends $Chemical = any, P = any> {
             value[$state] = lastState;
             this._unbind = unbind;
         }
+    }
+
+    private schedule(chemical: $Chemical, context: $BondExecutionContext, action: () => void) {
+        console.log("schedule", chemical.toString(), action);
+        const orchestrator = chemical[$orchestrator];
+        !orchestrator.active ? 
+            orchestrator.actions.push(action) :
+            action();
+    }
+
+    static context?: $BondExecutionContext;
+}
+
+class $BondExecutionContext {
+    chemical: $Chemical;
+    actions: Map<string, Promise<void>> = new Map();
+    resolved: Map<string, boolean> = new Map();
+    reacted: Map<string, boolean> = new Map();
+    unresolved = false;
+
+    constructor(chemical: $Chemical) {
+        this.chemical = chemical;
+    }
+
+    add(bond: $Bond, action: Promise<void>) {
+        const id = $BondExecutionContext.executionId(this.chemical, bond);
+        if (this.actions.has(id)) return;
+        this.actions.set(id, action);
+        this.resolved.set(id, false);
+        this.reacted.set(id, false);
+        this.unresolved = true;
+    }
+
+    after(action: () => void) {
+        const ids: string[] = [];
+        const pending: Promise<void>[] = [];
+        for (const [id, promise] of this.actions.entries()) {
+            if (!this.resolved.get(id)) {
+                ids.push(id);
+                pending.push(promise.then(action));
+                this.resolve(id);
+            }
+        }
+        Promise.all(pending).then(() => {
+            ids.forEach(id => this.react(id));
+        });
+    }
+
+    resolve(id: string) {
+        this.resolved.set(id, true);
+    }
+
+    react(id: string) {
+        this.reacted.set(id, true);
+    }
+
+    remove(id: string) {
+        this.actions.delete(id);
+        this.resolved.delete(id);
+        this.reacted.delete(id);
+    }
+
+    clean() {
+        this.reacted.entries()
+            .filter(([_, reacted]) => reacted)
+            .forEach(([id, _]) => this.remove(id));
+    }
+
+    static executionId(chemical: $Chemical, bond: $Bond): string {
+        return `${chemical.toString()}[${bond.property}]`;
     }
 }
 
@@ -894,7 +1087,7 @@ class $BondOrchestrationContext {
 
     child(chemical: $Chemical, props: any): any {
         if (chemical[$lastProps] === props) return props;
-        props = chemical[$binder].bond(props, this);
+        props = chemical[$orchestrator].bond(props, this);
         chemical[$lastProps] = props;
         return props;
     }
@@ -914,18 +1107,28 @@ class $BondOrchestrationContext {
 }
 
 class $BondOrchestrator<T extends $Chemical> {
+    private _active = false;
     private _chemical: T;
     private _bondConstructor?: Function;
     private _parameters: { isArray: boolean, isSpread: boolean }[] = [];
     private _rendered: Map<Function, ReactElement> = new Map();
     private _lastAguments?: $BondArguments;
+    private _executionContext: $BondExecutionContext;
+    private _actions: (() => void)[] = [];
+
+    get active() { return this._active; }
+    get actions() { return this._actions; }
+    get executionContext() { return this._executionContext; }
 
     constructor(chemical: T) {
         this._chemical = chemical;
         const name = chemical[$type].name;
         this._bondConstructor = (chemical as any)[name];
         this.parseBondConstructor();
+        this._executionContext = new $BondExecutionContext(chemical);
     }
+
+    activate() { this._active = true; }
 
     bond(props: any, parentContext?: $BondOrchestrationContext): any {
         const chemical = this._chemical;
@@ -945,6 +1148,7 @@ class $BondOrchestrator<T extends $Chemical> {
 
         chemical[$children] = props.children;
 
+        $Bond.context = this._executionContext;
         if (this._bondConstructor && context.argsValid) {
             if (!this._lastAguments || !$BondArguments.equals(this._lastAguments, context.arguments)) {
                 paramValidation.reset();
@@ -956,13 +1160,25 @@ class $BondOrchestrator<T extends $Chemical> {
             }
         }
 
+        $Bond.context = undefined;
         chemical[$formula].refresh();
         return props;
     }
 
-    render(): ReactNode {        
-        let view = this._chemical.view();
+    render(): ReactNode {
+        const chemical = this._chemical;
+        const formula = chemical[$formula];
+        const executionContext = this._executionContext;
+
+        $Bond.context = executionContext;
+        let view = chemical.view();
         view = this.augmentView(view);
+        $Bond.context = undefined;
+
+        executionContext.after(() => {
+            formula.update()
+        });
+
         return view;
     }
 
@@ -1036,18 +1252,24 @@ class $BondOrchestrator<T extends $Chemical> {
         } else if (type == Undefined) {
             context.args.push(undefined);
         } else if (typeof type === 'function') {
+            //console.log(this._chemical.toString(), type?.name || type)
             let component: $$Component = type; 
             if (!component.$bind) {
                 let func = type as React.FC;
-                component = $(func).$Component;
+                component = $wrap(func).$Component;
             }
-            if (!component.$bound)
+            if (!component.$bound) {
                 component = component.$bind(this._chemical);
+            }
+
+            //console.log("bonds", component.$chemical[$formula].bonds.values().map(b => b.property).toArray());
+            component.$chemical[$parent] = this._chemical;
 
             const chemical = component.$chemical;
             const props = context.child(chemical, element.props);
             const key = `${chemical[$cid]}`;
             context.args.push(chemical);
+            //console.log(this._chemical.toString(), context.args[context.args.length-1])
             if (props !== element.props || key !== element.key) {
                 context.children.push({ type: component, props: props, key: `${chemical[$cid]}` });
                 context.isModified = true;
@@ -1210,6 +1432,7 @@ class $ParamValidation {
             }
         }
         
+        if (type?.prototype instanceof $$Function) return type.$Function.name;
         if (type?.prototype instanceof $Chemical) return type.name;
         if (typeof type === 'function') return type.name;
         return 'unknown';
@@ -1252,8 +1475,8 @@ class $ParamValidation {
             }
         }
 
+        if (arg instanceof $$Function) return `${arg.__$Function?.name || '[Function]'}>`;
         if (arg instanceof $Chemical) return arg.constructor.name;
-        if (arg instanceof $$Function) return `Function<${arg.$Function?.name || 'unknown'}>`;
         if (arg instanceof $Html) return `$Html<'${arg.element}'>`; 
         if (React.isValidElement(arg)) {
             const elementType = arg.type;
@@ -1327,7 +1550,7 @@ class $ParamValidation {
                 return arg.every(el => el instanceof elementType);
             } else if (typeof elementType === 'function') {
                 // Check if each element is a $Function wrapping the specific function component
-                return arg.every(el => el instanceof $$Function && el.$Function === elementType);
+                return arg.every(el => el instanceof $$Function && el.__$Function === elementType);
             }
         } else if (type === 'any') {
             return $ParamValidation.isValidReactNode(arg);
@@ -1350,7 +1573,7 @@ class $ParamValidation {
             return arg instanceof type;
         } else if (typeof type === 'function') {
             // Check if arg is a $Function wrapping the specific function component
-            return arg instanceof $$Function && arg.$Function === type;
+            return arg instanceof $$Function && arg.__$Function === type;
         }
         return false;
     }
@@ -1365,7 +1588,7 @@ class $ParamValidation {
     }
 }
 
-export class $Represent {
+class $Represent {
     static symbolize(value: any, mode: 'safe' | 'fast' = 'safe'): string {
         return mode === 'fast' 
             ? JSON.stringify(value, $Represent.replacer)
@@ -1584,32 +1807,11 @@ function isProp(property: string, value: any | PropertyDescriptor): boolean {
     return isSpecial(property) && typeof value !== 'function';
 }
 
-// function symbolize(value: any): string {
-//     let wasReactive: boolean | undefined;
-//     if (value instanceof $Chemical) {
-//         wasReactive = value[$reactive];
-//         value[$reactive] = false;
-//     }
-
-//     var symbol = stringify(value, function(this: any, key: string, val: any): any {
-//         if (key === '') return val;
-//         if (val instanceof $Chemical) return val[$cid];
-//         if (this instanceof $Chemical) return this[$cid];
-//         if (typeof val === 'function') return undefined;
-//         if (val?.constructor?.name === 'Proxy') return '[Proxy]';
-//         return val;
-//     });
-
-//     if (value instanceof $Chemical && wasReactive !== undefined) {
-//         value[$reactive] = wasReactive;
-//     }
-//     return symbol;
-// }
-
-export function $<P>(Component: React.FC<P>): $Function<React.FC<P>> {
+function $wrap<P>(Component: React.FC<P>): $Function<React.FC<P>> {
     if (!(typeof Component === "function")) 
         throw new Error(`Expected a function component, got ${Component}`);
-    return new $$Function(Component) as any;
+    const func = new $$Function(Component) as any;
+    return func;
 }
 
 export function $use<T extends $Chemical>(chemical: T): $$Component<T>

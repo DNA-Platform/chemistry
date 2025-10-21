@@ -38,14 +38,16 @@ export class $AsyncButton extends $Chemical {
     }
 }
 
-// Test 2: Constructor calling async method that updates properties
+// Test 2: Constructor AND view calling async methods
 export class $AutoLoader extends $Chemical {
     data: any = null;
     loaded = false;
     loadTime: string | null = null;
+    viewLoadData: any = null;
+    viewLoadTime: string | null = null;
 
     $AutoLoader() {
-        //this.$loadData();
+        this.$loadData();
     }
     
     async $loadData() {
@@ -63,29 +65,66 @@ export class $AutoLoader extends $Chemical {
         this.loadTime = new Date().toLocaleTimeString();
     }
     
+    async $loadViewData() {
+        if (this.viewLoadData) return;
+        
+        // Simulate another API call
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        this.viewLoadData = {
+            viewMessage: 'Loaded from view method',
+            viewValue: Math.floor(Math.random() * 50)
+        };
+        this.viewLoadTime = new Date().toLocaleTimeString();
+    }
+    
     async $refresh() {
         this.loaded = false;
         this.data = null;
+        this.viewLoadData = null;
         await this.$loadData();
     }
     
     view() {
+        // Call async method in view - should be idempotent
+        this.$loadViewData();
+        
         return (
             <div style={{ padding: '15px', border: '1px solid #2196f3', borderRadius: '8px' }}>
-                <h4>Test 2: Async in Constructor</h4>
-                {!this.loaded ? (
-                    <div>⏳ Loading...</div>
-                ) : (
-                    <>
-                        <div>Message: {this.data?.message}</div>
-                        <div>Value: {this.data?.value}</div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                            Loaded at: {this.loadTime}
-                        </div>
-                    </>
-                )}
+                <h4>Test 2: Async in Constructor & View</h4>
+                
+                <div style={{ marginBottom: '10px', padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
+                    <strong>Constructor Load:</strong>
+                    {!this.loaded ? (
+                        <div>⏳ Loading...</div>
+                    ) : (
+                        <>
+                            <div>Message: {this.data?.message}</div>
+                            <div>Value: {this.data?.value}</div>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                Loaded at: {this.loadTime}
+                            </div>
+                        </>
+                    )}
+                </div>
+                
+                <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
+                    <strong>View Load:</strong>
+                    {!this.viewLoadData ? (
+                        <div>⏳ Loading view data...</div>
+                    ) : (
+                        <>
+                            <div>Message: {this.viewLoadData?.viewMessage}</div>
+                            <div>Value: {this.viewLoadData?.viewValue}</div>
+                            <div style={{ fontSize: '12px', color: '#666' }}>
+                                Loaded at: {this.viewLoadTime}
+                            </div>
+                        </>
+                    )}
+                </div>
+                
                 <button onClick={this.$refresh} style={{ marginTop: '10px', padding: '5px 10px' }}>
-                    Refresh
+                    Refresh All
                 </button>
             </div>
         );
@@ -269,11 +308,186 @@ export class $ListLoader extends $Chemical {
     }
 }
 
+// Test 6: Race conditions - rapid clicks
+export class $RaceCondition extends $Chemical {
+    clickId = 0;
+    results: string[] = [];
+    processing = false;
+    
+    async $slowProcess() {
+        this.processing = true;
+        const id = ++this.clickId;
+        this.results = [...this.results, `Started request ${id}`];
+        
+        // Random delay to simulate race conditions
+        const delay = Math.random() * 2000 + 500;
+        await new Promise(resolve => setTimeout(resolve, delay));
+        
+        this.results = [...this.results, `Completed request ${id} after ${delay.toFixed(0)}ms`];
+        this.processing = false;
+    }
+    
+    $clear() {
+        this.results = [];
+        this.clickId = 0;
+    }
+    
+    view() {
+        return (
+            <div style={{ padding: '15px', border: '1px solid #ff5722', borderRadius: '8px' }}>
+                <h4>Test 6: Race Conditions (Rapid Clicks)</h4>
+                <p style={{ fontSize: '12px', color: '#666' }}>
+                    Click rapidly to test async handling
+                </p>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                    <button onClick={this.$slowProcess}>
+                        Start Async Process
+                    </button>
+                    <button onClick={this.$clear}>Clear</button>
+                </div>
+                <div style={{ maxHeight: '150px', overflow: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px', fontSize: '12px' }}>
+                    {this.results.length === 0 ? (
+                        <div style={{ color: '#999' }}>No requests yet</div>
+                    ) : (
+                        this.results.map((result, i) => (
+                            <div key={i}>{result}</div>
+                        ))
+                    )}
+                </div>
+            </div>
+        );
+    }
+}
+
+// Test 7: Conditional async in view
+export class $ConditionalAsync extends $Chemical {
+    mode: 'idle' | 'loading' | 'loaded' = 'idle';
+    primaryData: any = null;
+    secondaryData: any = null;
+    
+    async $loadPrimary() {
+        if (this.primaryData) return;
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        this.primaryData = { value: 'Primary loaded' };
+    }
+    
+    async $loadSecondary() {
+        if (this.secondaryData) return;
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        this.secondaryData = { value: 'Secondary loaded' };
+    }
+    
+    $setMode(mode: 'idle' | 'loading' | 'loaded') {
+        this.mode = mode;
+    }
+    
+    $reset() {
+        this.mode = 'idle';
+        this.primaryData = null;
+        this.secondaryData = null;
+    }
+    
+    view() {
+        // Conditionally call async methods based on state
+        if (this.mode === 'loading') {
+            this.$loadPrimary();
+            if (this.primaryData) {
+                this.$loadSecondary();
+            }
+        }
+        
+        return (
+            <div style={{ padding: '15px', border: '1px solid #00bcd4', borderRadius: '8px' }}>
+                <h4>Test 7: Conditional Async in View</h4>
+                <div style={{ marginBottom: '10px' }}>
+                    Mode: <strong>{this.mode}</strong>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                    <button onClick={() => this.$setMode('idle')}>Set Idle</button>
+                    <button onClick={() => this.$setMode('loading')}>Start Loading</button>
+                    <button onClick={() => this.$setMode('loaded')}>Set Loaded</button>
+                    <button onClick={this.$reset}>Reset All</button>
+                </div>
+                <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
+                    <div>Primary: {this.primaryData ? this.primaryData.value : 'Not loaded'}</div>
+                    <div>Secondary: {this.secondaryData ? this.secondaryData.value : 'Not loaded'}</div>
+                </div>
+            </div>
+        );
+    }
+}
+
+// Test 8: Nested async calls with parent updates
+export class $NestedAsync extends $Chemical {
+    parentState = 'initial';
+    childResults: string[] = [];
+    depth = 0;
+    
+    async $parentMethod() {
+        this.parentState = 'parent processing';
+        this.depth = 1;
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        await this.$childMethod('from parent');
+        
+        this.parentState = 'parent complete';
+        this.depth = 0;
+    }
+    
+    async $childMethod(source: string) {
+        this.childResults = [...this.childResults, `Child called ${source} at depth ${this.depth}`];
+        this.depth++;
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+        
+        if (this.depth < 3) {
+            await this.$childMethod('recursively');
+        }
+        
+        this.depth--;
+    }
+    
+    $reset() {
+        this.parentState = 'initial';
+        this.childResults = [];
+        this.depth = 0;
+    }
+    
+    view() {
+        return (
+            <div style={{ padding: '15px', border: '1px solid #795548', borderRadius: '8px' }}>
+                <h4>Test 8: Nested Async Calls</h4>
+                <div>Parent State: <strong>{this.parentState}</strong></div>
+                <div>Current Depth: <strong>{this.depth}</strong></div>
+                <div style={{ marginTop: '10px', marginBottom: '10px' }}>
+                    <button onClick={this.$parentMethod}>Start Parent Method</button>
+                    <button onClick={() => this.$childMethod('directly')} style={{ marginLeft: '10px' }}>
+                        Call Child Directly
+                    </button>
+                    <button onClick={this.$reset} style={{ marginLeft: '10px' }}>Reset</button>
+                </div>
+                <div style={{ maxHeight: '150px', overflow: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px', fontSize: '12px' }}>
+                    {this.childResults.length === 0 ? (
+                        <div style={{ color: '#999' }}>No child calls yet</div>
+                    ) : (
+                        this.childResults.map((result, i) => (
+                            <div key={i}>{result}</div>
+                        ))
+                    )}
+                </div>
+            </div>
+        );
+    }
+}
+
 const AsyncButton = new $AsyncButton().Component;
 const AutoLoader = new $AutoLoader().Component;
 const MultiAsync = new $MultiAsync().Component;
 const ErrorHandler = new $ErrorHandler().Component;
 const ListLoader = new $ListLoader().Component;
+const RaceCondition = new $RaceCondition().Component;
+const ConditionalAsync = new $ConditionalAsync().Component;
+const NestedAsync = new $NestedAsync().Component;
 
 export default function BasicTests() {
     return (
@@ -289,6 +503,9 @@ export default function BasicTests() {
                 <MultiAsync />
                 <ErrorHandler />
                 <ListLoader />
+                <RaceCondition />
+                <ConditionalAsync />
+                <NestedAsync />
             </div>
             
             <div style={{ 
@@ -302,9 +519,13 @@ export default function BasicTests() {
                 <ul style={{ margin: '10px 0', paddingLeft: '20px' }}>
                     <li>Async $ methods can be used directly in onClick - Chemistry handles the Promise</li>
                     <li>Constructors call async methods synchronously - updates trigger re-renders</li>
+                    <li>View methods can call async methods - idempotency prevents loops</li>
                     <li>Property updates from async methods automatically update the view</li>
                     <li>Error handling works naturally with try/catch in async methods</li>
                     <li>Arrays and progressive updates work as expected</li>
+                    <li>Race conditions from rapid clicks are handled gracefully</li>
+                    <li>Conditional async calls in view work with idempotency</li>
+                    <li>Nested async methods maintain proper state updates</li>
                 </ul>
             </div>
         </div>
