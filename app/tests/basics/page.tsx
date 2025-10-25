@@ -21,6 +21,7 @@ class $Counter extends $Chemical {
    count = 0;
    
    $increment() {
+    console.log('$increment', this)
        this.count = this.count + 1;
    }
    
@@ -29,7 +30,7 @@ class $Counter extends $Chemical {
            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
                <div>Count: {this.count}</div>
                <button 
-                   onClick={() => this.$increment()}
+                   onClick={this.$increment}
                    style={{ 
                        border: '1px solid #ccc',
                        background: '#f5f5f5',

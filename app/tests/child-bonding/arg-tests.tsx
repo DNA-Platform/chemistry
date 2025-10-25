@@ -121,7 +121,7 @@ export class $FormBuilder extends $Chemical {
     
     view() {
         // Check what we received
-        const inputPass = this.inputEl && typeof this.inputEl === 'object' && 'type' in this.inputEl;
+        const inputPass = this.inputEl && this.inputEl.element === 'input';
         const buttonPass = this.buttonEl && typeof this.buttonEl === 'object';
         const divPass = this.divEl && typeof this.divEl === 'object';
         const allPass = inputPass && buttonPass && divPass && this.elements.length === 2;
@@ -204,7 +204,7 @@ export class $CollectionManager extends $Chemical {
                 </h4>
                 
                 <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
-                    <div><strong>Test:</strong> Constructor receives 3 separate arrays created by {'<$>...</$>'}</div>
+                    <div><strong>Test:</strong> Constructor receives 3 separate arrays created by {'<List>...</List>'}</div>
                     <div><strong>Expected:</strong></div>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                         <li>Array 1: 3 $Label instances</li>
@@ -387,11 +387,11 @@ export class $MatrixContainer extends $Chemical {
                 </h4>
                 
                 <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
-                    <div><strong>Test:</strong> Constructor receives 2D array structure created by nested {'<$>...</$>'}</div>
+                    <div><strong>Test:</strong> Constructor receives 2D array structure created by nested {'<List>...</List>'}</div>
                     <div><strong>Expected:</strong></div>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                         <li>header: 1 $Label</li>
-                        <li>rows: 3x3 array of $Labels (created by {'<$><$>...</$><$>...</$>...</$>'})</li>
+                        <li>rows: 3x3 array of $Labels (created by {'<List><List>...</List><List>...</List>...</List>'})</li>
                         <li>footer: 1 $$Function (optional)</li>
                     </ul>
                     <div><strong>Received:</strong></div>
@@ -460,6 +460,7 @@ export class $Book extends $Chemical {
     
     $Book(...chapters: $Chapter[]) {
         $check(chapters, [$Chapter]);
+        this.chapters = chapters;
     }
     
     view() {
@@ -484,6 +485,9 @@ export class $Catalogue extends $Chemical {
     $Catalogue(...books: $Book[]) {
         $check(books, [$Book]);
         this.books = books;
+        console.log('$Catalogue.books', this.books);
+        console.log('$Catalogue.book[0]', this.books[0]);
+        console.log('$Catalogue.book[0].chapters', this.books[0].chapters);
     }
     
     view() {

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import BasicTests from './basic-tests';
 import LoadingTests from './loading-tests';
+import IfWhenTests from './if-when-tests';
 
 const subTests = [
     {
@@ -16,6 +17,12 @@ const subTests = [
         name: 'Loading Tests',
         description: 'Tests that module works in sync and async contexts',
         component: LoadingTests
+    },
+    {
+        id: 'if-when',
+        name: 'If-When Tests',
+        description: 'Tests for executing async functions with helper components',
+        component: IfWhenTests
     },
 ];
 

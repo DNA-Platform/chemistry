@@ -83,6 +83,7 @@ export class $AutoLoader extends $Chemical {
         this.data = null;
         this.viewLoadData = null;
         await this.$loadData();
+        await this.$loadViewData();
     }
     
     view() {
@@ -259,16 +260,18 @@ export class $ListLoader extends $Chemical {
     loading = false;
     
     $ListLoader() {
-        //this.$loadItems();
+        this.$reload();
     }
     
     async $loadItems() {
+        if (this.items.length > 0)
+            return;
+
         this.loading = true;
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
-        // Simulate loading items one by one
         for (let i = 1; i <= 5; i++) {
-            await new Promise(resolve => setTimeout(resolve, 300));
-            this.items = [...this.items, `Item ${i} loaded at ${new Date().toLocaleTimeString()}`];
+            this.items.push(`Item ${i} loaded`);
         }
         
         this.loading = false;
@@ -279,7 +282,7 @@ export class $ListLoader extends $Chemical {
     }
     
     async $reload() {
-        this.items = [];
+        if (this.loading) return;
         await this.$loadItems();
     }
     
@@ -369,12 +372,14 @@ export class $ConditionalAsync extends $Chemical {
         if (this.primaryData) return;
         await new Promise(resolve => setTimeout(resolve, 1000));
         this.primaryData = { value: 'Primary loaded' };
+        this.check();
     }
     
     async $loadSecondary() {
         if (this.secondaryData) return;
         await new Promise(resolve => setTimeout(resolve, 1200));
         this.secondaryData = { value: 'Secondary loaded' };
+        this.check();
     }
     
     $setMode(mode: 'idle' | 'loading' | 'loaded') {
@@ -386,16 +391,13 @@ export class $ConditionalAsync extends $Chemical {
         this.primaryData = null;
         this.secondaryData = null;
     }
+
+    check() {
+        if (this.primaryData && this.secondaryData) 
+            this.$setMode('loaded')
+    }
     
     view() {
-        // Conditionally call async methods based on state
-        if (this.mode === 'loading') {
-            this.$loadPrimary();
-            if (this.primaryData) {
-                this.$loadSecondary();
-            }
-        }
-        
         return (
             <div style={{ padding: '15px', border: '1px solid #00bcd4', borderRadius: '8px' }}>
                 <h4>Test 7: Conditional Async in View</h4>
@@ -404,8 +406,7 @@ export class $ConditionalAsync extends $Chemical {
                 </div>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
                     <button onClick={() => this.$setMode('idle')}>Set Idle</button>
-                    <button onClick={() => this.$setMode('loading')}>Start Loading</button>
-                    <button onClick={() => this.$setMode('loaded')}>Set Loaded</button>
+                    <button onClick={() => { this.$setMode('loading'); this.$loadPrimary(); this.$loadSecondary();}}>Start Loading</button>
                     <button onClick={this.$reset}>Reset All</button>
                 </div>
                 <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
