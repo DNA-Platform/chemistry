@@ -206,9 +206,9 @@ export class $Chemical {
     }
 
     /** @internal */
-    get __reaction(): $Reaction | undefined { 
+    get __activeReaction(): $Reaction | undefined { 
         return this[$reaction].active ? this[$reaction] : 
-            this.parent ? this.parent.__reaction :
+            this.parent ? this.parent.__activeReaction :
             undefined; 
     }
 
@@ -450,8 +450,9 @@ class $Component$<T extends $Chemical> {
             reaction.bind(update);
 
             useEffect(() => {
-                reaction.track('existing');
+                reaction.activate('existing');
                 reaction.resolve('formation');
+                reaction.deactivate();
                 reaction.updateIf();
                 return () => {
                     reaction.resolve('destruction');
@@ -468,8 +469,9 @@ class $Component$<T extends $Chemical> {
             }, [chemical, renderCount]);
 
             useEffect(() => {
-                reaction.track('existing');
+                reaction.activate('existing');
                 reaction.resolve('process');
+                reaction.deactivate();
                 reaction.updateIf();
             }, [chemical, renderCount++]);
 
@@ -687,6 +689,8 @@ class $Reaction {
     get state() { return this._state; }
     private _state: $State;
 
+    get tracking() { return this._state.tracking; }
+
     constructor(chemical: $Chemical) {
         this._chemical = chemical;
         this._state = new $State(chemical);
@@ -698,20 +702,19 @@ class $Reaction {
         this._update = update;
     }
 
-    activate() {
+    activate(type?: 'existing') {
         this._active = true;
+        this.state.track(type);
     }
 
     deactivate() {
         this._active = false;
-    }
-
-    track(type?: 'existing') {
-        this.state.track(type);
+        this.state.clear();
     }
 
     updateIf(): boolean {
         const changed = this.state.changed(); 
+        console.log("updateIf:changed", changed);
         if (changed) this.update();
         return changed;
     }
@@ -807,13 +810,11 @@ class $State {
     private _current: Record<string, any> & { cid: string } = $State.empty;
     private _previous: Record<string, any> & { cid: string } = $State.empty;
 
-    get symbol(): string { 
-        return $State.symbolize(this._current);
-    }
+    get symbol(): string { return $State.symbolize(this._current); }
+    get previous(): string { return $State.symbolize(this._previous); }
 
-    get previous(): string { 
-        return $State.symbolize(this._previous);
-    }
+    get tracking() { return this._tracking; }
+    private _tracking = false;
 
     constructor(chemical: $Chemical) {
         this._chemical = chemical;
@@ -821,14 +822,20 @@ class $State {
     }
 
     track(type?: 'existing') {
+        if (this.tracking) return;
+        this._tracking = true;
         this._previous = this._current;
         this._current = type === 'existing' ? 
-            Object.assign(this._current) : 
+            Object.assign({}, this._current) : 
             { cid: $symbolize(this._chemical[$cid]) };
     }
 
+    clear() {
+        this._tracking = false;
+    }
+
     changed(): boolean {
-        return this.symbol == this.previous;
+        return this.symbol !== this.previous;
     }
 
     add(bond: $Bond, value: any) {
@@ -889,9 +896,12 @@ class $Bond<T extends $Chemical = any, P = any> {
     get lastSeenValue() { return this._lastSeenArgs; }
     set lastSeenValue(value: any) { 
         this._lastSeenValue = value;
-        const reaction = this._chemical.__reaction;
-        if (reaction)
+        const [reaction, type] = this.reaction;
+        console.log("lastSeenValue", "reactionType", type, "tracking", reaction.tracking, 'value', value)
+        console.log('lastSeenValue:state', reaction.state.symbol, 'previous', reaction.state.previous);
+        if (type === 'active' || reaction.tracking)
             reaction.state.add(this, value);
+        console.log('lastSeenValue:state', reaction.state.symbol, 'previous', reaction.state.previous);
     }
 
     get isProp() { return this._isProp; }
@@ -913,6 +923,11 @@ class $Bond<T extends $Chemical = any, P = any> {
     get isReadOnly() { return this.property && this.getter !== undefined && this.setter === undefined; }
     get isWriteOnly() { return this.property && this.getter === undefined && this.setter !== undefined; }
     get isEditable() { return this.isReadable && this.isWritable; }
+
+    get reaction(): [$Reaction, 'active' | 'ineactive'] { 
+        const activeReaction = this._chemical.__activeReaction;
+        return activeReaction ? [activeReaction, 'active'] : [this._chemical[$reaction], 'ineactive'];
+    }
 
     protected constructor(chemical: T, property: string, descriptor: PropertyDescriptor) {
         console.log('Bond:constructor', chemical)
@@ -1054,9 +1069,22 @@ class $BondFormation<T extends $Chemical = any, P = any> extends $Bond<T, P> {
         if (this.active)
             return this._lastSeenValue;
 
+        const chemical = this._chemical;
+        const reaction = chemical[$reaction];
+        const currentReaction = chemical.__activeReaction;
+        const updateRequired = currentReaction === undefined;
+
+        console.log("bondForm", this.property, "updateRequired", updateRequired);
+        if (updateRequired)
+            reaction.activate('existing');
+
         let result = this.action!(...args);
         if (!(result instanceof Promise)) {
             this.lastSeenValue = result;
+            if (updateRequired) {
+                reaction.deactivate();
+                reaction.updateIf();
+            }
             return result;
         }
 
@@ -1072,8 +1100,9 @@ class $BondFormation<T extends $Chemical = any, P = any> extends $Bond<T, P> {
             if (this._active != action) return;
             this._active = undefined;
             this._lastSeenValue = result;
-            reaction.track('existing');
+            reaction.activate('existing');
             reaction.state.add(this, result);
+            reaction.deactivate();
             reaction.updateIf();
         });
         return this._lastSeenValue;
@@ -1230,11 +1259,9 @@ class $BondOrchestrator<T extends $Chemical> {
 
         // Track the state of the reaction
         reaction.activate();
-        reaction.track();
         const view = this.view();
         reaction.deactivate();
         reaction.updateIf();
-
 
         this.bound = false;
         return view;

@@ -20,8 +20,8 @@ class $Display extends $Chemical {
 class $Counter extends $Chemical {
    count = 0;
    
-   $increment() {
-    console.log('$increment', this)
+   increment() {
+    console.log('increment', this)
        this.count = this.count + 1;
    }
    
@@ -30,7 +30,7 @@ class $Counter extends $Chemical {
            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
                <div>Count: {this.count}</div>
                <button 
-                   onClick={this.$increment}
+                   onClick={this.increment}
                    style={{ 
                        border: '1px solid #ccc',
                        background: '#f5f5f5',
@@ -83,18 +83,18 @@ class $ComplexProps extends $Chemical {
        this._computedValue = val / 2;
    }
    
-   $modifyRegularArray() {
+   modifyRegularArray() {
        this.regularArrayCount++;
        this.regularArray.push('added ' + this.regularArrayCount);
    }
    
-   $modifyRegularObject() {
+   modifyRegularObject() {
        this.regularObject.count++;
        this.regularObject.status = 'modified';
        (this.regularObject as any)['property' + this.regularObject.count] = 'value ' + this.regularObject.count;
    }
    
-   $modifyComputed() {
+   modifyComputed() {
        this.computedProp = 300;
    }
    
@@ -114,7 +114,7 @@ class $ComplexProps extends $Chemical {
                    <div>Regular Array: {JSON.stringify(this.regularArray)}</div>
                    <div>Regular Object: {JSON.stringify(this.regularObject)}</div>
                    <button 
-                       onClick={() => this.$modifyRegularArray()}
+                       onClick={() => this.modifyRegularArray()}
                        style={{
                            padding: '5px 10px',
                            marginRight: '10px',
@@ -127,7 +127,7 @@ class $ComplexProps extends $Chemical {
                        Add to Array
                    </button>
                    <button 
-                       onClick={() => this.$modifyRegularObject()}
+                       onClick={() => this.modifyRegularObject()}
                        style={{
                            padding: '5px 10px',
                            border: '1px solid #ccc',
@@ -144,7 +144,7 @@ class $ComplexProps extends $Chemical {
                    <h4>Computed Property (getter/setter):</h4>
                    <div>Computed Value: {this.computedProp}</div>
                    <button 
-                       onClick={() => this.$modifyComputed()}
+                       onClick={() => this.modifyComputed()}
                        style={{
                            padding: '5px 10px',
                            border: '1px solid #ccc',
