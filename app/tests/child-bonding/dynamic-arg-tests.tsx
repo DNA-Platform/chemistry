@@ -183,7 +183,7 @@ export class $Chapter extends $Chemical {
     view() {
         const inLibrary = 
             !!this.parent && !!this.parent.parent && 
-            this.parent.parent.constructor.name === '$Library';
+            this.parent.parent instanceof $Library;
         
         const Container = this.Container;
         const Info = this.ChapterInfo;
@@ -209,7 +209,7 @@ export class $Book extends $Chemical {
     title!: $Title;
     chapters: $Chapter[] = [];
     
-    private _isOpen = false;
+    protected isOpen = false;
     
     // Styled components that subclasses can override
     protected LibraryBookContainer = styled.div<{ $isOpen: boolean }>`
@@ -321,8 +321,8 @@ export class $Book extends $Chemical {
         this.chapters = chapters;
     }
     
-    $toggleOpen() {
-        this._isOpen = !this._isOpen;
+    toggleOpen() {
+        this.isOpen = !this.isOpen;
     }
     
     view() {
@@ -352,8 +352,8 @@ export class $Book extends $Chemical {
         const [Title, titleKey] = $use(this.title, 'key');
         
         return (
-            <Container onClick={this.$toggleOpen} $isOpen={this._isOpen}>
-                {!this._isOpen ? (
+            <Container onClick={this.toggleOpen} $isOpen={this.isOpen}>
+                {!this.isOpen ? (
                     <div style={{ width: '100%', height: '100%' }}>
                         <Cover key={coverKey} />
                     </div>

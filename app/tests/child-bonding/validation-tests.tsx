@@ -147,14 +147,17 @@ const testCases: TestResult[] = [
     
     // Parameter 2: count tests
     {
-        name: "P2: String instead of number",
-        description: "Passing string where number expected",
-        expectedError: "Parameter 2: expected number, received string",
+        name: "P2: Label instead of number",
+        description: "Passing Label where number expected",
+        expectedError: "Parameter 2: expected number, received Label",
         component: (
             <ComplexValidator>
                 <Label />
-                {"not a number"}
-                <List><Chapter /><Chapter /></List>
+                <Label />
+                <List>
+                    <Chapter />
+                    <Chapter />
+                </List>
                 <div>config</div>
                 <SimpleCard />
                 <List><List>{1}</List><List>{2}</List></List>

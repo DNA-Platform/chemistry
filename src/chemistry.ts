@@ -2,12 +2,12 @@ import { exec } from 'child_process';
 import { unwatchFile } from 'fs';
 import { GSP_NO_RETURNED_VALUE } from 'next/dist/lib/constants';
 import { ReactServerDOMTurbopackClient } from 'next/dist/server/route-modules/app-page/vendored/ssr/entrypoints';
-import React, { ReactNode, ReactElement, useState, useEffect, JSX, useLayoutEffect } from 'react';
+import React, { ReactNode, ReactElement, useState, useEffect, JSX, useLayoutEffect, useRef } from 'react';
 
 export type $Type<T = any> = $Constructor<T>;
 export type $Constructor<T = {}> = new (...args: any[]) => T;
 type $SymbolFeature = 'fast' | 'slow' | 'self-contained' | 'referential';
-type $Phase = 'construction' | 'formation' | 'progress' | 'process' | 'destruction';
+type $Phase = 'setup' | 'mount' | 'render' | 'layout' | 'effect' | 'unmount';
 
 export type Props = {
     [key: string]: any;
@@ -131,19 +131,20 @@ export function inert() {
 }
 
 // $Chemical Symbols
-const $lastProps = Symbol("$Chemical.lastProps");
 const $destroyed = Symbol("$Chemical.destroyed");
 const $remove = Symbol("$Chemical.remove");
 const $decorators = Symbol("$Chemical.decorators");
 const $cid = Symbol("$Chemical.cid");
 const $type = Symbol("$Chemical.type");
-const $formula = Symbol("$Chemical.formula");
+const $molecule = Symbol("$Chemical.molecule");
 const $reaction = Symbol("$Chemical.reaction");
+const $$reaction = Symbol("$Chemical.$reaction");
 const $template = Symbol("$Chemical.template");
 const $parent = Symbol("$Chemical.parent");
 const $orchestrator = Symbol("$Chemical.orchestrator");
 const $component = Symbol("$Chemical.component");
 const $children = Symbol("$Chemical.children");
+const $lastProps = Symbol("$Chemical.lastProps");
 
 // $Atom Symbols
 const $formed = Symbol("$Arom.formed");
@@ -151,9 +152,6 @@ const $formation = Symbol("$Arom.formation");
 const $remembered = Symbol("$Arom.remembered");
 
 export class $Chemical {
-    /** @internal */
-    [$lastProps]: any = {};
-
     /** @internal */
     [$remove] = false;
 
@@ -170,10 +168,13 @@ export class $Chemical {
     [$type]: typeof $Chemical;
 
     /** @internal */
-    [$formula]: $Formula;
+    [$molecule]: $Molecule;
 
     /** @internal */
     [$reaction]: $Reaction;
+
+    /** @internal */
+    [$$reaction]: $Reaction | undefined;
 
     /** @internal */
     [$parent]: $Chemical | undefined;
@@ -186,6 +187,9 @@ export class $Chemical {
 
     /** @internal */
     [$children]: ReactNode;
+
+    /** @internal */
+    [$lastProps]: any;
 
     /** @internal */
     static [$template]: $Chemical;
@@ -208,11 +212,24 @@ export class $Chemical {
     /** @internal */
     get __activeReaction(): $Reaction | undefined { 
         return this[$reaction].active ? this[$reaction] : 
+            this[$$reaction] && this[$$reaction].active ? this[$$reaction] :
             this.parent ? this.parent.__activeReaction :
             undefined; 
     }
 
-    get parent(): $Chemical | undefined { return this[$parent]; }
+    get parent(): $Chemical | undefined { 
+        const parent = this[$parent];
+        if (parent) {
+            parent[$$reaction] = 
+                this[$reaction].active ? this[$reaction] :
+                this[$$reaction] && this[$$reaction].active ? this[$$reaction] :
+                undefined;
+
+            if (parent[$$reaction]?.active)
+                $Reaction.track(parent);
+        }
+        return parent;
+    }
 
     /** @internal */
     set parent(chemical: $Chemical) { this[$parent] = chemical; }
@@ -241,7 +258,7 @@ export class $Chemical {
         this[$type] = this.constructor as any;
         if (!this[$type][$template]) 
             this[$type][$template] = this;
-        this[$formula] = new $Formula(this);
+        this[$molecule] = new $Molecule(this);
         this[$reaction] = new $Reaction(this);
         this[$orchestrator] = new $BondOrchestrator(this);
     }
@@ -256,10 +273,11 @@ export class $Chemical {
         return `${type?.name}[${cid}]`;
     }
 
-    async formation() { return this[$reaction].formation(); } 
-    async progress() { return this[$reaction].progress(); } 
-    async process() { return this[$reaction].process(); } 
-    async destruction() { return this[$reaction].destruction(); } 
+    async mount() { return this[$reaction].mount(); } 
+    async render() { return this[$reaction].render(); } 
+    async layout() { return this[$reaction].layout(); } 
+    async effect() { return this[$reaction].effect(); } 
+    async unmount() { return this[$reaction].unmount(); } 
 
     /** @internal */
     __render(props: any): ReactNode {
@@ -271,7 +289,7 @@ export class $Chemical {
         const component = this[$component];
         if (component && component.$bound && component.$chemical == this) return;
         this[$parent] = undefined as any
-        this[$formula]?.destroy();
+        this[$molecule]?.destroy();
         this[$reaction]?.destroy();
         this[$destroyed] = true;
     }
@@ -282,7 +300,7 @@ export class $Chemical {
             throw new Error(`The Component for ${this} has already been created`);
 
         this.assertViewConstructors();
-        this.__template[$formula].init();
+        this.__template[$molecule].init();
         return new $Component$(this.__template) as any;
     }
 
@@ -334,7 +352,7 @@ export class $Atom extends $Chemical {
                 if (!this[$formed])
                     await this.form();
                     await this.reflect();
-                    this[$formula].init();
+                    this[$molecule].init();
                     
                     this[$formed] = true;
             })
@@ -350,7 +368,7 @@ export class $Atom extends $Chemical {
             const stored = localStorage.getItem(key);
             if (stored) {
                 const diagram = JSON.parse(stored);
-                this[$formula].read(diagram);
+                this[$molecule].read(diagram);
                 return true;
             }
         } catch (e) {
@@ -362,7 +380,7 @@ export class $Atom extends $Chemical {
     protected async reflect(): Promise<void> {
         try {
             const key = `$Chemistry<${this[$type].name}>`;
-            const diagram = this[$formula].diagram('self-contained');
+            const diagram = this[$molecule].formula('self-contained');
             localStorage.setItem(key, diagram);
         } catch (e) {
             console.error(`Failed to remember ${this[$type].name}:`, e);
@@ -399,9 +417,9 @@ class $Function$<P = any> extends $Chemical {
     }
 
     protected gatherProps(): any {
-        this[$formula].init();
+        this[$molecule].init();
         const props: Record<string, any> = this.children ? { children: this.children } : { };
-        for (const bond of this[$formula].bonds.values()) {
+        for (const bond of this[$molecule].bonds.values()) {
             if (bond.isProp) props[bond.property.slice(1)] = bond.value();
         }
         return props;
@@ -425,7 +443,6 @@ class $Component$<T extends $Chemical> {
         this._chemical = chemical;
         this._parent = parent;
         
-        let renderCount = 0;
         this.Component = ((props: any) => {
             const [cid, setChemicalId] = useState(-1);
             const initialCid = -1;
@@ -440,22 +457,18 @@ class $Component$<T extends $Chemical> {
                 chemical = this._chemical!;
             }
 
-            console.log('Component:refresh')
-            chemical[$formula].refresh();
+            chemical[$molecule].refresh();
             if (newChemical)
                 setChemicalId(chemical[$cid]);
 
             const reaction = chemical[$reaction];
-            const [_, update] = useState({});
+            const [token, update] = useState({});
             reaction.bind(update);
 
             useEffect(() => {
-                reaction.activate('existing');
-                reaction.resolve('formation');
-                reaction.deactivate();
-                reaction.updateIf();
+                reaction.resolve('mount');
                 return () => {
-                    reaction.resolve('destruction');
+                    reaction.resolve('unmount');
                     if (!this.$bound) {
                         // Two checks to handle strict mode render after unmount
                         if (!chemical[$remove]) chemical[$remove] = true;
@@ -465,17 +478,13 @@ class $Component$<T extends $Chemical> {
             }, [chemical]);
 
             useLayoutEffect(() => {
-                reaction.resolve('progress');
-            }, [chemical, renderCount]);
+                reaction.resolve('layout');
+            }, [chemical, token]);
 
             useEffect(() => {
-                reaction.activate('existing');
-                reaction.resolve('process');
-                reaction.deactivate();
-                reaction.updateIf();
-            }, [chemical, renderCount++]);
+                reaction.resolve('effect');
+            }, [chemical, token]);
 
-            console.log('Component:render', props)
             return chemical.__render(props);
         }) as any;
 
@@ -494,34 +503,36 @@ class $Component$<T extends $Chemical> {
         if (chemical && chemical === this._chemical) return this.Component as any;
         if (chemical && parent && !chemical.parent) chemical[$parent] = parent; 
         if (chemical && chemical.parent && !parent) parent = chemical[$parent]; 
-        chemical = !chemical ? this.createChemical(parent ?? this._parent) : this.ensureChemical(chemical);
+        chemical = !chemical ? this.createChemical(parent) : this.ensureChemical(chemical);
         return new $Component$(chemical.__template, chemical, parent ?? this._parent) as any;
     }
 
     private createChemical(parent?: $Chemical): T {
-        this.$template[$formula].refresh();
+        this.$template[$molecule].refresh();
         const chemical = Object.create(this.$template) as T;
         chemical[$parent] = parent;
+        chemical[$type] = this.$template[$type];
         chemical[$cid] = $Chemical.getNextCid();
-        chemical[$formula] = new $Formula(chemical);
+        chemical[$molecule] = new $Molecule(chemical);
         chemical[$reaction] = new $Reaction(chemical);
         chemical[$orchestrator] = new $BondOrchestrator(chemical);
-        chemical[$formula].init();
+        chemical[$molecule].init();
         return chemical;
     }
 
     private ensureChemical(chemical: T): T {
-        if (!chemical[$formula]) {
-            chemical[$formula] = new $Formula(chemical);
+        if (!chemical[$molecule]) {
+            chemical[$type] = this.$template[$type];
+            chemical[$molecule] = new $Molecule(chemical);
             chemical[$reaction] = new $Reaction(chemical);
             chemical[$orchestrator] = new $BondOrchestrator(chemical);
-            chemical[$formula].init();
+            chemical[$molecule].init();
         }
         return chemical as any;
     }
 }
 
-class $Formula {
+class $Molecule {
     get initialize() { return this._initialized; }
     private _initialized = false;
 
@@ -538,7 +549,7 @@ class $Formula {
         this._chemical = chemical;
     }
 
-    diagram(closure: 'self-contained' | 'referential' = 'referential'): string {
+    formula(closure: 'self-contained' | 'referential' = 'referential'): string {
         const result: Record<string, any> = {};
         for (const [property, bond] of this._bonds) {
             if (bond.isMethod) continue; 
@@ -556,8 +567,8 @@ class $Formula {
 
         try {
             const template = this.chemical.__template;
-            if (!this.chemical.__isTemplate && !template[$formula]._initialized)
-                template[$formula].init();
+            if (!this.chemical.__isTemplate && !template[$molecule]._initialized)
+                template[$molecule].init();
             this._createBonds();
         } finally {
             this._initialized = true;
@@ -565,17 +576,14 @@ class $Formula {
     }
 
     refresh() {
-        console.log('refesh');
         if (this._destroyed) return;
         if (!this._initialized) {
-            console.log('refesh:init');
             this.init();
             return;
         }
 
         const chain = [this._chemical, Object.getPrototypeOf(this._chemical)];
         this._createBonds(chain);
-        console.log('refresh:bonds', this.bonds.values().map(b => b.property).toArray());
     }
 
     read(diagram: string) {
@@ -624,7 +632,6 @@ class $Formula {
             const bond = $Bond.create(this._chemical, property, descriptor);
             this._bonds.set(property, bond);
             bond.init();
-            console.log('createBonds', bond.property)
         }
     }
 
@@ -675,16 +682,18 @@ class $Reaction {
     private _chemical: $Chemical;
     private _update?: React.Dispatch<React.SetStateAction<{}>>;
     private _updateScheduled = false;
-    private _formation: (() => void)[] = [];
-    private _progress: (() => void)[] = [];
-    private _process: (() => void)[] = [];
-    private _destruction: (() => void)[] = [];
+    private _mount: (() => void)[] = [];
+    private _render: (() => void)[] = [];
+    private _layout: (() => void)[] = [];
+    private _effect: (() => void)[] = [];
+    private _unmount: (() => void)[] = [];
+    private _renderCount = 0;
 
-    get active() { return this._active; }
-    private _active = false;
+    get active() { return this._activeCount > 0; }
+    private _activeCount = 0;
 
-    get phase() { return this._phase; }
-    private _phase: $Phase = 'construction';
+    get phase(): $Phase { return this._phase; }
+    private _phase: $Phase = 'setup';
 
     get state() { return this._state; }
     private _state: $State;
@@ -703,90 +712,126 @@ class $Reaction {
     }
 
     activate(type?: 'existing') {
-        this._active = true;
+        this._activeCount++;
         this.state.track(type);
     }
 
     deactivate() {
-        this._active = false;
-        this.state.clear();
+        this._activeCount--;
+        if (!this.active) {
+            this.state.clear();
+            $Reaction._parents.forEach(parent => parent[$$reaction] = undefined);
+            $Reaction._parents = new Set();
+        }
     }
 
     updateIf(): boolean {
         const changed = this.state.changed(); 
-        console.log("updateIf:changed", changed);
         if (changed) this.update();
         return changed;
     }
 
     update() {
-        if (!this._update) throw Error("Update scheduled before chemical formation");
         if (this._updateScheduled) return;
-        
-        // During construction/formation, defer updates
-        if (this._phase === 'construction' || this._phase === 'formation') {
+        if (this._phase === 'setup') return;
+        if (this._phase === 'unmount') return;
+        if (this._renderCount == 0) return;
+        if (this.phase == 'effect') {
             this._updateScheduled = true;
-            this._process.push(() => {
-                this._updateScheduled = false;
-                queueMicrotask(() => this._update!({}));
+            this._update!({});
+        }
+
+        console.log("update", this.state.current)
+
+        // During construction/formation, defer updates
+        if (this._phase === 'render') {
+            queueMicrotask(() => {
+                if (this._updateScheduled) return;
+                this._updateScheduled = true;
+                this._update!({});
             });
             return;
         }
         
-        // Otherwise schedule immediately
         this._updateScheduled = true;
-        queueMicrotask(() => {
-            this._updateScheduled = false;
-            this._update!({});
-        });
+        this._update!({});
     }
 
     resolve(phase: $Phase) {
-        this._phase = phase;
+        if (phase === 'setup') return;
+        if (phase === 'effect') {
+            this._renderCount++;
+            this._updateScheduled = false;
+        }
+
         const actions = 
-            phase === 'formation' ? this._formation :
-            phase === 'progress' ? this._progress :
-            phase === 'process' ? this._process :
-            phase === 'destruction' ? this._destruction : [];
+            phase === 'mount' ? this._mount :
+            phase === 'render' ? this._render :
+            phase === 'layout' ? this._layout :
+            phase === 'effect' ? this._effect :
+            phase === 'unmount' ? this._unmount : 
+            undefined;
+
+        this._phase = phase;
+        if (this._phase === 'mount') 
+            this._phase = 'effect';
+
+        if (!actions)
+            return;
+
         while (actions.length > 0) 
             actions.shift()!();
     }
 
-    async formation() {
-        if (this._phase === 'formation') 
+    async mount() {
+        if (this.phase === 'unmount') 
+            return Promise.reject();
+        if (this._renderCount == 1 && this._phase === 'effect') 
             return Promise.resolve();
-        if (this._phase !== 'construction') 
+        if (this._renderCount < 1)
+            return this.effect();
+        return Promise.reject();
+    }
+
+    async render() {
+        if (this.phase === 'unmount') 
+            return Promise.reject();
+        if (this.phase === 'render')
             return Promise.resolve();
+        if (this.phase !== 'setup')
+            this.update();
         return new Promise<void>(resolve => {
-            this._formation.push(resolve);
+            this._render.push(resolve);
         });
     }
 
-    async progress() {
-        if (this._phase === 'progress') 
+    async layout() {
+        if (this.phase === 'unmount') 
+            return Promise.reject();
+        if (this._phase === 'layout') 
             return Promise.resolve();
-
-        this.update();
+        if (this.phase === 'effect')
+            return this.effect().then(() => this.update());
         return new Promise<void>(resolve => {
-            this._progress.push(resolve);
+            this._layout.push(resolve);
         });
     }
 
-    async process() {
-        if (this._phase === 'process') 
+    async effect() {
+        if (this.phase === 'unmount') 
+            return Promise.reject();
+        if (this._phase === 'effect') 
             return Promise.resolve();
-
-        this.update();
         return new Promise<void>(resolve => {
-            this._process.push(resolve)
+            this._effect.push(resolve)
         });
     }
 
-    async destruction() {
-        if (this._phase === 'destruction') 
+    async unmount() {
+        if (this._phase === 'unmount') 
             return Promise.resolve();
         return new Promise<void>(resolve => {
-            this._destruction.push(resolve)
+            this._unmount.push(resolve)
         });
     }
 
@@ -797,9 +842,14 @@ class $Reaction {
 
     private static _chemicals = new Map<number, $Chemical>();
     private static _system = new Map<$Chemical, $Reaction>();
+    private static _parents = new Set<$Chemical>();
 
     static find(cid: number): $Chemical | undefined {
         return this._chemicals.get(cid);
+    }
+
+    static track(parent: $Chemical) {
+        this._parents.add(parent);
     }
 }
 
@@ -810,7 +860,7 @@ class $State {
     private _current: Record<string, any> & { cid: string } = $State.empty;
     private _previous: Record<string, any> & { cid: string } = $State.empty;
 
-    get symbol(): string { return $State.symbolize(this._current); }
+    get current(): string { return $State.symbolize(this._current); }
     get previous(): string { return $State.symbolize(this._previous); }
 
     get tracking() { return this._tracking; }
@@ -835,7 +885,7 @@ class $State {
     }
 
     changed(): boolean {
-        return this.symbol !== this.previous;
+        return this.current !== this.previous;
     }
 
     add(bond: $Bond, value: any) {
@@ -897,11 +947,8 @@ class $Bond<T extends $Chemical = any, P = any> {
     set lastSeenValue(value: any) { 
         this._lastSeenValue = value;
         const [reaction, type] = this.reaction;
-        console.log("lastSeenValue", "reactionType", type, "tracking", reaction.tracking, 'value', value)
-        console.log('lastSeenValue:state', reaction.state.symbol, 'previous', reaction.state.previous);
         if (type === 'active' || reaction.tracking)
             reaction.state.add(this, value);
-        console.log('lastSeenValue:state', reaction.state.symbol, 'previous', reaction.state.previous);
     }
 
     get isProp() { return this._isProp; }
@@ -930,7 +977,6 @@ class $Bond<T extends $Chemical = any, P = any> {
     }
 
     protected constructor(chemical: T, property: string, descriptor: PropertyDescriptor) {
-        console.log('Bond:constructor', chemical)
         this._chemical = chemical;
         this._property = property;
         this._descriptor = descriptor;
@@ -989,7 +1035,6 @@ class $Bond<T extends $Chemical = any, P = any> {
     }
 
     protected bondSet(value: any) {
-        console.log('bondSet', this.property, 'isField', this.isField)
         if (value instanceof $Chemical && value[$destroyed]) value = undefined;
         if (this.isField) this._backingField = value;
         else if (this.isWritable) this.setter?.(value);
@@ -1043,11 +1088,9 @@ class $BondFormation<T extends $Chemical = any, P = any> extends $Bond<T, P> {
         const descriptor = this._descriptor;
         const chemical = this._chemical;
 
-        console.log('Bond:init:method', this.property, chemical);
         this._action = descriptor.value.bind(chemical);
         this._bondDescriptor = {
             value: (...args: any[]) => {
-                console.log('call', args)
                 return this.bondForm(...args);
             },
             writable: true,
@@ -1070,40 +1113,48 @@ class $BondFormation<T extends $Chemical = any, P = any> extends $Bond<T, P> {
             return this._lastSeenValue;
 
         const chemical = this._chemical;
-        const reaction = chemical[$reaction];
-        const currentReaction = chemical.__activeReaction;
-        const updateRequired = currentReaction === undefined;
+        let reaction = chemical.__activeReaction;
+        const updateRequired = 
+            reaction?.phase !== 'render' && 
+            reaction === undefined;
 
-        console.log("bondForm", this.property, "updateRequired", updateRequired);
-        if (updateRequired)
+        if (updateRequired) {
+            reaction = chemical[$reaction];
             reaction.activate('existing');
-
-        let result = this.action!(...args);
-        if (!(result instanceof Promise)) {
-            this.lastSeenValue = result;
-            if (updateRequired) {
-                reaction.deactivate();
-                reaction.updateIf();
-            }
-            return result;
         }
 
-        return this.handleAsync(result);
+        try {
+            let result = this.action!(...args);
+            if (!(result instanceof Promise)) {
+                this.lastSeenValue = result;
+                return result;
+            }
+            return this.handleAsync(result);
+        } finally {
+            if (updateRequired) {
+                reaction!.deactivate();
+                reaction!.updateIf();
+            }
+        }
     }
 
     protected handleAsync(action: Promise<any>): any {
         this._isAsync = true;
         this._lastSeenValue = undefined;
-        const reaction = this.chemical[$reaction];
+        const chemical = this._chemical;
         action.then(async result => {
-            await this.chemical.process();
+            await this.chemical.effect();
             if (this._active != action) return;
             this._active = undefined;
-            this._lastSeenValue = result;
-            reaction.activate('existing');
-            reaction.state.add(this, result);
-            reaction.deactivate();
-            reaction.updateIf();
+            this.lastSeenValue = result;
+            let reaction = chemical.__activeReaction;
+            if (!reaction) {
+                reaction = chemical[$reaction];
+                reaction.activate('existing');
+                reaction.state.add(this, result);
+                reaction.deactivate();
+                reaction.updateIf();
+            }
         });
         return this._lastSeenValue;
     }
@@ -1134,7 +1185,7 @@ class $BondArguments {
             const firstIsArray = Array.isArray(firstArg);
             const secondIsArray = Array.isArray(secondArg);
             if (firstIsArray !== secondIsArray) return false;
-            if (!firstIsArray && !secondIsArray && first != second) return false;
+            if (!firstIsArray && !secondIsArray && firstArg != secondArg) return false;
             if (firstIsArray && secondIsArray && !$BondArguments.equals(firstArg, secondArg)) return false;
         }
         return true;
@@ -1240,8 +1291,6 @@ class $BondOrchestrator<T extends $Chemical> {
     private _parameters: { isArray: boolean, isSpread: boolean }[] = [];
     private _rendered: Map<Function, ReactElement> = new Map();
     private _lastAguments?: $BondArguments;
-    private _actions: (() => void)[] = [];
-    bound = false;
 
     constructor(chemical: T) {
         this._chemical = chemical;
@@ -1263,13 +1312,10 @@ class $BondOrchestrator<T extends $Chemical> {
         reaction.deactivate();
         reaction.updateIf();
 
-        this.bound = false;
         return view;
     }
 
     bond(props: any, parentContext?: $BondOrchestrationContext): any {
-        if (this.bound) return props;
-
         const chemical = this._chemical;
         props = this.checkProps(props);
         let children: ReactNode = props.children;
@@ -1292,19 +1338,19 @@ class $BondOrchestrator<T extends $Chemical> {
                 $paramValidation.reset();
                 $paramValidation.chemical = this._chemical;
                 $paramValidation.paramCount = this._parameters.length;
+                console.log(this._chemical.toString(), context.arguments.values)
                 this._bondConstructor!.apply(this._chemical, context.arguments.values);
                 this._lastAguments = context.arguments;
                 $paramValidation.eval();
             }
         }
 
-        this.bound = true;
         return props;
     }
 
     view(): ReactNode {
         const chemical = this._chemical;
-        chemical[$formula].refresh();
+        chemical[$molecule].refresh();
 
         let view = chemical.view();
         view = this.augmentView(view);
@@ -1333,7 +1379,7 @@ class $BondOrchestrator<T extends $Chemical> {
         props = props || {};
         const isEmpty = Object.keys(props).length === 0;
         if (isEmpty) props = this._chemical[$lastProps] || props;
-        if (!props.children && this._chemical[$lastProps].children) 
+        if (!props.children && this._chemical[$lastProps]?.children) 
             props.children = this._chemical[$lastProps].children || [];
         return props;
     }
@@ -1344,7 +1390,7 @@ class $BondOrchestrator<T extends $Chemical> {
             if (typeof prop === 'symbol' || prop === 'children' || prop === 'key' || prop === 'ref') continue;
             $chemical$['$' + prop] = props[prop];
         }
-        chemical[$formula].refresh();
+        chemical[$molecule].refresh();
     }
 
     private process(children: ReactNode, context: $BondOrchestrationContext) {
@@ -1720,7 +1766,7 @@ class $Represent {
         const replacer = $Represent.replacer(closure === 'referential')
         return mode === 'fast' 
             ? JSON.stringify(value, replacer)
-            : $Represent.safe(value);
+            : $Represent.safe(value, replacer);
     }
     
     static literalize<T = any>(symbolization: string): T {
@@ -1769,7 +1815,8 @@ class $Represent {
         return $Represent.processLiteral(parsed);
     }
     
-    private static safe(value: any): string {
+    private static safe(value: any, replacer: (key: string, val: any) => any): string {
+        value = replacer('this', value);
         const stack: any[] = [];
         const seen = new Map<any, string>();
         let unique: string | undefined;
@@ -1788,6 +1835,8 @@ class $Represent {
         function process(val: any): any {
             if (val === null || typeof val !== 'object') 
                 return typeof val === 'function' ? undefined : val;
+
+            val = $Represent.replacer
             
             // Chemical reference
             if (val instanceof $Chemical) 
@@ -1905,6 +1954,7 @@ class $Represent {
         return (key: string, val: any) => {
             if (key === '') return val;
             if (val instanceof $Chemical) return referential ? val.toString() : undefined;
+            if (React.isValidElement(val)) return referential ? val.key : undefined;
             if (typeof val === 'function') return undefined;
             if (val?.constructor?.name === 'Proxy') return referential ? '[Proxy]' : undefined;
             return val;

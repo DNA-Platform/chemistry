@@ -62,13 +62,13 @@ export class $MixedContainer extends $Chemical {
     
     view() {
         const [Label] = $use(this.label, 'key');
-        const SimpleCard = this.simpleCard instanceof $Chemical ? $use(this.simpleCard) : null;
-        const InfoCard = this.infoCard instanceof $Chemical ? $use(this.infoCard) : null;
+        const SimpleCard = $use(this.simpleCard);
+        const InfoCard = $use(this.infoCard);
         
         // Check if test passes
         const labelPass = this.label instanceof $Chemical && this.label.constructor.name === '$Label';
-        const simpleCardPass = this.simpleCard instanceof $Chemical && this.simpleCard.constructor.name === '$$Function';
-        const infoCardPass = this.infoCard instanceof $Chemical && this.infoCard.constructor.name === '$$Function';
+        const simpleCardPass = this.simpleCard instanceof $Chemical && this.simpleCard.constructor.name === '$Function$';
+        const infoCardPass = this.infoCard instanceof $Chemical && this.infoCard.constructor.name === '$Function$';
         const allPass = labelPass && simpleCardPass && infoCardPass;
         
         return (
@@ -79,7 +79,7 @@ export class $MixedContainer extends $Chemical {
                 
                 <div style={{ marginBottom: '15px', background: '#f9f9f9', padding: '10px', borderRadius: '4px' }}>
                     <div><strong>Test:</strong> Constructor receives $Chemical and React.FC components correctly</div>
-                    <div><strong>Expected:</strong> label=$Label, simpleCard=$$Function, infoCard=$$Function</div>
+                    <div><strong>Expected:</strong> label=$Label, simpleCard=$Function$, infoCard=$Function$</div>
                     <div><strong>Received:</strong> label={this.label?.constructor?.name}, simpleCard={this.simpleCard?.constructor?.name}, infoCard={this.infoCard?.constructor?.name}</div>
                 </div>
                 
@@ -193,7 +193,7 @@ export class $CollectionManager extends $Chemical {
         const labelsPass = this.labels.length === 3 && 
                         this.labels.every(l => l instanceof $Chemical && l.constructor.name === '$Label');
         const buttonsPass = this.buttons.length === 2 && 
-                            this.buttons.every(b => b instanceof $Chemical && b.constructor.name === '$$Function');
+                            this.buttons.every(b => b instanceof $Chemical && b.constructor.name === '$Function$');
         const mixedPass = this.mixed.length === 3;
         const allPass = labelsPass && buttonsPass && mixedPass;
         
@@ -208,13 +208,13 @@ export class $CollectionManager extends $Chemical {
                     <div><strong>Expected:</strong></div>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                         <li>Array 1: 3 $Label instances</li>
-                        <li>Array 2: 2 $$Function instances (wrapped SimpleCard)</li>
+                        <li>Array 2: 2 $Function$ instances (wrapped SimpleCard)</li>
                         <li>Array 3: 3 mixed items (Label + SimpleCard + div element)</li>
                     </ul>
                     <div><strong>Received:</strong></div>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                         <li>labels[]: {labelsPass ? '✓' : '✗'} {this.labels.length} items, all $Label? {this.labels.every(l => l instanceof $Chemical && l.constructor.name === '$Label') ? 'yes' : 'no'}</li>
-                        <li>buttons[]: {buttonsPass ? '✓' : '✗'} {this.buttons.length} items, all $$Function? {this.buttons.every(b => b instanceof $Chemical && b.constructor.name === '$$Function') ? 'yes' : 'no'}</li>
+                        <li>buttons[]: {buttonsPass ? '✓' : '✗'} {this.buttons.length} items, all $Function$? {this.buttons.every(b => b instanceof $Chemical && b.constructor.name === '$Function$') ? 'yes' : 'no'}</li>
                         <li>mixed[]: {mixedPass ? '✓' : '✗'} {this.mixed.length} items (mixed types expected)</li>
                     </ul>
                 </div>
@@ -377,7 +377,7 @@ export class $MatrixContainer extends $Chemical {
         // Validate
         const headerPass = this.header instanceof $Chemical && this.header.constructor.name === '$Label';
         const rowsPass = this.rows.length === 3 && this.rows.every(row => row.length === 3);
-        const footerPass = this.footer instanceof $Chemical && this.footer.constructor.name === '$$Function';
+        const footerPass = this.footer instanceof $Chemical && this.footer.constructor.name === '$Function$';
         const allPass = headerPass && rowsPass && footerPass;
         
         return (
@@ -392,7 +392,7 @@ export class $MatrixContainer extends $Chemical {
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
                         <li>header: 1 $Label</li>
                         <li>rows: 3x3 array of $Labels (created by {'<List><List>...</List><List>...</List>...</List>'})</li>
-                        <li>footer: 1 $$Function (optional)</li>
+                        <li>footer: 1 $Function$ (optional)</li>
                     </ul>
                     <div><strong>Received:</strong></div>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
