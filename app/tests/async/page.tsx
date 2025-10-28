@@ -22,15 +22,6 @@ const subTests = [
             ssr: false
         })
     },
-    {
-        id: 'if-when',
-        name: 'If-When Tests',
-        description: 'Tests for executing async functions with helper components',
-        component: dynamic(() => import('./if-when-tests'), {
-            loading: () => <TestLoading />,
-            ssr: false
-        })
-    },
 ];
 
 function TestLoading() {

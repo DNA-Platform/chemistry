@@ -9,6 +9,7 @@ export class $AsyncButton extends $Chemical {
     loading = false;
     
     async handleClick() {
+        console.log('$AsyncButton', 'handleClick', 'this', this)
         this.loading = true;
         this.lastMessage = 'Processing...';
         
@@ -408,7 +409,7 @@ export class $ConditionalAsync extends $Chemical {
 // Test 8: Nested async calls with parent updates
 export class $NestedAsync extends $Chemical {
     parentState = 'initial';
-    childResults: string[] = [];
+    results: string[] = [];
     
     async parentMethod() {
         this.parentState = 'parent processing';
@@ -417,21 +418,22 @@ export class $NestedAsync extends $Chemical {
         await this.childMethod('from parent');
         
         this.parentState = 'parent complete';
+        this.results.push(this.parentState);
     }
     
     async childMethod(source: string) {
-        this.childResults = [...this.childResults, `child called ${source}`];
+        this.results = [...this.results, `child called ${source}`];
         
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        const length = this.childResults.length; 
+        const length = this.results.length; 
         if (length > 0)
-            this.childResults[length-1] = `child complete ${source}`
+            this.results[length-1] = `child complete ${source}`
     }
     
     reset() {
         this.parentState = 'initial';
-        this.childResults = [];
+        this.results = [];
     }
     
     view() {
@@ -447,10 +449,10 @@ export class $NestedAsync extends $Chemical {
                     <button onClick={this.reset} style={{ marginLeft: '10px' }}>Reset</button>
                 </div>
                 <div style={{ maxHeight: '150px', overflow: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px', fontSize: '12px' }}>
-                    {this.childResults.length === 0 ? (
+                    {this.results.length === 0 ? (
                         <div style={{ color: '#999' }}>No child calls yet</div>
                     ) : (
-                        this.childResults.map((result, i) => (
+                        this.results.map((result, i) => (
                             <div key={i}>{result}</div>
                         ))
                     )}
