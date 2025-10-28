@@ -1,6 +1,6 @@
 // app/tests/async/loading-tests.tsx
 'use client'
-import { $Chemical, $lookup, $load } from '@/chemistry';
+import { $Chemical, $lookup, $load, $use } from '@/chemistry';
 import React, { ReactNode, useState, useEffect } from 'react';
 
 // Base entry class
@@ -44,7 +44,7 @@ export class $Dictionary extends $Chemical {
         });
     }
     
-    $toggleEntry(index: number) {
+    toggleEntry(index: number) {
         const key = `entry-${index}`;
         this.expanded[key] = !this.expanded[key];
     }
@@ -59,6 +59,7 @@ export class $Dictionary extends $Chemical {
                 <div style={{ display: 'grid', gap: '10px' }}>
                     {this.entries.map((entry, i) => {
                         const isExpanded = this.expanded[`entry-${i}`];
+                        const [Entry, k] = $use(entry, 'key')
                         return (
                             <div key={i} style={{ 
                                 padding: '10px', 
@@ -67,7 +68,7 @@ export class $Dictionary extends $Chemical {
                                 border: '1px solid #e2e8f0'
                             }}>
                                 <div 
-                                    onClick={() => this.$toggleEntry(i)}
+                                    onClick={() => this.toggleEntry(i)}
                                     style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}
                                 >
                                     <strong>{entry.title}</strong>
@@ -75,7 +76,7 @@ export class $Dictionary extends $Chemical {
                                 </div>
                                 {isExpanded && (
                                     <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                                        <entry.Component />
+                                        <Entry key={k} />
                                     </div>
                                 )}
                             </div>

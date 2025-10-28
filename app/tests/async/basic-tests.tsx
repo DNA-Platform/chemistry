@@ -8,7 +8,7 @@ export class $AsyncButton extends $Chemical {
     lastMessage = 'Click to start';
     loading = false;
     
-    async $handleClick() {
+    async handleClick() {
         this.loading = true;
         this.lastMessage = 'Processing...';
         
@@ -27,7 +27,7 @@ export class $AsyncButton extends $Chemical {
                 <div>Count: {this.clickCount}</div>
                 <div>Status: {this.lastMessage}</div>
                 <button 
-                    onClick={this.$handleClick}
+                    onClick={this.handleClick}
                     disabled={this.loading}
                     style={{ marginTop: '10px', padding: '8px 16px' }}
                 >
@@ -78,14 +78,6 @@ export class $AutoLoader extends $Chemical {
         this.viewLoadTime = new Date().toLocaleTimeString();
     }
     
-    async $refresh() {
-        this.loaded = false;
-        this.data = null;
-        this.viewLoadData = null;
-        await this.$loadData();
-        await this.$loadViewData();
-    }
-    
     view() {
         // Call async method in view - should be idempotent
         this.$loadViewData();
@@ -123,10 +115,6 @@ export class $AutoLoader extends $Chemical {
                         </>
                     )}
                 </div>
-                
-                <button onClick={this.$refresh} style={{ marginTop: '10px', padding: '5px 10px' }}>
-                    Refresh All
-                </button>
             </div>
         );
     }
@@ -139,39 +127,39 @@ export class $MultiAsync extends $Chemical {
     step3Done = false;
     processing = false;
     
-    async $step1() {
+    async step1() {
         this.processing = true;
         await new Promise(resolve => setTimeout(resolve, 500));
         this.step1Done = true;
         this.processing = false;
     }
     
-    async $step2() {
+    async step2() {
         this.processing = true;
         await new Promise(resolve => setTimeout(resolve, 700));
         this.step2Done = true;
         this.processing = false;
     }
     
-    async $step3() {
+    async step3() {
         this.processing = true;
         await new Promise(resolve => setTimeout(resolve, 600));
         this.step3Done = true;
         this.processing = false;
     }
     
-    async $runAll() {
+    async runAll() {
         this.processing = true;
         this.step1Done = false;
         this.step2Done = false;
         this.step3Done = false;
         
-        await this.$step1();
-        await this.$step2();
-        await this.$step3();
+        await this.step1();
+        await this.step2();
+        await this.step3();
     }
     
-    async $reset() {
+    async reset() {
         this.step1Done = false;
         this.step2Done = false;
         this.step3Done = false;
@@ -188,11 +176,11 @@ export class $MultiAsync extends $Chemical {
                     <div>Step 3: {this.step3Done ? '✅' : '⭕'}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <button onClick={this.$step1} disabled={this.processing}>Step 1</button>
-                    <button onClick={this.$step2} disabled={this.processing}>Step 2</button>
-                    <button onClick={this.$step3} disabled={this.processing}>Step 3</button>
-                    <button onClick={this.$runAll} disabled={this.processing}>Run All</button>
-                    <button onClick={this.$reset}>Reset</button>
+                    <button onClick={this.step1} disabled={this.processing}>Step 1</button>
+                    <button onClick={this.step2} disabled={this.processing}>Step 2</button>
+                    <button onClick={this.step3} disabled={this.processing}>Step 3</button>
+                    <button onClick={this.runAll} disabled={this.processing}>Run All</button>
+                    <button onClick={this.reset}>Reset</button>
                 </div>
             </div>
         );
@@ -206,7 +194,7 @@ export class $ErrorHandler extends $Chemical {
     error: string | null = null;
     processing = false;
     
-    async $tryRiskyOperation() {
+    async tryRiskyOperation() {
         this.processing = true;
         this.error = null;
         this.success = false;
@@ -243,7 +231,7 @@ export class $ErrorHandler extends $Chemical {
                     {this.error && <div style={{ color: '#f44336' }}>❌ Error: {this.error}</div>}
                 </div>
                 <button 
-                    onClick={this.$tryRiskyOperation}
+                    onClick={this.tryRiskyOperation}
                     disabled={this.processing}
                     style={{ marginTop: '10px', padding: '5px 10px' }}
                 >
@@ -258,12 +246,11 @@ export class $ErrorHandler extends $Chemical {
 export class $ListLoader extends $Chemical {
     items: string[] = [];
     loading = false;
+    loaded = false;
     
-    $ListLoader() {
-        this.$reload();
-    }
+    get loadButtonName() { return this.loaded ? "Reload" : "Load"; }
     
-    async $loadItems() {
+    async loadItems() {
         if (this.items.length > 0)
             return;
 
@@ -275,15 +262,16 @@ export class $ListLoader extends $Chemical {
         }
         
         this.loading = false;
+        this.loaded = true;
     }
     
-    async $clear() {
+    async clear() {
         this.items = [];
     }
     
-    async $reload() {
+    async reload() {
         if (this.loading) return;
-        await this.$loadItems();
+        await this.loadItems();
     }
     
     view() {
@@ -303,8 +291,8 @@ export class $ListLoader extends $Chemical {
                     )}
                 </div>
                 <div style={{ marginTop: '10px', display: 'flex', gap: '10px' }}>
-                    <button onClick={this.$clear} disabled={this.loading}>Clear</button>
-                    <button onClick={this.$reload} disabled={this.loading}>Reload</button>
+                    <button onClick={this.clear} disabled={this.loading}>Clear</button>
+                    <button onClick={this.reload} disabled={this.loading}>{this.loadButtonName}</button>
                 </div>
             </div>
         );
@@ -317,7 +305,7 @@ export class $RaceCondition extends $Chemical {
     results: string[] = [];
     processing = false;
     
-    async $slowProcess() {
+    async slowProcess() {
         this.processing = true;
         const id = ++this.clickId;
         this.results = [...this.results, `Started request ${id}`];
@@ -330,7 +318,7 @@ export class $RaceCondition extends $Chemical {
         this.processing = false;
     }
     
-    $clear() {
+    clear() {
         this.results = [];
         this.clickId = 0;
     }
@@ -343,10 +331,10 @@ export class $RaceCondition extends $Chemical {
                     Click rapidly to test async handling
                 </p>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                    <button onClick={this.$slowProcess}>
+                    <button onClick={this.slowProcess}>
                         Start Async Process
                     </button>
-                    <button onClick={this.$clear}>Clear</button>
+                    <button onClick={this.clear}>Clear</button>
                 </div>
                 <div style={{ maxHeight: '150px', overflow: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px', fontSize: '12px' }}>
                     {this.results.length === 0 ? (
@@ -368,25 +356,25 @@ export class $ConditionalAsync extends $Chemical {
     primaryData: any = null;
     secondaryData: any = null;
     
-    async $loadPrimary() {
+    async loadPrimary() {
         if (this.primaryData) return;
         await new Promise(resolve => setTimeout(resolve, 1000));
         this.primaryData = { value: 'Primary loaded' };
         this.check();
     }
     
-    async $loadSecondary() {
+    async loadSecondary() {
         if (this.secondaryData) return;
         await new Promise(resolve => setTimeout(resolve, 1200));
         this.secondaryData = { value: 'Secondary loaded' };
         this.check();
     }
     
-    $setMode(mode: 'idle' | 'loading' | 'loaded') {
+    setMode(mode: 'idle' | 'loading' | 'loaded') {
         this.mode = mode;
     }
     
-    $reset() {
+    reset() {
         this.mode = 'idle';
         this.primaryData = null;
         this.secondaryData = null;
@@ -394,7 +382,7 @@ export class $ConditionalAsync extends $Chemical {
 
     check() {
         if (this.primaryData && this.secondaryData) 
-            this.$setMode('loaded')
+            this.setMode('loaded')
     }
     
     view() {
@@ -405,9 +393,8 @@ export class $ConditionalAsync extends $Chemical {
                     Mode: <strong>{this.mode}</strong>
                 </div>
                 <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
-                    <button onClick={() => this.$setMode('idle')}>Set Idle</button>
-                    <button onClick={() => { this.$setMode('loading'); this.$loadPrimary(); this.$loadSecondary();}}>Start Loading</button>
-                    <button onClick={this.$reset}>Reset All</button>
+                    <button onClick={() => { this.setMode('loading'); this.loadPrimary(); this.loadSecondary();}}>Start Loading</button>
+                    <button onClick={this.reset}>Reset All</button>
                 </div>
                 <div style={{ padding: '10px', background: '#f5f5f5', borderRadius: '4px' }}>
                     <div>Primary: {this.primaryData ? this.primaryData.value : 'Not loaded'}</div>
@@ -422,36 +409,29 @@ export class $ConditionalAsync extends $Chemical {
 export class $NestedAsync extends $Chemical {
     parentState = 'initial';
     childResults: string[] = [];
-    depth = 0;
     
-    async $parentMethod() {
+    async parentMethod() {
         this.parentState = 'parent processing';
-        this.depth = 1;
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        await this.$childMethod('from parent');
+        await this.childMethod('from parent');
         
         this.parentState = 'parent complete';
-        this.depth = 0;
     }
     
-    async $childMethod(source: string) {
-        this.childResults = [...this.childResults, `Child called ${source} at depth ${this.depth}`];
-        this.depth++;
+    async childMethod(source: string) {
+        this.childResults = [...this.childResults, `child called ${source}`];
         
         await new Promise(resolve => setTimeout(resolve, 300));
         
-        if (this.depth < 3) {
-            await this.$childMethod('recursively');
-        }
-        
-        this.depth--;
+        const length = this.childResults.length; 
+        if (length > 0)
+            this.childResults[length-1] = `child complete ${source}`
     }
     
-    $reset() {
+    reset() {
         this.parentState = 'initial';
         this.childResults = [];
-        this.depth = 0;
     }
     
     view() {
@@ -459,13 +439,12 @@ export class $NestedAsync extends $Chemical {
             <div style={{ padding: '15px', border: '1px solid #795548', borderRadius: '8px' }}>
                 <h4>Test 8: Nested Async Calls</h4>
                 <div>Parent State: <strong>{this.parentState}</strong></div>
-                <div>Current Depth: <strong>{this.depth}</strong></div>
                 <div style={{ marginTop: '10px', marginBottom: '10px' }}>
-                    <button onClick={this.$parentMethod}>Start Parent Method</button>
-                    <button onClick={() => this.$childMethod('directly')} style={{ marginLeft: '10px' }}>
+                    <button onClick={this.parentMethod}>Start Parent Method</button>
+                    <button onClick={() => this.childMethod('directly')} style={{ marginLeft: '10px' }}>
                         Call Child Directly
                     </button>
-                    <button onClick={this.$reset} style={{ marginLeft: '10px' }}>Reset</button>
+                    <button onClick={this.reset} style={{ marginLeft: '10px' }}>Reset</button>
                 </div>
                 <div style={{ maxHeight: '150px', overflow: 'auto', background: '#f5f5f5', padding: '10px', borderRadius: '4px', fontSize: '12px' }}>
                     {this.childResults.length === 0 ? (
