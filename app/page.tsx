@@ -17,6 +17,12 @@ const tests = [
         path: '/tests/child-bonding'
     },
     {
+        id: 'reactions',
+        name: 'Reaction Tests',
+        description: 'Tests that make sure chemical dependencies are part of the right reaction',
+        path: '/tests/reactions'
+    },
+    {
         id: 'async',
         name: 'Async Tests',
         description: 'Tests usage of async methods in several contexts',

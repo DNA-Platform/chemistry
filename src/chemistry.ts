@@ -1402,7 +1402,6 @@ class $BondOrchestrator<T extends $Chemical> {
 
     bond(props: any, parentContext?: $BondOrchestrationContext): any {
         const chemical = this._chemical;
-        props = this.checkProps(props);
         let children: ReactNode = props.children;
         const context = new $BondOrchestrationContext(chemical, this._parameters);
         parentContext?.childContexts.push(context);
@@ -1453,15 +1452,6 @@ class $BondOrchestrator<T extends $Chemical> {
                 isSpread: p.startsWith('...'), 
                 isArray: false 
             }));
-    }
-
-    private checkProps(props: any) {
-        props = props || {};
-        const isEmpty = Object.keys(props).length === 0;
-        if (isEmpty) props = this._chemical[$lastProps] || props;
-        if (!props.children && this._chemical[$lastProps]?.children) 
-            props.children = this._chemical[$lastProps].children || [];
-        return props;
     }
 
     private bindProps(chemical: $Chemical, props: any) {
@@ -1595,35 +1585,48 @@ class $BondOrchestrator<T extends $Chemical> {
         
         if (!React.isValidElement(node)) 
             return node;
-        
-        if (!React.isValidElement(node)) 
-            return node;
 
         const element = node as React.ReactElement<any>;
         const props = element.props;
         const type = element.type;
-        const key = element.key;
-        const children = props?.children;
 
         let $element = element;
         let $props = props;
         let $type = type as $Component;
-        let $key = key;
-        let $children = children;
+        let $children: ReactNode[] | undefined;
 
-        if (children) 
-            $children = React.Children.map(children, child => this.augmentNode(child));
+        const isCardContainer = $type?.$chemical?.constructor?.name === "$CardContainer";
+        if (isCardContainer) {
+            console.log("$CardContainer", "props", props)
+            console.log("$CardContainer", "props.children", props.children)
+        }
+
         if (typeof $type === 'function' && $type.$chemical) {
-            if (Object.keys(props).length > 0) $type = $type.$bind();
-            $key = $type.$chemical[$symbol];
-            if (key !== $key) 
-                $props = {...props, key: $key};
+            $props = $type.$chemical[$lastProps] || {};
+            if (isCardContainer) {
+                console.log("$CardContainer", "$props:lastProps", $props)
+                console.log("$CardContainer", "$props:lastProps.children", $props.children)
+            }
+            if (Object.keys(props).length > 0) {
+                $type = $type.$bind();
+                $props = { ...$props };
+                $props.key = $type.$chemical[$symbol];
+                for (const prop in props)
+                    $props[prop] = props[prop];
+                if (isCardContainer) {
+                    console.log("$CardContainer", "$props:newProps", $props)
+                    console.log("$CardContainer", "$props:newProps.children", $props.children)
+                }
+            }
         }
-        if (type !== $type) {
-            $element = React.createElement($type, $props, $children);
-        } else if (key !== $key || children !== $children) {
-            $element = React.cloneElement(element, $props, $children);
+        if (props.children) {
+            $children = React.Children.map(props.children, child => this.augmentNode(child));
         }
+        if (type !== $type || props !== $props || $children)
+            $element = $children ? 
+                React.createElement($type, $props, $children) :
+                 React.createElement($type, $props);
+
         return $element;
     }
 }

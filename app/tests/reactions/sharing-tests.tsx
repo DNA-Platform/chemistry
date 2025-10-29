@@ -1,0 +1,492 @@
+// app/tests/dependencies/sharing-tests.tsx
+'use client'
+import { $Chemical, $use, $check } from '@/chemistry';
+import React from 'react';
+
+// ============================================
+// SIMPLE TITLE COMPONENT
+// ============================================
+
+class $Title extends $Chemical {
+    $value = 'Title';
+    
+    view() {
+        return (
+            <div style={{ 
+                fontSize: '16px',
+                fontWeight: 'bold',
+                marginBottom: '10px',
+                color: '#333'
+            }}>
+                {this.$value}
+            </div>
+        );
+    }
+}
+
+// ============================================
+// SIMPLE CARD COMPONENT
+// ============================================
+
+class $Card extends $Chemical {
+    // Simple properties that can be overridden via TSX
+    $background? = '#e3f2fd';  // Light blue default - optional in TSX
+    $text? = 'Card Text';      // Optional in TSX
+    $border? = '2px solid #1976d2';  // Optional in TSX
+    
+    // Track instance (not TSX properties, no $)
+    id = Math.random().toString(36).substr(2, 5);
+    updateCount = 0;
+    
+    changeBackground() {
+        // Generate a light random color
+        const hue = Math.floor(Math.random() * 360);
+        this.$background = `hsl(${hue}, 70%, 90%)`;
+        this.updateCount++;
+    }
+    
+    changeText() {
+        this.$text = `Updated ${this.updateCount++}`;
+    }
+    
+    changeBorder() {
+        const styles = ['solid', 'dashed', 'dotted', 'double'];
+        const currentStyle = this.$border!.split(' ')[1];
+        const nextIndex = (styles.indexOf(currentStyle) + 1) % styles.length;
+        this.$border = `2px ${styles[nextIndex]} #1976d2`;
+        this.updateCount++;
+    }
+    
+    view() {
+        return (
+            <div style={{ 
+                padding: '20px',
+                background: this.$background,
+                border: this.$border,
+                borderRadius: '8px',
+                marginBottom: '10px',
+                position: 'relative'
+            }}>
+                <div style={{ 
+                    position: 'absolute', 
+                    top: '5px', 
+                    right: '5px',
+                    fontSize: '10px',
+                    color: '#666',
+                    background: 'white',
+                    padding: '2px 5px',
+                    borderRadius: '3px'
+                }}>
+                    ID: {this.id}
+                </div>
+                
+                <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '16px' }}>
+                    {this.$text}
+                </div>
+                
+                <div style={{ fontSize: '11px', color: '#444', marginBottom: '10px' }}>
+                    Updates: {this.updateCount} | BG: {this.$background}
+                </div>
+                
+                <div style={{ display: 'flex', gap: '5px' }}>
+                    <button 
+                        onClick={() => this.changeBackground()}
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                        Change BG
+                    </button>
+                    <button 
+                        onClick={() => this.changeText()}
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                        Change Text
+                    </button>
+                    <button 
+                        onClick={() => this.changeBorder()}
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                        Change Border
+                    </button>
+                </div>
+            </div>
+        );
+    }
+}
+
+// ============================================
+// CARD CONTAINER - Has cards as children
+// ============================================
+
+class $CardContainer extends $Chemical {
+    title!: $Title;
+    card1!: $Card;
+    card2!: $Card;
+    
+    $CardContainer(title: $Title, card1: $Card, card2: $Card) {
+        this.title = $check(title, $Title);
+        this.card1 = $check(card1, $Card);
+        this.card2 = $check(card2, $Card);
+    }
+    
+    view() {
+        const Title = $use(this.title);
+        const Card1 = $use(this.card1);
+        const Card2 = $use(this.card2);
+        
+        return (
+            <div style={{ 
+                padding: '15px',
+                background: '#f5f5f5',
+                border: '2px solid #999',
+                borderRadius: '8px',
+                marginBottom: '15px'
+            }}>
+                <Title />
+                <Card1 />
+                <Card2 />
+            </div>
+        );
+    }
+}
+
+// ============================================
+// TEST 1: SAME BOUND INSTANCE RENDERED TWICE
+// ============================================
+
+class $BoundSharingTest extends $Chemical {
+    // Get bound cards from constructor
+    card1!: $Card;
+    card2!: $Card;
+    
+    $BoundSharingTest(card1: $Card, card2: $Card) {
+        this.card1 = $check(card1, $Card);
+        this.card2 = $check(card2, $Card);
+    }
+    
+    view() {
+        const Card1 = $use(this.card1);
+        const Card2 = $use(this.card2);
+        
+        return (
+            <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                <h3>Test 1: Same Bound Instance - With and Without Props</h3>
+                
+                <div style={{ marginBottom: '20px', background: '#e8f5e9', padding: '15px', borderRadius: '4px' }}>
+                    <strong>Key Concept:</strong>
+                    <p style={{ margin: '10px 0' }}>
+                        Each row shows the SAME bound instance rendered twice. Left side: no props (original). 
+                        Right side: with color override. Changes to the left affect both UNTIL the right side 
+                        shadows that property by changing it directly.
+                    </p>
+                </div>
+                
+                <div style={{ marginBottom: '20px' }}>
+                    <h4>Card 1 - Instance {this.card1.id}</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div>
+                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                                ✨ Original (no props)
+                            </div>
+                            <Card1 />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                                🎨 With background override
+                            </div>
+                            <Card1 background="#ffe0b2" text="Same instance, orange BG" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h4>Card 2 - Instance {this.card2.id}</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                        <div>
+                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                                ✨ Original (no props)
+                            </div>
+                            <Card2 />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                                🎨 With background override
+                            </div>
+                            <Card2 background="#f3e5f5" text="Same instance, purple BG" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div style={{ marginTop: '20px', padding: '10px', background: '#fff3cd', borderRadius: '4px' }}>
+                    <strong>Try This:</strong> Change the background on the left - the right keeps its override. 
+                    Change the border on the left - BOTH update! Change text on the right - it shadows and 
+                    becomes independent.
+                </div>
+            </div>
+        );
+    }
+}
+
+// ============================================
+// TEST 2: EXTRACTING CARDS FROM CONTAINERS
+// ============================================
+
+class $ContainerExtractionTest extends $Chemical {
+    container1!: $CardContainer;
+    container2!: $CardContainer;
+    
+    $ContainerExtractionTest(container1: $CardContainer, container2: $CardContainer) {
+        this.container1 = $check(container1, $CardContainer);
+        this.container2 = $check(container2, $CardContainer);
+    }
+    
+    view() {
+        // Extract cards from containers
+        const allCards = [
+            this.container1.card1,
+            this.container1.card2,
+            this.container2.card1,
+            this.container2.card2
+        ];
+        
+        // Get the container components
+        const Container1 = $use(this.container1);
+        const Container2 = $use(this.container2);
+        
+        return (
+            <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                <h3>Test 2: Cards Extracted from Containers</h3>
+                
+                <div style={{ marginBottom: '20px', background: '#e1f5fe', padding: '15px', borderRadius: '4px' }}>
+                    <strong>What's Happening:</strong>
+                    <p style={{ margin: '10px 0' }}>
+                        Cards are passed to containers, then extracted and rendered in a list with color overrides.
+                        The same cards appear in both the containers (left) and the list (right). Changes propagate
+                        based on the prototypal inheritance rules.
+                    </p>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div>
+                        <h4>Original Containers</h4>
+                        <Container1 />
+                        <Container2 />
+                    </div>
+                    <div>
+                        <h4>Extracted & Recolored</h4>
+                        {allCards.map((card, i) => {
+                            const Card = $use(card);
+                            const hue = i * 90;
+                            const bg = `hsl(${hue}, 70%, 92%)`;
+                            return (
+                                <div key={i} style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>
+                                        From {i < 2 ? 'Container 1' : 'Container 2'}, Card {(i % 2) + 1}
+                                    </div>
+                                    <Card background={bg} text={`Extracted #${i + 1}`} />
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+}
+
+// ============================================
+// TEST 3: SUBCLASS WITH PARENT VIEW
+// ============================================
+
+class $CardReuser extends $CardContainer {
+    // Subclass that reuses parent's view but with different behavior
+    
+    swapCards() {
+        // Swap the cards
+        const temp = this.card1;
+        this.card1 = this.card2;
+        this.card2 = temp;
+    }
+    
+    view() {
+        // Reuse parent's view but add a control
+        return (
+            <div>
+                <button 
+                    onClick={() => this.swapCards()}
+                    style={{ marginBottom: '10px', padding: '5px 10px' }}
+                >
+                    Swap Cards in Container
+                </button>
+                {super.view()}
+            </div>
+        );
+    }
+}
+
+class $SubclassReuseTest extends $Chemical {
+    cards!: $Card[];
+    
+    $SubclassReuseTest(...cards: $Card[]) {
+        this.cards = $check(cards, [$Card]);
+    }
+    
+    view() {
+        // Get BOUND components
+        const Card1 = $use(this.cards[0]);
+        const Card2 = $use(this.cards[1]);
+        const Card3 = $use(this.cards[2]);
+        
+        // Get the CardReuser as a bound component
+        const Reuser = $use(new $CardReuser());
+        
+        return (
+            <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+                <h3>Test 3: Bound Components Shared & Passed Through Bond Constructor</h3>
+                
+                <div style={{ marginBottom: '20px', background: '#fce4ec', padding: '15px', borderRadius: '4px' }}>
+                    <strong>The Test:</strong>
+                    <p style={{ margin: '10px 0' }}>
+                        Card1 and Card2 are BOUND components. We render them directly (left), 
+                        then pass THE SAME bound components as children to CardReuser (right).
+                        Changes to one should affect all instances UNLESS properties are overridden.
+                    </p>
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                    <div>
+                        <h4>Direct Rendering (Same Bound Instance 3x)</h4>
+                        <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+                            These are the SAME Card1 rendered 3 times - change one, all change!
+                        </div>
+                        <Card1 />
+                        <Card1 />
+                        <Card1 background="#ffe0b2" />  {/* With override */}
+                        
+                        <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+                            These are the SAME Card2 rendered 2 times
+                        </div>
+                        <Card2 />
+                        <Card2 />
+                    </div>
+                    
+                    <div>
+                        <h4>Passed Through Bond Constructor</h4>
+                        <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+                            The SAME Card1 and Card2 passed as children to Reuser
+                        </div>
+                        <Reuser>
+                            <Title value="Container via Bond Constructor" />
+                            <Card1 />
+                            <Card2 />
+                        </Reuser>
+                        
+                        <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+                            Again with property overrides
+                        </div>
+                        <Reuser>
+                            <Title value="Reuser with Overrides" />
+                            <Card1 background="#c8e6c9" />
+                            <Card2 text="Overridden in Bond Constructor" />
+                        </Reuser>
+                    </div>
+                </div>
+                
+                <div style={{ marginTop: '20px', padding: '10px', background: '#e1f5fe', borderRadius: '4px' }}>
+                    <strong>Observe:</strong> Changing Card1 on the left affects ALL Card1 instances 
+                    (except where background is overridden). The prototypal inheritance allows 
+                    the same bound component to exist with different property layers!
+                </div>
+            </div>
+        );
+    }
+}
+
+// ============================================
+// CREATE COMPONENTS
+// ============================================
+
+const Title = new $Title().Component;
+const Card = new $Card().Component;
+const CardContainer = new $CardContainer().Component;
+const BoundSharingTest = new $BoundSharingTest().Component;
+const ContainerExtractionTest = new $ContainerExtractionTest().Component;
+const SubclassReuseTest = new $SubclassReuseTest().Component;
+
+// ============================================
+// MAIN TEST COMPONENT
+// ============================================
+
+export default function SharingTests() {
+    return (
+        <div style={{ padding: '40px', fontFamily: 'system-ui', background: '#f0f0f0', minHeight: '100vh' }}>
+            <h1>Sharing Tests - Bound Components & Prototypal Inheritance</h1>
+            
+            <div style={{ 
+                marginBottom: '30px', 
+                padding: '20px', 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                color: 'white',
+                borderRadius: '8px'
+            }}>
+                <h2 style={{ marginTop: 0 }}>Understanding Bound vs Unbound</h2>
+                <p style={{ fontSize: '18px', lineHeight: 1.6 }}>
+                    <strong>Unbound:</strong> {'<Card />'} in JSX creates a NEW instance each time.<br/>
+                    <strong>Bound:</strong> Cards passed through bond constructors become specific instances.<br/>
+                    <strong>The Magic:</strong> Render the SAME bound instance with different props - 
+                    Chemistry creates a prototypal layer for the props while maintaining the original instance.
+                </p>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '30px' }}>
+                {/* Test 1: Same instance rendered twice */}
+                <BoundSharingTest>
+                    <Card text="First Card" />
+                    <Card text="Second Card" />
+                </BoundSharingTest>
+                
+                {/* Test 2: Cards in containers, then extracted */}
+                <ContainerExtractionTest>
+                    <CardContainer>
+                        <Title value="Container A" />
+                        <Card text="A1" />
+                        <Card text="A2" />
+                    </CardContainer>
+                    <CardContainer>
+                        <Title value="Container B" />
+                        <Card text="B1" />
+                        <Card text="B2" />
+                    </CardContainer>
+                </ContainerExtractionTest>
+                
+                {/* Test 3: Subclass reusing parent view */}
+                <SubclassReuseTest>
+                    <Card text="Card for Reuser 1" />
+                    <Card text="Card for Reuser 2" />
+                    <Card text="Card for Children 1" />
+                    <Card text="Card for Children 2" />
+                </SubclassReuseTest>
+            </div>
+            
+            <div style={{ 
+                marginTop: '30px',
+                padding: '20px', 
+                background: 'white',
+                borderRadius: '8px',
+                boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+                <h3>🔬 The Prototypal Inheritance Rules:</h3>
+                <ol style={{ lineHeight: 1.8 }}>
+                    <li><strong>Props create a layer:</strong> When you pass props to a bound component, 
+                        Chemistry creates a prototypal inheritance layer.</li>
+                    <li><strong>Non-overridden properties inherit:</strong> Properties not specified in props 
+                        still come from the original instance.</li>
+                    <li><strong>Changes propagate until shadowed:</strong> Changing a property on the original 
+                        affects all renderings that haven't shadowed it.</li>
+                    <li><strong>Direct assignment shadows:</strong> When a rendering directly changes a property, 
+                        it shadows that property forever.</li>
+                    <li><strong>The original is never modified:</strong> The base bound instance remains pure.</li>
+                </ol>
+            </div>
+        </div>
+    );
+}
