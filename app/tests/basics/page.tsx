@@ -21,6 +21,7 @@ class $Counter extends $Chemical {
     count = 0;
 
     increment() {
+        console.log(this)
         this.count = this.count + 1;
     }
 
