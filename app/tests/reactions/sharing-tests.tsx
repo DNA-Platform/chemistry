@@ -112,7 +112,7 @@ class $Card extends $Chemical {
                         Change Text
                     </button>
                     <button 
-                        onClick={this.changeBackground}
+                        onClick={() => this.changeBackground()}
                         style={{ fontSize: '12px', padding: '4px 8px' }}
                     >
                         Change BG
@@ -130,24 +130,21 @@ class $Card extends $Chemical {
 }
 
 // ============================================
-// CARD CONTAINER - Has cards as children
+// CARD CONTAINER - Takes ONE card
 // ============================================
 
 class $CardContainer extends $Chemical {
     title!: $Title;
-    card1!: $Card;
-    card2!: $Card;
+    card!: $Card;
     
-    $CardContainer(title: $Title, card1: $Card, card2: $Card) {
+    $CardContainer(title: $Title, card: $Card) {
         this.title = $check(title, $Title);
-        this.card1 = $check(card1, $Card);
-        this.card2 = $check(card2, $Card);
+        this.card = $check(card, $Card);
     }
     
     view() {
         const Title = $use(this.title);
-        const Card1 = $use(this.card1);
-        const Card2 = $use(this.card2);
+        const Card = $use(this.card);
         
         return (
             <div style={{ 
@@ -158,13 +155,11 @@ class $CardContainer extends $Chemical {
                 marginBottom: '15px'
             }}>
                 <Title />
-                <Card1 />
-                <Card2 />
+                <Card />
             </div>
         );
     }
 }
-
 // ============================================
 // TEST 1: SINGLE CARD INSTANCE - RENDERED WITH SHADOWS
 // ============================================
@@ -221,66 +216,55 @@ class $BoundSharingTest extends $Chemical {
 }
 
 // ============================================
-// TEST 2: EXTRACTING CARDS FROM CONTAINERS
+// TEST 2: GRAPH TRAVERSAL - Same test through container
 // ============================================
 
-class $ContainerExtractionTest extends $Chemical {
-    container1!: $CardContainer;
-    container2!: $CardContainer;
+class $GraphTraversalTest extends $Chemical {
+    container!: $CardContainer;
     
-    $ContainerExtractionTest(container1: $CardContainer, container2: $CardContainer) {
-        this.container1 = $check(container1, $CardContainer);
-        this.container2 = $check(container2, $CardContainer);
+    $GraphTraversalTest(container: $CardContainer) {
+        this.container = $check(container, $CardContainer);
     }
     
     view() {
-        // Extract cards from containers
-        const allCards = [
-            this.container1.card1,
-            this.container1.card2,
-            this.container2.card1,
-            this.container2.card2
-        ];
-        
-        // Get the container components
-        const Container1 = $use(this.container1);
-        const Container2 = $use(this.container2);
+        // Extract card from container via object graph
+        const Card = $use(this.container.card);
         
         return (
             <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <h3>Test 2: Cards Extracted from Containers</h3>
+                <h3>Test 2: Graph Traversal - Shadowing Through Containers</h3>
                 
                 <div style={{ marginBottom: '20px', background: '#e1f5fe', padding: '15px', borderRadius: '4px' }}>
-                    <strong>What's Happening:</strong>
+                    <strong>Key Concept:</strong>
                     <p style={{ margin: '10px 0' }}>
-                        Cards are passed to containers, then extracted and rendered in a list with color overrides.
-                        The same cards appear in both the containers (left) and the list (right). Changes propagate
-                        based on the prototypal inheritance rules.
+                        Card is owned by Container, but we access it via object graph (container.card).
+                        Same shadowing behavior works - ONE card instance (ID: {this.container.card.id}) rendered twice.
                     </p>
                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
                     <div>
-                        <h4>Original Containers</h4>
-                        <Container1 />
-                        <Container2 />
+                        <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                            ✨ Original (no props)
+                        </div>
+                        <Card />
                     </div>
                     <div>
-                        <h4>Extracted & Recolored</h4>
-                        {allCards.map((card, i) => {
-                            const Card = $use(card);
-                            const hue = i * 90;
-                            const bg = `hsl(${hue}, 70%, 92%)`;
-                            return (
-                                <div key={i} style={{ marginBottom: '10px' }}>
-                                    <div style={{ fontSize: '11px', color: '#666', marginBottom: '2px' }}>
-                                        From {i < 2 ? 'Container 1' : 'Container 2'}, Card {(i % 2) + 1}
-                                    </div>
-                                    <Card background={bg} text={`Extracted #${i + 1}`} />
-                                </div>
-                            );
-                        })}
+                        <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                            🎨 Background override ONLY
+                        </div>
+                        <Card background="#ffe0b2" />
                     </div>
+                </div>
+                
+                <div style={{ padding: '10px', background: '#fff3cd', borderRadius: '4px' }}>
+                    <strong>Try This:</strong> 
+                    <ul style={{ margin: '10px 0', paddingLeft: '20px', lineHeight: 1.6 }}>
+                        <li>Change background on left → right keeps its override (shadowed)</li>
+                        <li>Change border on left → BOTH update (not shadowed)</li>
+                        <li>Change text on left → BOTH update (not shadowed)</li>
+                        <li>Graph traversal doesn't break sharing!</li>
+                    </ul>
                 </div>
             </div>
         );
@@ -291,109 +275,109 @@ class $ContainerExtractionTest extends $Chemical {
 // TEST 3: SUBCLASS WITH PARENT VIEW
 // ============================================
 
-class $CardReuser extends $CardContainer {
-    // Subclass that reuses parent's view but with different behavior
+// class $CardReuser extends $CardContainer {
+//     // Subclass that reuses parent's view but with different behavior
     
-    swapCards() {
-        // Swap the cards
-        const temp = this.card1;
-        this.card1 = this.card2;
-        this.card2 = temp;
-    }
+//     swapCards() {
+//         // Swap the cards
+//         const temp = this.card1;
+//         this.card1 = this.card2;
+//         this.card2 = temp;
+//     }
     
-    view() {
-        // Reuse parent's view but add a control
-        return (
-            <div>
-                <button 
-                    onClick={() => this.swapCards()}
-                    style={{ marginBottom: '10px', padding: '5px 10px' }}
-                >
-                    Swap Cards in Container
-                </button>
-                {super.view()}
-            </div>
-        );
-    }
-}
+//     view() {
+//         // Reuse parent's view but add a control
+//         return (
+//             <div>
+//                 <button 
+//                     onClick={() => this.swapCards()}
+//                     style={{ marginBottom: '10px', padding: '5px 10px' }}
+//                 >
+//                     Swap Cards in Container
+//                 </button>
+//                 {super.view()}
+//             </div>
+//         );
+//     }
+// }
 
-class $SubclassReuseTest extends $Chemical {
-    cards!: $Card[];
+// class $SubclassReuseTest extends $Chemical {
+//     cards!: $Card[];
     
-    $SubclassReuseTest(...cards: $Card[]) {
-        this.cards = $check(cards, [$Card]);
-    }
+//     $SubclassReuseTest(...cards: $Card[]) {
+//         this.cards = $check(cards, [$Card]);
+//     }
     
-    view() {
-        // Get BOUND components
-        const Card1 = $use(this.cards[0]);
-        const Card2 = $use(this.cards[1]);
-        const Card3 = $use(this.cards[2]);
+//     view() {
+//         // Get BOUND components
+//         const Card1 = $use(this.cards[0]);
+//         const Card2 = $use(this.cards[1]);
+//         const Card3 = $use(this.cards[2]);
         
-        // Get the CardReuser as a bound component
-        const Reuser = $use(new $CardReuser());
+//         // Get the CardReuser as a bound component
+//         const Reuser = $use(new $CardReuser());
         
-        return (
-            <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <h3>Test 3: Bound Components Shared & Passed Through Bond Constructor</h3>
+//         return (
+//             <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+//                 <h3>Test 3: Bound Components Shared & Passed Through Bond Constructor</h3>
                 
-                <div style={{ marginBottom: '20px', background: '#fce4ec', padding: '15px', borderRadius: '4px' }}>
-                    <strong>The Test:</strong>
-                    <p style={{ margin: '10px 0' }}>
-                        Card1 and Card2 are BOUND components. We render them directly (left), 
-                        then pass THE SAME bound components as children to CardReuser (right).
-                        Changes to one should affect all instances UNLESS properties are overridden.
-                    </p>
-                </div>
+//                 <div style={{ marginBottom: '20px', background: '#fce4ec', padding: '15px', borderRadius: '4px' }}>
+//                     <strong>The Test:</strong>
+//                     <p style={{ margin: '10px 0' }}>
+//                         Card1 and Card2 are BOUND components. We render them directly (left), 
+//                         then pass THE SAME bound components as children to CardReuser (right).
+//                         Changes to one should affect all instances UNLESS properties are overridden.
+//                     </p>
+//                 </div>
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                    <div>
-                        <h4>Direct Rendering (Same Bound Instance 3x)</h4>
-                        <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-                            These are the SAME Card1 rendered 3 times - change one, all change!
-                        </div>
-                        <Card1 />
-                        <Card1 />
-                        <Card1 background="#ffe0b2" />  {/* With override */}
+//                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+//                     <div>
+//                         <h4>Direct Rendering (Same Bound Instance 3x)</h4>
+//                         <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+//                             These are the SAME Card1 rendered 3 times - change one, all change!
+//                         </div>
+//                         <Card1 />
+//                         <Card1 />
+//                         <Card1 background="#ffe0b2" />  {/* With override */}
                         
-                        <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-                            These are the SAME Card2 rendered 2 times
-                        </div>
-                        <Card2 />
-                        <Card2 />
-                    </div>
+//                         <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+//                             These are the SAME Card2 rendered 2 times
+//                         </div>
+//                         <Card2 />
+//                         <Card2 />
+//                     </div>
                     
-                    <div>
-                        <h4>Passed Through Bond Constructor</h4>
-                        <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-                            The SAME Card1 and Card2 passed as children to Reuser
-                        </div>
-                        <Reuser>
-                            <Title value="Container via Bond Constructor" />
-                            <Card1 />
-                            <Card2 />
-                        </Reuser>
+//                     <div>
+//                         <h4>Passed Through Bond Constructor</h4>
+//                         <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+//                             The SAME Card1 and Card2 passed as children to Reuser
+//                         </div>
+//                         <Reuser>
+//                             <Title value="Container via Bond Constructor" />
+//                             <Card1 />
+//                             <Card2 />
+//                         </Reuser>
                         
-                        <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-                            Again with property overrides
-                        </div>
-                        <Reuser>
-                            <Title value="Reuser with Overrides" />
-                            <Card1 background="#c8e6c9" />
-                            <Card2 text="Overridden in Bond Constructor" />
-                        </Reuser>
-                    </div>
-                </div>
+//                         <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
+//                             Again with property overrides
+//                         </div>
+//                         <Reuser>
+//                             <Title value="Reuser with Overrides" />
+//                             <Card1 background="#c8e6c9" />
+//                             <Card2 text="Overridden in Bond Constructor" />
+//                         </Reuser>
+//                     </div>
+//                 </div>
                 
-                <div style={{ marginTop: '20px', padding: '10px', background: '#e1f5fe', borderRadius: '4px' }}>
-                    <strong>Observe:</strong> Changing Card1 on the left affects ALL Card1 instances 
-                    (except where background is overridden). The prototypal inheritance allows 
-                    the same bound component to exist with different property layers!
-                </div>
-            </div>
-        );
-    }
-}
+//                 <div style={{ marginTop: '20px', padding: '10px', background: '#e1f5fe', borderRadius: '4px' }}>
+//                     <strong>Observe:</strong> Changing Card1 on the left affects ALL Card1 instances 
+//                     (except where background is overridden). The prototypal inheritance allows 
+//                     the same bound component to exist with different property layers!
+//                 </div>
+//             </div>
+//         );
+//     }
+// }
 
 // ============================================
 // CREATE COMPONENTS
@@ -403,8 +387,8 @@ const Title = new $Title().Component;
 const Card = new $Card().Component;
 const CardContainer = new $CardContainer().Component;
 const BoundSharingTest = new $BoundSharingTest().Component;
-const ContainerExtractionTest = new $ContainerExtractionTest().Component;
-const SubclassReuseTest = new $SubclassReuseTest().Component;
+const GraphTraversalTest = new $GraphTraversalTest().Component;
+//const SubclassReuseTest = new $SubclassReuseTest().Component;
 
 // ============================================
 // MAIN TEST COMPONENT
@@ -438,18 +422,12 @@ export default function SharingTests() {
                 </BoundSharingTest>
                 
                 {/* Test 2: Cards in containers, then extracted */}
-                {/* <ContainerExtractionTest>
+                <GraphTraversalTest>
                     <CardContainer>
-                        <Title value="Container A" />
-                        <Card text="A1" />
-                        <Card text="A2" />
+                        <Title value="Container Title" />
+                        <Card text="Shared Card" />
                     </CardContainer>
-                    <CardContainer>
-                        <Title value="Container B" />
-                        <Card text="B1" />
-                        <Card text="B2" />
-                    </CardContainer>
-                </ContainerExtractionTest> */}
+                </GraphTraversalTest>
                 
                 {/* Test 3: Subclass reusing parent view */}
                 {/* <SubclassReuseTest>

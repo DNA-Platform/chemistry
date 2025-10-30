@@ -1030,6 +1030,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         bond._chemical = chemical;
         bond._children = new Set();
         bond._bid = undefined;
+        bond._backingField = undefined;
         bond._lastSeenValue = undefined;
         bond._lastSeenValueHere = undefined;
         bond._lastSeenArgs = undefined;
@@ -1101,10 +1102,6 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         for (const child of this._children)
             child.bondSet(value);
     }
-
-    // protected update() {
-    //     this.reaction?.state.add(this, this._lastSeenValue);
-    // }
 
     protected update() {
         const chemical = this._chemical;
@@ -1530,6 +1527,8 @@ class $BondOrchestrator<T extends $Chemical> {
                 continue; 
             $chemical$['$' + prop] = value;
         }
+
+        chemical[$molecule].reactivate();
     }
 
     private process(children: ReactNode, context: $BondOrchestrationContext) {
@@ -1671,17 +1670,19 @@ class $BondOrchestrator<T extends $Chemical> {
         let $key = element.key;
 
         if (typeof $type === 'function' && $type.$chemical) {
-            $props = $type.$chemical.__props();
-            if (first) { 
-                $key = viewSymbol;
-                $props.key = $key;
-            }
+            //$props = $type.$chemical.__props
+            $props = $type.$chemical[$lastProps] || {};
+            $props = { ...$props };
             if (Object.keys(props).length > 0) {
                 $type = $type.$bind();
                 for (const prop in props)
                     $props[prop] = props[prop];
                 if (!first)
                     $props.key = $type.$chemical[$symbol];
+            }
+            if (first) { 
+                $key = viewSymbol;
+                $props.key = $key;
             }
         }
         if (props.children)
