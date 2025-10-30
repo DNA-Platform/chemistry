@@ -272,114 +272,6 @@ class $GraphTraversalTest extends $Chemical {
 }
 
 // ============================================
-// TEST 3: SUBCLASS WITH PARENT VIEW
-// ============================================
-
-// class $CardReuser extends $CardContainer {
-//     // Subclass that reuses parent's view but with different behavior
-    
-//     swapCards() {
-//         // Swap the cards
-//         const temp = this.card1;
-//         this.card1 = this.card2;
-//         this.card2 = temp;
-//     }
-    
-//     view() {
-//         // Reuse parent's view but add a control
-//         return (
-//             <div>
-//                 <button 
-//                     onClick={() => this.swapCards()}
-//                     style={{ marginBottom: '10px', padding: '5px 10px' }}
-//                 >
-//                     Swap Cards in Container
-//                 </button>
-//                 {super.view()}
-//             </div>
-//         );
-//     }
-// }
-
-// class $SubclassReuseTest extends $Chemical {
-//     cards!: $Card[];
-    
-//     $SubclassReuseTest(...cards: $Card[]) {
-//         this.cards = $check(cards, [$Card]);
-//     }
-    
-//     view() {
-//         // Get BOUND components
-//         const Card1 = $use(this.cards[0]);
-//         const Card2 = $use(this.cards[1]);
-//         const Card3 = $use(this.cards[2]);
-        
-//         // Get the CardReuser as a bound component
-//         const Reuser = $use(new $CardReuser());
-        
-//         return (
-//             <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-//                 <h3>Test 3: Bound Components Shared & Passed Through Bond Constructor</h3>
-                
-//                 <div style={{ marginBottom: '20px', background: '#fce4ec', padding: '15px', borderRadius: '4px' }}>
-//                     <strong>The Test:</strong>
-//                     <p style={{ margin: '10px 0' }}>
-//                         Card1 and Card2 are BOUND components. We render them directly (left), 
-//                         then pass THE SAME bound components as children to CardReuser (right).
-//                         Changes to one should affect all instances UNLESS properties are overridden.
-//                     </p>
-//                 </div>
-                
-//                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-//                     <div>
-//                         <h4>Direct Rendering (Same Bound Instance 3x)</h4>
-//                         <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-//                             These are the SAME Card1 rendered 3 times - change one, all change!
-//                         </div>
-//                         <Card1 />
-//                         <Card1 />
-//                         <Card1 background="#ffe0b2" />  {/* With override */}
-                        
-//                         <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-//                             These are the SAME Card2 rendered 2 times
-//                         </div>
-//                         <Card2 />
-//                         <Card2 />
-//                     </div>
-                    
-//                     <div>
-//                         <h4>Passed Through Bond Constructor</h4>
-//                         <div style={{ marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-//                             The SAME Card1 and Card2 passed as children to Reuser
-//                         </div>
-//                         <Reuser>
-//                             <Title value="Container via Bond Constructor" />
-//                             <Card1 />
-//                             <Card2 />
-//                         </Reuser>
-                        
-//                         <div style={{ marginTop: '20px', marginBottom: '10px', fontSize: '12px', color: '#666' }}>
-//                             Again with property overrides
-//                         </div>
-//                         <Reuser>
-//                             <Title value="Reuser with Overrides" />
-//                             <Card1 background="#c8e6c9" />
-//                             <Card2 text="Overridden in Bond Constructor" />
-//                         </Reuser>
-//                     </div>
-//                 </div>
-                
-//                 <div style={{ marginTop: '20px', padding: '10px', background: '#e1f5fe', borderRadius: '4px' }}>
-//                     <strong>Observe:</strong> Changing Card1 on the left affects ALL Card1 instances 
-//                     (except where background is overridden). The prototypal inheritance allows 
-//                     the same bound component to exist with different property layers!
-//                 </div>
-//             </div>
-//         );
-//     }
-// }
-
-// ============================================
 // CREATE COMPONENTS
 // ============================================
 
@@ -388,7 +280,6 @@ const Card = new $Card().Component;
 const CardContainer = new $CardContainer().Component;
 const BoundSharingTest = new $BoundSharingTest().Component;
 const GraphTraversalTest = new $GraphTraversalTest().Component;
-//const SubclassReuseTest = new $SubclassReuseTest().Component;
 
 // ============================================
 // MAIN TEST COMPONENT
@@ -428,14 +319,6 @@ export default function SharingTests() {
                         <Card text="Shared Card" />
                     </CardContainer>
                 </GraphTraversalTest>
-                
-                {/* Test 3: Subclass reusing parent view */}
-                {/* <SubclassReuseTest>
-                    <Card text="Card for Reuser 1" />
-                    <Card text="Card for Reuser 2" />
-                    <Card text="Card for Children 1" />
-                    <Card text="Card for Children 2" />
-                </SubclassReuseTest> */}
             </div>
             
             <div style={{ 
