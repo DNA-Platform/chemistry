@@ -31,8 +31,8 @@ class $Title extends $Chemical {
 class $Card extends $Chemical {
     // Simple properties that can be overridden via TSX
     $background? = '#e3f2fd';  // Light blue default - optional in TSX
-    $name? = 'Card Name';      // Optional in TSX
-    $text? = 'Card Text';      // Optional in TSX
+    $name? = 'Card';      // Optional in TSX
+    $text? = 'Text';      // Optional in TSX
     $border? = '2px solid #1976d2';  // Optional in TSX
     
     // Track instance (not TSX properties, no $)
@@ -46,6 +46,12 @@ class $Card extends $Chemical {
         this.updateCount++;
     }
     
+    changeName() {
+        let name = this.$name || '';
+        if (name.length < 2) name = "Card"
+        this.$name = `${name[name.length-1].toUpperCase()}${name.slice(0, name.length-1).toLowerCase()}`;
+    }
+
     changeText() {
         this.$text = `Text Updated ${this.updateCount++}`;
     }
@@ -94,16 +100,22 @@ class $Card extends $Chemical {
                 
                 <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                     <button 
-                        onClick={this.changeBackground}
+                        onClick={this.changeName}
                         style={{ fontSize: '12px', padding: '4px 8px' }}
                     >
-                        Change BG
+                        Change Name
                     </button>
                     <button 
                         onClick={this.changeText}
                         style={{ fontSize: '12px', padding: '4px 8px' }}
                     >
                         Change Text
+                    </button>
+                    <button 
+                        onClick={this.changeBackground}
+                        style={{ fontSize: '12px', padding: '4px 8px' }}
+                    >
+                        Change BG
                     </button>
                     <button 
                         onClick={this.changeBorder}
@@ -422,7 +434,7 @@ export default function SharingTests() {
             <div style={{ display: 'grid', gap: '30px' }}>
                 {/* Test 1: Same instance rendered twice */}
                 <BoundSharingTest>
-                    <Card name="Shared Card" />
+                    <Card name="Shared" />
                 </BoundSharingTest>
                 
                 {/* Test 2: Cards in containers, then extracted */}

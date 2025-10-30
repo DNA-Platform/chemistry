@@ -1521,9 +1521,14 @@ class $BondOrchestrator<T extends $Chemical> {
 
     private bindProps(chemical: $Chemical, props: any) {
         const $chemical$: any = chemical;
+        const lastProps = chemical[$lastProps] || {};
         for (const prop in props) {
-            if (typeof prop === 'symbol' || prop === 'children' || prop === 'key' || prop === 'ref') continue;
-            $chemical$['$' + prop] = props[prop];
+            if (typeof prop === 'symbol' || prop === 'children' || prop === 'key' || prop === 'ref') 
+                continue;
+            const value = props[prop];
+            if (prop in lastProps && lastProps[prop] == value) 
+                continue; 
+            $chemical$['$' + prop] = value;
         }
     }
 
