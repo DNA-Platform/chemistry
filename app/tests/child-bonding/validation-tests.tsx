@@ -72,6 +72,7 @@ export class $ComplexValidator extends $Chemical {
             this.card = $check(card, SimpleCard, undefined);
             this.matrix = $check(matrix, [[Number]]);
         } catch (e) {
+            console.log("$ComplexValidator error", e)
             this.validationError = (e as Error).message;
         }
     }

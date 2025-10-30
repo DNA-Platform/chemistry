@@ -102,9 +102,9 @@ export class $MixedContainer extends $Chemical {
 // ============================================
 
 export class $FormBuilder extends $Chemical {
-    inputEl!: $Html<'input'>;
-    buttonEl!: $Html<'button'>;
-    divEl!: $Html<'div'>;
+    input!: $Html<'input'>;
+    button!: $Html<'button'>;
+    div!: $Html<'div'>;
     elements: any[] = [];
     
     $FormBuilder(
@@ -113,17 +113,21 @@ export class $FormBuilder extends $Chemical {
         div: $Html<'div'>,
         ...moreElements: any[]
     ) {
-        this.inputEl = $check(input, 'input');
-        this.buttonEl = $check(button, 'button');
-        this.divEl = $check(div, 'div');
+        console.log("$FormBuilder:1", "input", input)
+        console.log("$FormBuilder:2", "button", button)
+        console.log("$FormBuilder:3", "div", div)
+        console.log("$FormBuilder:4", "moreElements", moreElements)
+        this.input = $check(input, 'input');
+        this.button = $check(button, 'button');
+        this.div = $check(div, 'div');
         this.elements = $check(moreElements, ['any']);
     }
     
     view() {
         // Check what we received
-        const inputPass = this.inputEl && this.inputEl.element === 'input';
-        const buttonPass = this.buttonEl && typeof this.buttonEl === 'object';
-        const divPass = this.divEl && typeof this.divEl === 'object';
+        const inputPass = this.input && this.input.type === 'input';
+        const buttonPass = this.button && this.button.type === 'button';
+        const divPass = this.div && this.div.type === 'div';
         const allPass = inputPass && buttonPass && divPass && this.elements.length === 2;
         
         return (
@@ -137,9 +141,9 @@ export class $FormBuilder extends $Chemical {
                     <div><strong>Expected:</strong> 3 element objects + 2 extra elements in rest params</div>
                     <div><strong>Received:</strong></div>
                     <ul style={{ margin: '5px 0', paddingLeft: '20px' }}>
-                        <li>input: {inputPass ? '✓ React element object' : '✗ ' + typeof this.inputEl}</li>
-                        <li>button: {buttonPass ? '✓ React element object' : '✗ ' + typeof this.buttonEl}</li>
-                        <li>div: {divPass ? '✓ React element object' : '✗ ' + typeof this.divEl}</li>
+                        <li>input: {inputPass ? '✓ React element object' : '✗ ' + typeof this.input}</li>
+                        <li>button: {buttonPass ? '✓ React element object' : '✗ ' + typeof this.button}</li>
+                        <li>div: {divPass ? '✓ React element object' : '✗ ' + typeof this.div}</li>
                         <li>rest params: {this.elements.length === 2 ? '✓ 2 elements' : `✗ ${this.elements.length} elements`}</li>
                     </ul>
                 </div>

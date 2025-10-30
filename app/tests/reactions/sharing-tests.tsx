@@ -31,6 +31,7 @@ class $Title extends $Chemical {
 class $Card extends $Chemical {
     // Simple properties that can be overridden via TSX
     $background? = '#e3f2fd';  // Light blue default - optional in TSX
+    $name? = 'Card Name';      // Optional in TSX
     $text? = 'Card Text';      // Optional in TSX
     $border? = '2px solid #1976d2';  // Optional in TSX
     
@@ -46,7 +47,7 @@ class $Card extends $Chemical {
     }
     
     changeText() {
-        this.$text = `Updated ${this.updateCount++}`;
+        this.$text = `Text Updated ${this.updateCount++}`;
     }
     
     changeBorder() {
@@ -81,28 +82,31 @@ class $Card extends $Chemical {
                 </div>
                 
                 <div style={{ fontWeight: 'bold', marginBottom: '10px', fontSize: '16px' }}>
-                    {this.$text}
+                    {this.$name}
                 </div>
                 
                 <div style={{ fontSize: '11px', color: '#444', marginBottom: '10px' }}>
-                    Updates: {this.updateCount} | BG: {this.$background}
+                    <div>Updates: {this.updateCount}</div>
+                    <div>Text: {this.$text}</div>
+                    <div>Border: {this.$border}</div>
+                    <div>Background: {this.$background}</div>
                 </div>
                 
-                <div style={{ display: 'flex', gap: '5px' }}>
+                <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
                     <button 
-                        onClick={() => this.changeBackground()}
+                        onClick={this.changeBackground}
                         style={{ fontSize: '12px', padding: '4px 8px' }}
                     >
                         Change BG
                     </button>
                     <button 
-                        onClick={() => this.changeText()}
+                        onClick={this.changeText}
                         style={{ fontSize: '12px', padding: '4px 8px' }}
                     >
                         Change Text
                     </button>
                     <button 
-                        onClick={() => this.changeBorder()}
+                        onClick={this.changeBorder}
                         style={{ fontSize: '12px', padding: '4px 8px' }}
                     >
                         Change Border
@@ -150,76 +154,54 @@ class $CardContainer extends $Chemical {
 }
 
 // ============================================
-// TEST 1: SAME BOUND INSTANCE RENDERED TWICE
+// TEST 1: SINGLE CARD INSTANCE - RENDERED WITH SHADOWS
 // ============================================
 
 class $BoundSharingTest extends $Chemical {
-    // Get bound cards from constructor
-    card1!: $Card;
-    card2!: $Card;
+    card!: $Card;
     
-    $BoundSharingTest(card1: $Card, card2: $Card) {
-        this.card1 = $check(card1, $Card);
-        this.card2 = $check(card2, $Card);
+    $BoundSharingTest(card: $Card) {
+        this.card = $check(card, $Card);
     }
     
     view() {
-        const Card1 = $use(this.card1);
-        const Card2 = $use(this.card2);
+        const Card = $use(this.card);
         
         return (
             <div style={{ padding: '20px', background: 'white', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                <h3>Test 1: Same Bound Instance - With and Without Props</h3>
+                <h3>Test 1: Same Bound Instance - Shadowing Demo</h3>
                 
                 <div style={{ marginBottom: '20px', background: '#e8f5e9', padding: '15px', borderRadius: '4px' }}>
                     <strong>Key Concept:</strong>
                     <p style={{ margin: '10px 0' }}>
-                        Each row shows the SAME bound instance rendered twice. Left side: no props (original). 
-                        Right side: with color override. Changes to the left affect both UNTIL the right side 
-                        shadows that property by changing it directly.
+                        ONE card instance (ID: {this.card.id}) rendered twice. 
+                        Left: no overrides. Right: ONLY background shadowed.
                     </p>
                 </div>
                 
-                <div style={{ marginBottom: '20px' }}>
-                    <h4>Card 1 - Instance {this.card1.id}</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div>
-                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
-                                ✨ Original (no props)
-                            </div>
-                            <Card1 />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+                    <div>
+                        <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                            ✨ Original (no props)
                         </div>
-                        <div>
-                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
-                                🎨 With background override
-                            </div>
-                            <Card1 background="#ffe0b2" text="Same instance, orange BG" />
+                        <Card />
+                    </div>
+                    <div>
+                        <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
+                            🎨 Background override ONLY
                         </div>
+                        <Card background="#ffe0b2" />
                     </div>
                 </div>
                 
-                <div>
-                    <h4>Card 2 - Instance {this.card2.id}</h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div>
-                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
-                                ✨ Original (no props)
-                            </div>
-                            <Card2 />
-                        </div>
-                        <div>
-                            <div style={{ fontSize: '12px', marginBottom: '5px', color: '#666' }}>
-                                🎨 With background override
-                            </div>
-                            <Card2 background="#f3e5f5" text="Same instance, purple BG" />
-                        </div>
-                    </div>
-                </div>
-                
-                <div style={{ marginTop: '20px', padding: '10px', background: '#fff3cd', borderRadius: '4px' }}>
-                    <strong>Try This:</strong> Change the background on the left - the right keeps its override. 
-                    Change the border on the left - BOTH update! Change text on the right - it shadows and 
-                    becomes independent.
+                <div style={{ padding: '10px', background: '#fff3cd', borderRadius: '4px' }}>
+                    <strong>Try This:</strong> 
+                    <ul style={{ margin: '10px 0', paddingLeft: '20px', lineHeight: 1.6 }}>
+                        <li>Change background on left → right keeps its override (shadowed)</li>
+                        <li>Change border on left → BOTH update (not shadowed)</li>
+                        <li>Change text on left → BOTH update (not shadowed)</li>
+                        <li>Change anything on right → only right changes (independent layer)</li>
+                    </ul>
                 </div>
             </div>
         );
@@ -440,12 +422,11 @@ export default function SharingTests() {
             <div style={{ display: 'grid', gap: '30px' }}>
                 {/* Test 1: Same instance rendered twice */}
                 <BoundSharingTest>
-                    <Card text="First Card" />
-                    <Card text="Second Card" />
+                    <Card name="Shared Card" />
                 </BoundSharingTest>
                 
                 {/* Test 2: Cards in containers, then extracted */}
-                <ContainerExtractionTest>
+                {/* <ContainerExtractionTest>
                     <CardContainer>
                         <Title value="Container A" />
                         <Card text="A1" />
@@ -456,15 +437,15 @@ export default function SharingTests() {
                         <Card text="B1" />
                         <Card text="B2" />
                     </CardContainer>
-                </ContainerExtractionTest>
+                </ContainerExtractionTest> */}
                 
                 {/* Test 3: Subclass reusing parent view */}
-                <SubclassReuseTest>
+                {/* <SubclassReuseTest>
                     <Card text="Card for Reuser 1" />
                     <Card text="Card for Reuser 2" />
                     <Card text="Card for Children 1" />
                     <Card text="Card for Children 2" />
-                </SubclassReuseTest>
+                </SubclassReuseTest> */}
             </div>
             
             <div style={{ 

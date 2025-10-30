@@ -62,8 +62,8 @@ class $FieldCatalystTest extends $Chemical {
     breakAndAssignToField() {
         console.log("breakAndAssignToField", "this", this)
         // Use YOUR method to create a version with NO parent (new catalyst)
-        const wrongCatalyst = new $DataChemical(); // this.originalDep.Component.$bind().$chemical;
-        wrongCatalyst.id = "Just testing some random value"
+        const wrongCatalyst = new $DataChemical();
+        wrongCatalyst.id = "New id from an unbound $DataChemical"
         
         // Verify it has NO parent now
         this.wrongVersionHadNoParent = !wrongCatalyst.parent;
