@@ -1,19 +1,16 @@
 // app/tests/async/loading-tests.tsx
 'use client'
-import { $Chemical, $lookup, $load, $use } from '@/chemistry';
+import { $Chemical, $lookup, $load, $use, $Atom, $is } from '@/chemistry';
 import React, { ReactNode, useState, useEffect } from 'react';
 
 // Base entry class
 export class $DictionaryEntry extends $Chemical {
     title = '';
     examples: string[] = [];
-    
-    get dictionary() { 
-        return this.parent as $Dictionary;
-    }
+    $parent = $is($Dictionary);
     
     set dictionary(value: $Dictionary) { 
-        this.parent = value;
+        this.$parent = value;
     }
     
     definition(): ReactNode {
@@ -39,7 +36,7 @@ export class $Dictionary extends $Chemical {
         super();
         this.entries = entries.sort((a, b) => a.title.localeCompare(b.title));
         this.entries.forEach((entry, i) => { 
-            entry.parent = this; 
+            entry.$parent = this; 
             this.expanded[`entry-${i}`] = false;
         });
     }

@@ -1,6 +1,6 @@
 // app/tests/dependencies/member-tests.tsx
 'use client'
-import { $Chemical, $use, $check } from '@/chemistry';
+import { $Chemical, $use, $check, $is } from '@/chemistry';
 import React from 'react';
 
 // ============================================
@@ -10,15 +10,16 @@ import React from 'react';
 class $DataChemical extends $Chemical {
     $value = 'initial';
     id = Math.random().toString(36).substr(2, 9);
+    $parent = $is($Chemical);
     
     increment() {
         this.$value = `Updated ${Date.now()}`;
     }
     
     view() {
-        const hasParent = !!this.parent;
-        const parentKey = this.parent?.key || 'none';
-        const parentType = this.parent?.constructor.name || 'none';
+        const hasParent = !!this.$parent;
+        const parentKey = this.$parent?.toString() || 'none';
+        const parentType = this.$parent?.constructor.name || 'none';
         
         return (
             <div style={{ 
@@ -43,6 +44,9 @@ class $DataChemical extends $Chemical {
 // ============================================
 
 class $FieldCatalystTest extends $Chemical {
+    // The parent property
+    $parent = $is($Chemical);
+
     // These will be set from bond constructor
     originalDep!: $DataChemical;
     
@@ -56,7 +60,7 @@ class $FieldCatalystTest extends $Chemical {
     $FieldCatalystTest(dep: $DataChemical) {
         this.originalDep = $check(dep, $DataChemical);
         // Record that original had parent
-        this.originalHadParent = !!this.originalDep.parent;
+        this.originalHadParent = !!this.originalDep.$parent;
     }
     
     breakAndAssignToField() {
@@ -66,7 +70,7 @@ class $FieldCatalystTest extends $Chemical {
         wrongCatalyst.id = "New id from an unbound $DataChemical"
         
         // Verify it has NO parent now
-        this.wrongVersionHadNoParent = !wrongCatalyst.parent;
+        this.wrongVersionHadNoParent = !wrongCatalyst.$parent;
         
         // Modify it to prove it's different
         wrongCatalyst.$value = 'Broken catalyst version';
@@ -104,7 +108,7 @@ class $FieldCatalystTest extends $Chemical {
                     <strong>Verification:</strong>
                     <div>1. Original from constructor had parent: {this.originalHadParent ? '✅ YES' : '❌ NO'}</div>
                     <div>2. After .$bind().$chemical had NO parent: {this.wrongVersionHadNoParent ? '✅ CORRECT (was catalyst)' : '❓ Not tested'}</div>
-                    <div>3. Field member now has THIS as parent: {this.fieldMember?.parent === this ? '✅ FIXED BY BONDSET!' : '❓ Check below'}</div>
+                    <div>3. Field member now has THIS as parent: {this.fieldMember?.$parent === this ? '✅ FIXED BY BONDSET!' : '❓ Check below'}</div>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -145,7 +149,7 @@ class $PropertyCatalystTest extends $Chemical {
     
     $PropertyCatalystTest(dep: $DataChemical) {
         this.originalDep = $check(dep, $DataChemical);
-        this.originalHadParent = !!this.originalDep.parent;
+        this.originalHadParent = !!this.originalDep.$parent;
     }
     
     breakAndAssignToProperty() {
@@ -153,7 +157,7 @@ class $PropertyCatalystTest extends $Chemical {
         const wrongCatalyst = this.originalDep.Component.$bind().$chemical;
         
         // Verify it has NO parent
-        this.propWrongHadNoParent = !wrongCatalyst.parent;
+        this.propWrongHadNoParent = !wrongCatalyst.$parent;
         
         // Modify to distinguish it
         wrongCatalyst.$value = 'Property broken catalyst';
@@ -191,7 +195,7 @@ class $PropertyCatalystTest extends $Chemical {
                     <strong>Verification:</strong>
                     <div>1. Original had parent: {this.originalHadParent ? '✅ YES' : '❌ NO'}</div>
                     <div>2. After .$bind().$chemical had NO parent: {this.propWrongHadNoParent ? '✅ CORRECT (was catalyst)' : '❓ Not tested'}</div>
-                    <div>3. Property now has THIS as parent: {this.propMember?.parent === this ? '✅ FIXED BY BONDSET!' : '❓ Check below'}</div>
+                    <div>3. Property now has THIS as parent: {this.propMember?.$parent === this ? '✅ FIXED BY BONDSET!' : '❓ Check below'}</div>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -222,7 +226,7 @@ class $MethodCatalystTest extends $Chemical {
     
     $MethodCatalystTest(dep: $DataChemical) {
         this.originalDep = $check(dep, $DataChemical);
-        this.originalHadParent = !!this.originalDep.parent;
+        this.originalHadParent = !!this.originalDep.$parent;
     }
     
     // Method that returns wrong catalyst
@@ -231,7 +235,7 @@ class $MethodCatalystTest extends $Chemical {
         const wrong = this.originalDep.Component.$bind().$chemical;
         
         // Track that it has NO parent
-        this.methodCreatedWrongCatalyst = !wrong.parent;
+        this.methodCreatedWrongCatalyst = !wrong.$parent;
         
         wrong.$value = 'Returned from method';
         
@@ -273,7 +277,7 @@ class $MethodCatalystTest extends $Chemical {
                     <strong>Verification:</strong>
                     <div>1. Original had parent: {this.originalHadParent ? '✅ YES' : '❌ NO'}</div>
                     <div>2. Method created catalyst (no parent): {this.methodCreatedWrongCatalyst ? '✅ YES' : '❓ Not tested'}</div>
-                    <div>3. Result has THIS as parent: {this.methodResult?.parent === this ? '✅ FIXED BY BONDCALL!' : '❓ Check below'}</div>
+                    <div>3. Result has THIS as parent: {this.methodResult?.$parent === this ? '✅ FIXED BY BONDCALL!' : '❓ Check below'}</div>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
@@ -311,8 +315,8 @@ class $MultipleDepsTest extends $Chemical {
         this.dep1 = $check(dep1, $DataChemical);
         this.dep2 = $check(dep2, $DataChemical);
         
-        this.dep1HadParent = !!this.dep1.parent;
-        this.dep2HadParent = !!this.dep2.parent;
+        this.dep1HadParent = !!this.dep1.$parent;
+        this.dep2HadParent = !!this.dep2.$parent;
     }
     
     breakBothAndAssign() {
@@ -321,8 +325,8 @@ class $MultipleDepsTest extends $Chemical {
         const broken2 = this.dep2.Component.$bind().$chemical;
         
         // Verify they have NO parents
-        this.broken1HadNoParent = !broken1.parent;
-        this.broken2HadNoParent = !broken2.parent;
+        this.broken1HadNoParent = !broken1.$parent;
+        this.broken2HadNoParent = !broken2.$parent;
         
         broken1.$value = 'Broken 1';
         broken2.$value = 'Broken 2';
@@ -356,8 +360,8 @@ class $MultipleDepsTest extends $Chemical {
                 
                 <div style={{ marginBottom: '15px', padding: '10px', background: '#fff', borderRadius: '4px' }}>
                     <strong>Verification:</strong>
-                    <div>Original Dep1 had parent: {this.dep1HadParent ? '✅' : '❌'} | Broken had none: {this.broken1HadNoParent ? '✅' : '❓'} | Fixed: {this.brokenDep1?.parent === this ? '✅' : '❓'}</div>
-                    <div>Original Dep2 had parent: {this.dep2HadParent ? '✅' : '❌'} | Broken had none: {this.broken2HadNoParent ? '✅' : '❓'} | Fixed: {this.brokenDep2?.parent === this ? '✅' : '❓'}</div>
+                    <div>Original Dep1 had parent: {this.dep1HadParent ? '✅' : '❌'} | Broken had none: {this.broken1HadNoParent ? '✅' : '❓'} | Fixed: {this.brokenDep1?.$parent === this ? '✅' : '❓'}</div>
+                    <div>Original Dep2 had parent: {this.dep2HadParent ? '✅' : '❌'} | Broken had none: {this.broken2HadNoParent ? '✅' : '❓'} | Fixed: {this.brokenDep2?.$parent === this ? '✅' : '❓'}</div>
                 </div>
                 
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '20px' }}>
