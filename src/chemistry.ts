@@ -95,42 +95,84 @@ type $ParameterType =
     | [[$ParameterType]]
     | [[[$ParameterType]]];
 
-class $Decorators {
-    parent: Set<string> = new Set();
-    inert: Map<string, boolean> = new Map();
-    reactive: Map<string, boolean> = new Map();
-    static on(chemical: $Chemical): $Decorators {
-        if (chemical[$decorators]) return chemical[$decorators];
-        chemical[$decorators] = new $Decorators();
-        return chemical[$decorators];
+class $Reflection {
+    chemical: $Chemical;
+    property: string;
+
+    get reactive(): boolean { 
+        if ($Reflection.isSpecial(this.property)) return true;
+        const reactiveGenerally = $Reflection.isReactive(this.property);
+        return reactiveGenerally ?
+            !$Reflection.inertSpecifically(this.chemical, this.property, reactiveGenerally) :
+            !!$Reflection.reactiveSpecifically(this.chemical, this.property, reactiveGenerally);
+    };
+
+    constructor(chemical: $Chemical, property: string) {
+        this.chemical = chemical;
+        this.property = property;
+    }
+
+    static inertDecorators: Map<$Chemical, Set<string>> = new Map();
+    static reactiveDecorators: Map<$Chemical, Set<string>> = new Map();
+
+    static inertSpecifically(chemical: $Chemical, property: string, reactiveGenerally: boolean): boolean | undefined {
+        if (!reactiveGenerally) return true;
+        if (chemical === $Chemical.prototype) return undefined;
+        const map = this.inertDecorators.get(chemical);
+        return !map ? 
+            this.inertSpecifically(Object.getPrototypeOf(chemical), property, reactiveGenerally) :
+            map.has(property);
+    }
+
+    static reactiveSpecifically(chemical: $Chemical, property: string, reactiveGenerally: boolean): boolean | undefined {
+        if (reactiveGenerally) return true;
+        if (chemical === $Chemical.prototype) return undefined;
+        const map = this.reactiveDecorators.get(chemical);
+        return !map ? 
+            this.reactiveSpecifically(Object.getPrototypeOf(chemical), property, reactiveGenerally) :
+            map.has(property);
+    }
+
+    static isReactive(property: string): boolean {
+        if (property === "constructor") return false;
+        if (property.startsWith('_')) return false;
+        if (!property.startsWith("$")) return true;
+        return this.isSpecial(property);
+    }
+
+    static isSpecial(property: string): boolean {
+        return property.length > 2 && 
+            property[0] === '$' && 
+            property[1] !== "$" && 
+            property[1] !== "_" &&
+            property[1] === property[1].toLowerCase();
     }
 }
 
-// A decorator for reassigning the parent property
-export function parent() {
-    return function (chemical: $Chemical, property: string) {
-        const decorators = $Decorators.on(chemical);
-        decorators.parent.add(property);
+// Decorator to mark a field as inert (non-reactive)
+export function inert() {
+    return function (prototype: $Chemical, property: string) {
+        let properties = $Reflection.inertDecorators.get(prototype)!;
+        if (!properties) {
+            properties = new Set();
+            $Reflection.inertDecorators.set(prototype, properties);
+        }
+        properties.add(property);
     };
 }
 
 // Reactive decorator for methods
 export function reactive() {
-    return function (chemical: $Chemical, property: string) {
-        const decorators = $Decorators.on(chemical);
-        decorators.reactive.set(property, true);
+    return function (prototype: $Chemical, property: string) {
+        let properties = $Reflection.reactiveDecorators.get(prototype)!;
+        if (!properties) {
+            properties = new Set();
+            $Reflection.reactiveDecorators.set(prototype, properties);
+        }
+        properties.add(property);
     };
 }
 
-// Decorator to mark a field as inert (non-reactive)
-export function inert() {
-    return function (chemical: $Chemical, property: string) {
-        const decorators = $Decorators.on(chemical);
-        decorators.inert.set(property, true);
-    };
-}
-
-// $Chemical Symbols
 const $cid = Symbol("$Chemical.cid");
 const $symbol = Symbol("$Chemical.symbol");
 const $destroyed = Symbol("$Chemical.destroyed");
@@ -141,6 +183,7 @@ const $molecule = Symbol("$Chemical.molecule");
 const $reaction = Symbol("$Chemical.reaction");
 const $$reaction = Symbol("$Chemical.$reaction");
 const $template = Symbol("$Chemical.template");
+const $isTemplate = Symbol("$Chemical.isTemplate");
 const $isBound = Symbol("$Chemical.bound");
 const $catalyst = Symbol("$Chemical.catalyst");
 const $isCatalyst = Symbol("$Chemical.catalyst");
@@ -164,7 +207,7 @@ const $$parseCid = Symbol("$Chemical.static.template");
 export class $Chemical {
     [$remove] = false;
     [$destroyed] = false;
-    [$decorators]!: $Decorators;
+    [$decorators]!: $Reflection;
     [$cid]: number;
     [$symbol]: string;
     [$type]: typeof $Chemical;
@@ -178,7 +221,8 @@ export class $Chemical {
     [$template]: this;
 
     static [$$template]: $Chemical;
-    get [$isBound]() { return this?.[$component]?.$chemical == this; }
+    get [$isTemplate]() { return this == this[$type][$$template]; }
+    get [$isBound]() { return this == this?.[$component]?.$chemical; }
 
     [$catalyst]: $Chemical;
     get [$isCatalyst]() { return this == this[$catalyst]; }
@@ -257,8 +301,7 @@ export class $Chemical {
     }
 
     [$destroy]() {
-        const component = this[$component];
-        if (component && component.$bound && component.$chemical == this) return;
+        if (this[$isTemplate] || this[$isBound]) return;
         this[$parent$] = undefined as any
         this[$molecule]?.destroy();
         this[$reaction]?.destroy();
@@ -314,6 +357,26 @@ const $formation = Symbol("$Arom.formation");
 const $remembered = Symbol("$Arom.remembered");
 
 export class $Atom extends $Chemical {
+    constructor() {
+        super();
+        if (this == this[$type][$$template]) {
+            this[$molecule].reactivate();
+            this[$component] = this[$createComponent]().$bind(this);
+        }
+        return this[$type][$$template] as this;
+    }
+
+    static particle<T extends $Atom = $Atom>(): T {
+        try {
+            if (!this[$$template]) new this();
+        } catch (error) { 
+            console.error(error); 
+        }
+        return this[$$template] as any;
+    }
+}
+
+export class $Persistent extends $Atom {
     /** @internal */
     [$formed] = false;
 
@@ -379,7 +442,6 @@ export class $Atom extends $Chemical {
         if (!this[$$template]) new this();
         return this[$$template] as any;
     }
-
 }
 
 export class $Function$<P = any> extends $Chemical {
@@ -414,6 +476,18 @@ export class $Html$<T extends keyof JSX.IntrinsicElements = any> extends $Chemic
 
     view() {
         return React.createElement(this._type, this[$props]());
+    }
+}
+
+export class $Include extends $Chemical {
+    view(): ReactNode {
+        return this.children;
+    }
+}
+
+export class $Exclude extends $Chemical {
+    view(): ReactNode {
+        return undefined;
     }
 }
 
@@ -759,6 +833,7 @@ class $Molecule {
 
     get bonds() { return this._bonds; }
     private _bonds: Map<string, $Bond> = new Map();
+    private _inert = new Set<string>();
 
     constructor(chemical: $Chemical) {
         this._chemical = chemical;
@@ -844,6 +919,9 @@ class $Molecule {
         this.selectProperties(chemical).forEach((descriptor, property) => properties.set(property, descriptor));
         properties.forEach((descriptor, property) => {
             if (this._bonds.has(property)) return;
+            if (this._inert.has(property)) return;
+            const reflect = new $Reflection(chemical, property);
+            if (!reflect.reactive) return this._inert.add(property);
             const bond = $Bond.create(chemical, property, descriptor);
             this._bonds.set(property, bond);
             bond.form();
@@ -873,12 +951,11 @@ class $Molecule {
         return properties;
     }
 
-    private selectProperties(object: any): Map<string, PropertyDescriptor> {
+    private selectProperties(chemical: $Chemical): Map<string, PropertyDescriptor> {
         const properties = new Map<string, PropertyDescriptor>();
-        const descriptors = Object.getOwnPropertyDescriptors(object)
+        const descriptors = Object.getOwnPropertyDescriptors(chemical)
         for (const property in descriptors)
-            if ($Bond.isReactiveProperty(property))
-                properties.set(property, descriptors[property]);
+            properties.set(property, descriptors[property]);
         return properties;
     }
 }
@@ -979,7 +1056,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         this._property = property;
         this._chemical = chemical;
         this._descriptor = descriptor;
-        this._isProp = $Bond.isSpecial(property);
+        this._isProp = $Reflection.isSpecial(property);
     }
 
     form() {
@@ -1119,21 +1196,6 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         Object.defineProperty(this._chemical, this._property, this._bondDescriptor);
     }
 
-    static isReactiveProperty(property: string): boolean {
-        if (property.startsWith('_')) return false;
-        if (property === "constructor") return false;
-        if (!property.startsWith("$")) return true;
-        return $Bond.isSpecial(property);
-    }
-
-    static isSpecial(property: string): boolean {
-        return property.length > 2 && 
-            property[0] === '$' && 
-            property[1] !== "$" && 
-            property[1] !== "_" &&
-            property[1] === property[1].toLowerCase();
-    }
-
     static isMethod(descriptor: PropertyDescriptor) {
         return typeof descriptor.value === 'function';
     }
@@ -1154,7 +1216,7 @@ class $Bonding<T extends $Chemical = any, P = any> extends $Bond<T, P> {
         super(chemical, method, descriptor);
         this._isProp = false;
         this._isMethod = true;
-        this._isPure = $Bond.isSpecial(method);
+        this._isPure = $Reflection.isSpecial(method);
     }
 
     form() {
@@ -1519,11 +1581,11 @@ class $BondOrchestrator<T extends $Chemical> {
             context.args.push(chemical);
             context.children.push(element);
             //this._rendered.set(chemical.Component, element);
-        } else if (type === List) {
+        } else if (type === Include) {
             context.isModified = true;
             const arrayContext = context.array();
             this.processArray(React.Children.toArray(element.props?.children || []), arrayContext);
-        } else if (type == Undefined) {
+        } else if (type == Exclude) {
             context.args.push(undefined);
         } else if (typeof type === 'function') {
             let component: $$Component = type; 
@@ -2479,20 +2541,14 @@ function extract(module: any, parent?: $Chemical): $Chemical | null {
     return null;
 }
 
-export class $List extends $Chemical {
-    view(): ReactNode {
-        return this.children;
-    }
-}
+export const Chemical = new $Chemical().Component;
+$Chemical[$$template][$molecule].reactivate();
 
-export class $Undefined extends $Chemical {
-    view(): ReactNode {
-        return undefined;
-    }
-}
+export const Atom = new $Atom().Component;
+$Atom[$$template][$molecule].reactivate();
 
-export const List = new $List().Component; 
-export const Undefined = new $Undefined().Component;
+export const Include = new $Include().Component;
+export const Exclude = new $Exclude().Component;
 
 // function compose(Chemical: typeof $Chemical, name: string, bondConstructor: Function) {
 //     const NewChemical = {

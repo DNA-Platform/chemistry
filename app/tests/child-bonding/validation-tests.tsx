@@ -1,6 +1,6 @@
 // app/tests/child-binding/validation-tests.tsx
 'use client'
-import { $Chemical, List, $check, Undefined, $Html, $Function } from '@/chemistry';
+import { $Chemical, Include, $check, Exclude, $Html, $Function } from '@/chemistry';
 
 // ============================================
 // TEST COMPONENTS
@@ -72,7 +72,6 @@ export class $ComplexValidator extends $Chemical {
             this.card = $check(card, SimpleCard, undefined);
             this.matrix = $check(matrix, [[Number]]);
         } catch (e) {
-            console.log("$ComplexValidator error", e)
             this.validationError = (e as Error).message;
         }
     }
@@ -138,10 +137,10 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Book />
                 {42}
-                <List><Chapter /><Chapter /></List>
+                <Include><Chapter /><Chapter /></Include>
                 <div>config</div>
                 <SimpleCard />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     },
@@ -155,13 +154,13 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 <Label />
-                <List>
+                <Include>
                     <Chapter />
                     <Chapter />
-                </List>
+                </Include>
                 <div>config</div>
                 <SimpleCard />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     },
@@ -175,14 +174,14 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 {42}
-                <List>
+                <Include>
                     <Chapter />
                     <Label />
                     <Book />
-                </List>
+                </Include>
                 <div>config</div>
                 <SimpleCard />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     },
@@ -196,10 +195,10 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 {42}
-                <List><Chapter /><Chapter /></List>
+                <Include><Chapter /><Chapter /></Include>
                 <span>config</span>
                 <SimpleCard />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     },
@@ -213,10 +212,10 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 {42}
-                <List><Chapter /><Chapter /></List>
+                <Include><Chapter /><Chapter /></Include>
                 <div>config</div>
                 <Label />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     },
@@ -230,13 +229,13 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 {42}
-                <List><Chapter /><Chapter /></List>
+                <Include><Chapter /><Chapter /></Include>
                 <div>config</div>
                 <SimpleCard />
-                <List>
-                    <List>{"a"}{"b"}</List>
-                    <List>{"x"}</List>
-                </List>
+                <Include>
+                    <Include>{"a"}{"b"}</Include>
+                    <Include>{"x"}</Include>
+                </Include>
             </ComplexValidator>
         )
     },
@@ -250,10 +249,10 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 {42}
-                <List><Chapter /><Chapter /></List>
+                <Include><Chapter /><Chapter /></Include>
                 <div>config</div>
                 <SimpleCard />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     },
@@ -267,10 +266,10 @@ const testCases: TestResult[] = [
             <ComplexValidator>
                 <Label />
                 {42}
-                <List><Chapter /><Chapter /></List>
-                <Undefined /> {/* Testing Comments */}
-                <Undefined />
-                <List><List>{1}</List><List>{2}</List></List>
+                <Include><Chapter /><Chapter /></Include>
+                <Exclude /> {/* Testing Comments */}
+                <Exclude />
+                <Include><Include>{1}</Include><Include>{2}</Include></Include>
             </ComplexValidator>
         )
     }

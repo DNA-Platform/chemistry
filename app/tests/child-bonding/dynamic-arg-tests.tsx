@@ -1,6 +1,6 @@
 // app/tests/dynamic-children/page.tsx
 'use client'
-import { $Chemical, $use, Undefined } from '@/chemistry';
+import { $Chemical, $use, Exclude } from '@/chemistry';
 import React, { useState } from 'react';
 import styled from 'styled-components';
 
@@ -988,7 +988,7 @@ function Test6OptionalCover() {
                         {showCover ? (
                             <Cover color="#ff5722" title={bookTitle} author="Test Author" />
                         ) : (
-                            <Undefined />
+                            <Exclude />
                         )}
                         <Title text={bookTitle} />
                         <Chapter number={1} title="Opening" pages={12} />
@@ -1000,7 +1000,7 @@ function Test6OptionalCover() {
                 <div>
                     <h5 style={{ marginBottom: '10px' }}>Always Using Default:</h5>
                     <Book author="Default Author">
-                        <Undefined />
+                        <Exclude />
                         <Title text="Book with Default Cover" />
                         <Chapter number={1} title="Chapter One" pages={20} />
                         <Chapter number={2} title="Chapter Two" pages={25} />

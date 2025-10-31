@@ -1,6 +1,6 @@
 // app > tests > basics
 'use client'
-import { $Chemical } from '@/chemistry';
+import { $Chemical, inert } from '@/chemistry';
 import React from 'react';
 
 // Test 1: Most basic - can we pass a prop and see it?
@@ -41,6 +41,50 @@ class $Counter extends $Chemical {
                     }}
                 >
                     Increment
+                </button>
+            </div>
+        );
+    }
+}
+
+// Test 2.5: Can we update a property and see the change?
+class $InertCounter extends $Chemical {
+    private useIncrementInert = false;
+    count = 0;
+    @inert() 
+    countInert = 0;
+
+    increment() {
+        console.log("$Counter:increment", "this", this)
+        this.count++;
+    }
+
+    incrementInert() {
+        console.log("$Counter:incrementInert", "this", this , "should not cause an update")
+        this.countInert++;
+    }
+
+    constructor(useIncrementInert: boolean) {
+        super();
+        this.useIncrementInert = useIncrementInert;
+    }
+
+    view() {
+        return (
+            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
+                <div>Count: { this.useIncrementInert ? this.countInert : this.count }</div>
+                <button
+                    onClick={() => this.useIncrementInert ? this.incrementInert() : this.increment()}
+                    style={{
+                        border: '1px solid #ccc',
+                        background: '#f5f5f5',
+                        padding: '5px 15px',
+                        cursor: 'pointer',
+                        borderRadius: '4px',
+                        marginTop: '8px'
+                    }}
+                >
+                    {this.useIncrementInert ? "Increment Inert" : "Increment"}
                 </button>
             </div>
         );
@@ -164,6 +208,8 @@ class $ComplexProps extends $Chemical {
 export default function BasicsTest() {
     const Display = new $Display().Component;
     const Counter = new $Counter().Component;
+    const InertCounter1 = new $InertCounter(false).Component;
+    const InertCounter2 = new $InertCounter(true).Component;
     const MultiProp = new $MultiProp().Component;
     const ComplexProps = new $ComplexProps().Component;
 
@@ -198,6 +244,23 @@ export default function BasicsTest() {
                 <div style={{ marginTop: '10px', color: '#666' }}>
                     ✓ Pass if count increases on click<br />
                     ✗ Fail if count stays at 0
+                </div>
+            </div>
+
+            {/* Test 2.5 */}
+            <div style={{ marginBottom: '40px' }}>
+                <h2>Test 2: Inert Properties</h2>
+                <div style={{ marginBottom: '10px' }}>
+                    <strong>Expected:</strong> Count should increment when button clicked
+                </div>
+                <div style={{ marginBottom: '10px' }}>
+                    <strong>Expected:</strong> Count should not increment because it is inert
+                </div>
+                <InertCounter1 />
+                <InertCounter2 />
+                <div style={{ marginTop: '10px', color: '#666' }}>
+                    ✓ Pass if the first increments and the second doesn't<br />
+                    ✗ Fail if the second increments or the first doesn't
                 </div>
             </div>
 

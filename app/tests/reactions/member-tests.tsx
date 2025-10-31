@@ -64,7 +64,6 @@ class $FieldCatalystTest extends $Chemical {
     }
     
     breakAndAssignToField() {
-        console.log("breakAndAssignToField", "this", this)
         // Use YOUR method to create a version with NO parent (new catalyst)
         const wrongCatalyst = new $DataChemical();
         wrongCatalyst.id = "New id from an unbound $DataChemical"

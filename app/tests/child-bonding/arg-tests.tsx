@@ -1,6 +1,6 @@
 // app/tests/child-binding/arg-tests.tsx
 'use client'
-import { $Chemical, List, $use, $Function, $Html, $check } from '@/chemistry';
+import { $Chemical, Include, $use, $Function, $Html, $check } from '@/chemistry';
 import React from 'react';
 
 // ============================================
@@ -113,10 +113,6 @@ export class $FormBuilder extends $Chemical {
         div: $Html<'div'>,
         ...moreElements: any[]
     ) {
-        console.log("$FormBuilder:1", "input", input)
-        console.log("$FormBuilder:2", "button", button)
-        console.log("$FormBuilder:3", "div", div)
-        console.log("$FormBuilder:4", "moreElements", moreElements)
         this.input = $check(input, 'input');
         this.button = $check(button, 'button');
         this.div = $check(div, 'div');
@@ -489,9 +485,6 @@ export class $Catalogue extends $Chemical {
     $Catalogue(...books: $Book[]) {
         $check(books, [$Book]);
         this.books = books;
-        console.log('$Catalogue.books', this.books);
-        console.log('$Catalogue.book[0]', this.books[0]);
-        console.log('$Catalogue.book[0].chapters', this.books[0].chapters);
     }
     
     view() {
@@ -636,20 +629,20 @@ export default function ArgTests() {
                     <strong>Expected:</strong> Constructor receives arrays of Chemicals, functions wrapped by Chemistry, mixed types
                 </div>
                 <CollectionManager>
-                    <List>
+                    <Include>
                         <Label text="First" color="red" />
                         <Label text="Second" color="green" />
                         <Label text="Third" color="blue" />
-                    </List>
-                    <List>
+                    </Include>
+                    <Include>
                         <SimpleCard />
                         <SimpleCard />
-                    </List>
-                    <List>
+                    </Include>
+                    <Include>
                         <Label text="Mixed 1" />
                         <SimpleCard />
                         <div>Mixed 3</div>
-                    </List>
+                    </Include>
                 </CollectionManager>
                 <div style={{ marginTop: '10px', color: '#666' }}>
                     ✓ First array contains $Chemical instances<br/>
@@ -689,23 +682,23 @@ export default function ArgTests() {
                 </div>
                 <MatrixContainer>
                     <Label text="Matrix Header" color="#333" />
-                    <List>
-                        <List>
+                    <Include>
+                        <Include>
                             <Label text="1,1" />
                             <Label text="1,2" />
                             <Label text="1,3" />
-                        </List>
-                        <List>
+                        </Include>
+                        <Include>
                             <Label text="2,1" />
                             <Label text="2,2" />
                             <Label text="2,3" />
-                        </List>
-                        <List>
+                        </Include>
+                        <Include>
                             <Label text="3,1" />
                             <Label text="3,2" />
                             <Label text="3,3" />
-                        </List>
-                    </List>
+                        </Include>
+                    </Include>
                     <InfoCard />
                 </MatrixContainer>
                 <div style={{ marginTop: '10px', color: '#666' }}>
