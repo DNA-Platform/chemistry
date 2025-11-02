@@ -1,6 +1,6 @@
 // app/tests/child-binding/original-tests.tsx
 'use client'
-import { $Chemical, Include, $use } from '@/chemistry';
+import { $Chemical, Include, $use } from '@/archive/chemistry';
 import React from 'react';
 
 // Test 1: Basic children as constructor arguments

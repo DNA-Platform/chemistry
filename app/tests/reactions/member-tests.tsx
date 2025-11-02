@@ -1,6 +1,6 @@
 // app/tests/dependencies/member-tests.tsx
 'use client'
-import { $Chemical, $use, $check, $is } from '@/chemistry';
+import { $Chemical, $use, $check, $is } from '@/archive/chemistry';
 import React from 'react';
 
 // ============================================

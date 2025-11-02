@@ -1,6 +1,6 @@
 // app/tests/dependencies/sharing-tests.tsx
 'use client'
-import { $Chemical, $use, $check } from '@/chemistry';
+import { $Chemical, $use, $check } from '@/archive/chemistry';
 import React from 'react';
 
 // ============================================

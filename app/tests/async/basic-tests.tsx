@@ -1,5 +1,5 @@
 'use client'
-import { $Chemical } from '@/chemistry';
+import { $Chemical } from '@/archive/chemistry';
 import React from 'react';
 
 // Test 1: Async $ method directly in onClick

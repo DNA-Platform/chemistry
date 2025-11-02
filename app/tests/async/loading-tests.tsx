@@ -1,6 +1,6 @@
 // app/tests/async/loading-tests.tsx
 'use client'
-import { $Chemical, $lookup, $load, $use, $Atom } from '@/chemistry';
+import { $Chemical, $lookup, $load, $use, $Atom } from '@/archive/chemistry';
 import React, { ReactNode, useState, useEffect } from 'react';
 
 // Base entry class

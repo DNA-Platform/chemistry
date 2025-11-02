@@ -1,6 +1,6 @@
 // app/tests/child-binding/validation-tests.tsx
 'use client'
-import { $Chemical, Include, $check, Exclude, $Html, $Function } from '@/chemistry';
+import { $Chemical, Include, $check, Exclude, $Html, $Function } from '@/archive/chemistry';
 
 // ============================================
 // TEST COMPONENTS

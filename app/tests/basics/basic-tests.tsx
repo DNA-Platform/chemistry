@@ -1,6 +1,6 @@
 // app/tests/basics/basic-tests.tsx
 'use client'
-import { $Chemical, inert } from '@/chemistry';
+import { $Chemical, inert } from '@/archive/chemistry';
 import React from 'react';
 
 // Test 1: Most basic - can we pass a prop and see it?

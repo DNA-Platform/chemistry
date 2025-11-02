@@ -78,7 +78,7 @@ export type $Html<T extends keyof JSX.IntrinsicElements = any> =
         [K in keyof JSX.IntrinsicElements[T] as K extends 'children' ? never : `$${string & K}`]?: JSX.IntrinsicElements[T][K];
     }
 
-type $ParameterType = 
+export type $ParameterType = 
     | $Constructor<$Chemical>
     | React.FC
     | Function
@@ -95,7 +95,7 @@ type $ParameterType =
     | [[$ParameterType]]
     | [[[$ParameterType]]];
 
-class $Reflection {
+export class $Reflection {
     chemical: $Chemical;
     property: string;
 
@@ -491,7 +491,7 @@ export class $Exclude extends $Chemical {
     }
 }
 
-class $Component$<T extends $Chemical> {
+export class $Component$<T extends $Chemical> {
     private Component: $Component<T>;
 
     get $template() { return this._template; };
@@ -582,7 +582,7 @@ class $Component$<T extends $Chemical> {
     }
 }
 
-class $Reaction {
+export class $Reaction {
     private _reactions = new Map<number, $Reaction>();
     private _update?: React.Dispatch<React.SetStateAction<{}>>;
     private _updateScheduled = false;
@@ -775,7 +775,7 @@ class $Reaction {
     }
 }
 
-class $State {
+export class $State {
     get chemical() { return this._chemical; }
     private _chemical: $Chemical;
 
@@ -821,7 +821,7 @@ class $State {
     private static get empty() { return { cid: "-1" }; }
 }
 
-class $Molecule {
+export class $Molecule {
     get reactive() { return this._reactive; }
     private _reactive = false;
 
@@ -960,7 +960,7 @@ class $Molecule {
     }
 }
 
-class $Bond<T extends $Chemical = $Chemical, P = any> {
+export class $Bond<T extends $Chemical = $Chemical, P = any> {
     protected _children = new Set<$Bond>();
 
     get formed() { return this._formed; }
@@ -1207,7 +1207,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
     }
 }
 
-class $Bonding<T extends $Chemical = any, P = any> extends $Bond<T, P> {
+export class $Bonding<T extends $Chemical = any, P = any> extends $Bond<T, P> {
     get lastSeenActive() { return this._lastSeenActive; }
     protected _lastSeenActive?: $Promise<any>;
     protected _lastSeenRender?: $Promise<any>;
@@ -1338,12 +1338,12 @@ class $Bonding<T extends $Chemical = any, P = any> extends $Bond<T, P> {
     private static AsyncFunction = (async function() {}).constructor;
 }
 
-interface $BondParameter {
+export interface $BondParameter {
     isArray: boolean, 
     isSpread: boolean
 }
 
-class $BondArguments {
+export class $BondArguments {
     values: any[] = [];
     parameters: $BondParameter[] = [];
     parameterIndex = -1;
@@ -1353,7 +1353,7 @@ class $BondArguments {
     }
 }
 
-class $BondOrchestrationContext {
+export class $BondOrchestrationContext {
     private parameters: $BondParameter[];
     private parameterIndex = -1;
     arguments: $BondArguments;
@@ -1446,7 +1446,7 @@ class $BondOrchestrationContext {
     }
 }
 
-class $BondOrchestrator<T extends $Chemical> {
+export class $BondOrchestrator<T extends $Chemical> {
     private _chemical: T;
     private _bondConstructor?: Function;
     private _parameters: { isArray: boolean, isSpread: boolean }[] = [];
@@ -1718,7 +1718,7 @@ class $BondOrchestrator<T extends $Chemical> {
     }
 }
 
-class $Parent<T extends $Chemical, P extends $Chemical> extends $Bond<T, P> {
+export class $Parent<T extends $Chemical, P extends $Chemical> extends $Bond<T, P> {
     private _type?: $Type;
 
     constructor(chemical: T, property: string, descriptor: PropertyDescriptor) {
@@ -1761,7 +1761,7 @@ class $Parent<T extends $Chemical, P extends $Chemical> extends $Bond<T, P> {
     }
 }
 
-class $ParamValidation {
+export class $ParamValidation {
     index = 0;
     count = -1;
     types: string[] = [];
@@ -2011,7 +2011,7 @@ class $ParamValidation {
     }
 }
 
-class $Represent {
+export class $Represent {
     static symbolize(value: any, ...features: $SymbolFeature[]): string {
         const mode = features.find(f => f === 'fast') ? 'fast' : 'safe';
         const closure = features.find(f => f === 'self-contained') ? 'self-contained' : 'referential'; 

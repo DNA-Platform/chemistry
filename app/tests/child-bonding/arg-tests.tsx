@@ -1,6 +1,6 @@
 // app/tests/child-binding/arg-tests.tsx
 'use client'
-import { $Chemical, Include, $use, $Function, $Html, $check } from '@/chemistry';
+import { $Chemical, Include, $use, $Function, $Html, $check } from '@/archive/chemistry';
 import React from 'react';
 
 // ============================================

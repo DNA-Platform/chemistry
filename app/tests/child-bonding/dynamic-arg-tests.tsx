@@ -1,6 +1,6 @@
 // app/tests/dynamic-children/page.tsx
 'use client'
-import { $Chemical, $use, Exclude } from '@/chemistry';
+import { $Chemical, $use, Exclude } from '@/archive/chemistry';
 import React, { useState } from 'react';
 import styled from 'styled-components';
 
