@@ -9,7 +9,6 @@ export class $AsyncButton extends $Chemical {
     loading = false;
     
     async handleClick() {
-        console.log('$AsyncButton', 'handleClick', 'this', this)
         this.loading = true;
         this.lastMessage = 'Processing...';
         

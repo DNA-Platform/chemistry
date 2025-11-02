@@ -1,299 +1,81 @@
-// app > tests > basics
+// app/tests/basics/page.tsx
 'use client'
-import { $Chemical, inert } from '@/chemistry';
-import React from 'react';
+import { useState } from 'react';
+import dynamic from 'next/dynamic';
 
-// Test 1: Most basic - can we pass a prop and see it?
-class $Display extends $Chemical {
-    $text = 'initial';
+const subTests = [
+    {
+        id: 'basics',
+        name: 'Basic Tests',
+        description: 'Tests that show child-bonding as a proof of concept',
+        component: dynamic(() => import('./basic-tests'), {
+            loading: () => <TestLoading />,
+            ssr: false
+        })
+    },
+];
 
-    view() {
-        return (
-            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
-                <div>Text: {this.$text}</div>
-            </div>
-        );
-    }
-}
-
-// Test 2: Can we update a property and see the change?
-class $Counter extends $Chemical {
-    count = 0;
-
-    increment() {
-        console.log("$Counter:this", this)
-        this.count = this.count + 1;
-    }
-
-    view() {
-        return (
-            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
-                <div>Count: {this.count}</div>
-                <button
-                    onClick={this.increment}
-                    style={{
-                        border: '1px solid #ccc',
-                        background: '#f5f5f5',
-                        padding: '5px 15px',
-                        cursor: 'pointer',
-                        borderRadius: '4px',
-                        marginTop: '8px'
-                    }}
-                >
-                    Increment
-                </button>
-            </div>
-        );
-    }
-}
-
-// Test 2.5: Can we update a property and see the change?
-class $InertCounter extends $Chemical {
-    private useIncrementInert = false;
-    count = 0;
-    @inert() 
-    countInert = 0;
-
-    increment() {
-        console.log("$Counter:increment", "this", this)
-        this.count++;
-    }
-
-    incrementInert() {
-        console.log("$Counter:incrementInert", "this", this , "should not cause an update")
-        this.countInert++;
-    }
-
-    constructor(useIncrementInert: boolean) {
-        super();
-        this.useIncrementInert = useIncrementInert;
-    }
-
-    view() {
-        return (
-            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
-                <div>Count: { this.useIncrementInert ? this.countInert : this.count }</div>
-                <button
-                    onClick={() => this.useIncrementInert ? this.incrementInert() : this.increment()}
-                    style={{
-                        border: '1px solid #ccc',
-                        background: '#f5f5f5',
-                        padding: '5px 15px',
-                        cursor: 'pointer',
-                        borderRadius: '4px',
-                        marginTop: '8px'
-                    }}
-                >
-                    {this.useIncrementInert ? "Increment Inert" : "Increment"}
-                </button>
-            </div>
-        );
-    }
-}
-
-// Test 3: Multiple props
-class $MultiProp extends $Chemical {
-    $first = 'default1';
-    $second = 'default2';
-    $third = 0;
-
-    view() {
-        return (
-            <div style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '4px' }}>
-                <div>First: {this.$first}</div>
-                <div>Second: {this.$second}</div>
-                <div>Third: {this.$third}</div>
-            </div>
-        );
-    }
-}
-
-class $ComplexProps extends $Chemical {
-    // Props (with $)
-    $arrayProp = ['default1', 'default2'];
-    $objectProp = { name: 'default', value: 0 };
-
-    // Regular properties (no $)
-    regularArrayCount = 0;
-    regularArray = ['initial1', 'initial2', 'initial3'];
-    regularObject = { status: 'ready', count: 10 };
-
-    // Property with getter/setter
-    private _computedValue = 100;
-    get computedProp() {
-        return this._computedValue * 2;
-    }
-    set computedProp(val: number) {
-        this._computedValue = val / 2;
-    }
-
-    modifyRegularArray() {
-        this.regularArrayCount++;
-        this.regularArray.push('added ' + this.regularArrayCount);
-    }
-
-    modifyRegularObject() {
-        this.regularObject.count++;
-        this.regularObject.status = 'modified';
-        (this.regularObject as any)['property' + this.regularObject.count] = 'value ' + this.regularObject.count;
-    }
-
-    modifyComputed() {
-        this.computedProp = 300;
-    }
-
-    view() {
-        return (
-            <div style={{ padding: '20px', border: '1px solid #ddd', borderRadius: '8px' }}>
-                <h3>Complex Property Types</h3>
-
-                <div style={{ marginBottom: '20px' }}>
-                    <h4>Props (with $):</h4>
-                    <div>Array Prop: {JSON.stringify(this.$arrayProp)}</div>
-                    <div>Object Prop: {JSON.stringify(this.$objectProp)}</div>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                    <h4>Regular Properties (no $):</h4>
-                    <div>Regular Array: {JSON.stringify(this.regularArray)}</div>
-                    <div>Regular Object: {JSON.stringify(this.regularObject)}</div>
-                    <button
-                        onClick={() => this.modifyRegularArray()}
-                        style={{
-                            padding: '5px 10px',
-                            marginRight: '10px',
-                            border: '1px solid #ccc',
-                            background: '#f5f5f5',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Add to Array
-                    </button>
-                    <button
-                        onClick={() => this.modifyRegularObject()}
-                        style={{
-                            padding: '5px 10px',
-                            border: '1px solid #ccc',
-                            background: '#f5f5f5',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Modify Object
-                    </button>
-                </div>
-
-                <div style={{ marginBottom: '20px' }}>
-                    <h4>Computed Property (getter/setter):</h4>
-                    <div>Computed Value: {this.computedProp}</div>
-                    <button
-                        onClick={() => this.modifyComputed()}
-                        style={{
-                            padding: '5px 10px',
-                            border: '1px solid #ccc',
-                            background: '#f5f5f5',
-                            borderRadius: '4px',
-                            cursor: 'pointer'
-                        }}
-                    >
-                        Set to 300
-                    </button>
-                </div>
-            </div>
-        );
-    }
-}
-
-export default function BasicsTest() {
-    const Display = new $Display().Component;
-    const Counter = new $Counter().Component;
-    const InertCounter1 = new $InertCounter(false).Component;
-    const InertCounter2 = new $InertCounter(true).Component;
-    const MultiProp = new $MultiProp().Component;
-    const ComplexProps = new $ComplexProps().Component;
-
+function TestLoading() {
     return (
-        <div style={{ padding: '40px', fontFamily: 'system-ui' }}>
-            <h1>Basics Test</h1>
-            <p style={{ color: '#666', marginBottom: '30px' }}>
-                Testing the absolute fundamentals of the Chemistry framework.
-            </p>
-
-            {/* Test 1 */}
-            <div style={{ marginBottom: '40px' }}>
-                <h2>Test 1: Simple Prop Passing</h2>
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Expected:</strong> Should show "Hello World" instead of "initial"
-                </div>
-                <Display text="Hello World" />
-                <div style={{ marginTop: '10px', color: '#666' }}>
-                    ✓ Pass if you see "Hello World"<br />
-                    ✗ Fail if you see "initial"
-                </div>
+        <div style={{ 
+            padding: '40px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            minHeight: '400px'
+        }}>
+            <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '24px', marginBottom: '10px' }}>⏳</div>
+                <div>Loading test...</div>
             </div>
+        </div>
+    );
+}
 
-            {/* Test 2 */}
-            <div style={{ marginBottom: '40px' }}>
-                <h2>Test 2: Property Updates</h2>
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Expected:</strong> Count should increment when button clicked
-                </div>
-                <Counter />
-                <Counter />
-                <div style={{ marginTop: '10px', color: '#666' }}>
-                    ✓ Pass if count increases on click<br />
-                    ✗ Fail if count stays at 0
-                </div>
+export default function BasicsTestPage() {
+    const [selectedTest, setSelectedTest] = useState<string>('basic-tests');
+    
+    const TestComponent = subTests.find(t => t.id === selectedTest)?.component;
+    
+    return (
+        <div style={{ fontFamily: 'system-ui' }}>
+            {/* Sub-navigation bar */}
+            <div style={{ 
+                borderBottom: '1px solid #e0e0e0',
+                background: '#f5f5f5',
+                padding: '10px 40px',
+                display: 'flex',
+                gap: '20px'
+            }}>
+                {subTests.map(test => (
+                    <button
+                        key={test.id}
+                        onClick={() => setSelectedTest(test.id)}
+                        style={{
+                            padding: '8px 16px',
+                            background: selectedTest === test.id ? 'white' : 'transparent',
+                            borderTop: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
+                            borderRight: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
+                            borderLeft: selectedTest === test.id ? '1px solid #ddd' : '1px solid transparent',
+                            borderBottom: 'none',
+                            borderRadius: '4px 4px 0 0',
+                            cursor: 'pointer',
+                            marginBottom: '-1px',
+                            fontWeight: selectedTest === test.id ? 'bold' : 'normal'
+                        }}
+                    >
+                        <div>{test.name}</div>
+                        {test.description && (
+                            <div style={{ fontSize: '11px', color: '#666', fontWeight: 'normal' }}>
+                                {test.description}
+                            </div>
+                        )}
+                    </button>
+                ))}
             </div>
-
-            {/* Test 2.5 */}
-            <div style={{ marginBottom: '40px' }}>
-                <h2>Test 2: Inert Properties</h2>
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Expected:</strong> Count should increment when button clicked
-                </div>
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Expected:</strong> Count should not increment because it is inert
-                </div>
-                <InertCounter1 />
-                <InertCounter2 />
-                <div style={{ marginTop: '10px', color: '#666' }}>
-                    ✓ Pass if the first increments and the second doesn't<br />
-                    ✗ Fail if the second increments or the first doesn't
-                </div>
-            </div>
-
-            {/* Test 3 */}
-            <div style={{ marginBottom: '40px' }}>
-                <h2>Test 3: Multiple Props</h2>
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Expected:</strong> Should show "One", "Two", and "99"
-                </div>
-                <MultiProp first="One" second="Two" third={99} />
-                <div style={{ marginTop: '10px', color: '#666' }}>
-                    ✓ Pass if all three props show correct values<br />
-                    ✗ Fail if any show default values
-                </div>
-            </div>
-
-            {/* Test 4 */}
-            <div style={{ marginBottom: '40px' }}>
-                <h2>Test 4: Complex Property Types</h2>
-                <div style={{ marginBottom: '10px' }}>
-                    <strong>Expected:</strong> Arrays and objects as props, regular properties reactive, getter/setter working
-                </div>
-                <ComplexProps
-                    arrayProp={['passed1', 'passed2', 'passed3']}
-                    objectProp={{ name: 'Passed Object', value: 42 }}
-                />
-                <div style={{ marginTop: '10px', color: '#666' }}>
-                    ✓ Pass if arrays/objects show passed values<br />
-                    ✓ Pass if regular properties update on button clicks<br />
-                    ✓ Pass if computed property shows 600 after clicking "Set to 300"<br />
-                    ✗ Fail if props show defaults or properties don't update
-                </div>
-            </div>
+            
+            {/* Test content */}
+            {TestComponent && <TestComponent />}
         </div>
     );
 }

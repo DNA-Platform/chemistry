@@ -35,8 +35,8 @@
     ".next/types/**/*.ts",
     ".site/types/**/*.ts",
     "next-env.d.ts",
-    "site/types/**/*.ts"
-, ".archive/chemistry2.ts", ".archive/chemistry.ts"  ],
+    "site/types/**/*.ts", 
+  ],
   "exclude": [
     "node_modules"
   ]
