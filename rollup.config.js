@@ -1,7 +1,7 @@
-import typescript from '@rollup/plugin-typescript';
-import dts from 'rollup-plugin-dts';
+const typescript = require('@rollup/plugin-typescript');
+const dts = require('rollup-plugin-dts').default;
 
-export default [
+module.exports = [
     {
         input: 'src/index.ts',
         output: [
@@ -16,8 +16,12 @@ export default [
                 sourcemap: true
             }
         ],
-        plugins: [typescript()],
-        external: ['react', 'react-dom']
+        plugins: [
+            typescript({
+                tsconfig: './tsconfig.build.json'  // Use the build config!
+            })
+        ],
+        external: ['react', 'react-dom', 'react/jsx-runtime']
     },
     {
         input: 'src/index.ts',

@@ -3,15 +3,15 @@ import { $BondOrchestrator, $Component$, $Molecule, $Reaction, $Reflection } fro
 import {// $Chemical
     $cid, $symbol, $destroyed, $remove, $decorators, $type, $molecule, $reaction, $$reaction, $template, $isTemplate, $isBound, $parent$, $parent, $orchestrator, $component, $children, $props, $lastProps, $render, $apply, $bond, $createComponent, $destroy, $$template, $$getNextCid, $$createSymbol, $$isSymbol, $$parseCid 
 } from "../symbols";
-import { $$Component, $Component, $Props } from "@/types";
+import { $$Component, $Component, $Props } from "../types";
 import { $Particle } from "./particle";
 
 export class $Chemical extends $Particle {
-    [$type]!: typeof $Chemical;
     // [$molecule]: $Molecule;
     // [$reaction]: $Reaction;
     // [$orchestrator]: $BondOrchestrator<any>;
     // [$$reaction]: $Reaction | undefined;
+    [$component]?: $Component<this>;
     static [$$template]: $Chemical;
 
     get [$isBound]() { return this == this?.[$component]?.$chemical; }
@@ -103,24 +103,4 @@ export class $Chemical extends $Particle {
 
         this.assertViewConstructors(Object.getPrototypeOf(prototype), thisConstructor);
     }
-
-    static [$$getNextCid](): number { return $Chemical.nextCid++; }
-    private static nextCid = 1;
-
-    static [$$createSymbol](chemical: $Particle) {
-        return `$Chemistry.${chemical[$type].name}[${chemical[$cid]}]`;
-    }
-
-    static [$$isSymbol](symbol: string): boolean {
-        return symbol.startsWith('$Chemistry.');
-    }
-
-    static [$$parseCid](symbol: string): number | undefined {
-        if (!$Chemical[$$isSymbol](symbol)) return undefined;
-        const match = symbol.match($Chemical.symbolPattern);
-        if (!match) throw new Error(`Invalid chemical symbol: ${symbol}`);
-        return Number(match[1]);
-    }
-
-    private static symbolPattern = /\[(\d+)\]$/;
 }
