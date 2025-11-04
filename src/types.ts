@@ -3,7 +3,8 @@ import { $Function$, $Html$ } from "./archive/chemistry";
 import { $Particle } from "./chemistry/particle";
 import { $Chemical } from "./chemistry/chemical";
 
-export type $Constructor<T = {}> = new (...args: any[]) => T;
+export type $Constructor<Result = any, Parameters extends any[] = any[]> = new (...args: Parameters) => Result;
+export type $Type<T = any> = $Constructor<T> & { name: string }
 export type $SymbolFeature = 'fast' | 'slow' | 'self-contained' | 'referential';
 export type $Phase = 'setup' | 'mount' | 'render' | 'layout' | 'effect' | 'unmount';
 export type $Promise<T = any> = Promise<T> & {
@@ -11,6 +12,10 @@ export type $Promise<T = any> = Promise<T> & {
     complete: boolean,
     then: <U>(action: (value: T) => U) => $Promise<U>,
     cancel: (action?: () => any) => any
+}
+
+export interface $Rep<T = any> {
+    ref: string;
 }
 
 export type $Props = {
@@ -66,10 +71,10 @@ export type $$Properties<T> = {
 export type $MethodComponent<T, M extends (...args: any[]) => any> =
     (props: $$Properties<T> & { call: Parameters<M> }) => ReturnType<M>;
 
-export type $Component<T extends $Chemical = $Chemical> = React.FC<$Properties<T>> & Component<T>;
-export type $$Component<T extends $Chemical = $Chemical> = React.FC<$$Properties<T>> & Component<T>;
+export type $Component<T = any> = React.FC<$Properties<T>> & Component<T>;
+export type $$Component<T = any> = React.FC<$$Properties<T>> & Component<T>;
 
-export interface Component<T extends $Chemical> {
+export interface Component<T> {
     get $bound(): boolean;
     get $chemical(): T;
     $?(): $$Component<T>;
@@ -87,6 +92,14 @@ export type $Html<T extends keyof JSX.IntrinsicElements = any> =
     $Html$<T> & {
         [K in keyof JSX.IntrinsicElements[T]as K extends 'children' ? never : `$${string & K}`]?: JSX.IntrinsicElements[T][K];
     }
+
+export interface $Particular<T> {
+    view(): ReactNode;
+    $view?: $Component<T>;
+    $$view?: $$Component<T>;
+    frame($this: $Particular<T>): ReactNode;
+    $frame?: $Component<T & { $this: $Particular<T> }>;
+}
 
 export type $ParameterType =
     | $Constructor<$Particle>

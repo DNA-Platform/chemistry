@@ -23,6 +23,7 @@
     "dev": "npm run clean && next dev",
     "build": "next build",
     "tests": "vitest",
+    "tests:b": "npm run build:c && npm run tests",
     "start": "npm run build && npx serve site",
     "lint": "next lint",
     "clean": "rimraf site",
@@ -30,7 +31,7 @@
     "build:c": "npm run clean:c && npm run compile:c",
     "compile:c": "rollup -c",
     "watch:c": "rollup -c -w",
-    "clean:c": "rimraf -rf dist && rimraf .rollup.cache",
+    "clean:c": "rimraf dist .rollup.cache",
     "publish:c": "npm publish",
     "prepublishOnly": "npm run build:c",
     "publish:dry": "npm pack --dry-run"
@@ -44,7 +45,7 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@rollup/plugin-multi-entry": "^6.0.1",
-    "@rollup/plugin-typescript": "^12.1.4",
+    "@rollup/plugin-typescript": "^12.3.0",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

@@ -6,7 +6,7 @@ import {
     $cid, $symbol, $type, $template, $isTemplate, $children, $apply, $bond, $$template
 } from "@/symbols";
 
-describe('$Particle Core Structure', () => {
+describe('$Particle', () => {
     it('should establish template singleton correctly', () => {
         // The template already exists from module export
         const template = $Particle[$$template];

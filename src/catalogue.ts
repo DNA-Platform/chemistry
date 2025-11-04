@@ -1,78 +1,173 @@
-export class $Type<T = any> {
-    $ref(): string {
-        return '';
+import { $Rep } from "./types";
+
+export type $Subject = any;
+export type $Topc = any;
+
+class $Catalogue {
+    #literature = new Map<$Rep, any>();
+    #references = new Map<string, $Rep>();
+    #subjects = new Set<$Subject>();
+    #topics: $Subject[] = [];
+    #dereferenced = false;
+    #name: string;
+    
+    readonly $subject: $Subject;
+    
+    constructor(name: string) {
+        // The elegant self-reference - this IS its own subject
+        this.#name = name;
+        this.$subject = this;
+        this.#subjects.add(this);
     }
-}
-
-export class $Catalogue {
-    private library = new Map<symbol, Map<string, any>>();
-    private catalogues = new Map<symbol, typeof $ref | undefined>();
-    private references = new Set<Symbol>();
-    ref: symbol;
-
-    constructor($$ref?: any, ref?: symbol) {
-        $$ref = $$ref || this.$ref;
-        this.ref = Symbol(ref ? `$${ref.description}` : '$ref');
-        this.$ref = $$ref.bind(this);
-        this.catalogues.set(this.ref, this.$ref);
+    
+    $empty(): $Catalogue {
+        if (this.#dereferenced) return undefined as any;
+        const catalogue = new $Catalogue($Catalogue.newName());
+        return catalogue;
     }
-
-    $ref(type?: typeof $ref | 'new'): typeof $ref
-    $ref<T>(ref: $Type<T>, subject?: symbol): T;
-    $ref<T>(ref: $Type<T>, literal: T, subject?: symbol): void;
-    $ref(...args: any[]): any {
-        const len = args.length;
-        let subject1 = args.length >= 1 ? this.$subject(args[1]) : undefined;
-        let subject2 = args.length >= 2 ? this.$subject(args[2]) : undefined;
-        if (len == 0) {
-            return this.$make($ref, this.ref);
-        } else if (len == 1 && args[0] == 'new') {
-            return this.$make($ref, undefined);
-        } else if (len == 1 && this.references.has(args[0])) {
-            return this.$make(args[0])
-        } else if (len <= 3 && args[0] instanceof $Type) {
-            const ref = args[0];
-            const type: 'read' | 'write' | undefined = 
-                len == 1 || (len == 2 && subject1) ? 'read' :
-                len == 2 || (len == 3 && subject2) ? 'write' :
-                undefined;
-            if (type == 'read') {
-                const subject = subject1 || this.ref;
-                const literature = this.library.get(subject);
-                const literal = literature?.get(ref.$ref());
-                if (literal) return literal;
-                const $ref = this.catalogues.get(subject);
-                return $ref?.(ref);
-            } else if (type === 'write') {
-                const literal = args[1];
-                const subject = subject2 || this.ref;
-                const literature = this.library.get(subject);
-                literature?.set(ref.$ref(), literal);
-            } else {
-                throw Error(`$ref(${args.map(arg => arg?.toString())}) ${this.error}`);
+    
+    $new(): $Catalogue {
+        if (this.#dereferenced) return undefined as any;
+        const catalogue = new $Catalogue(`$${this.#name}`);
+        catalogue.#topics.push(this);
+        this.#subjects.add(catalogue);
+        return catalogue;
+    }
+    
+    $including(...topics: $Subject[]): $Catalogue {
+        if (this.#dereferenced) return undefined as any;
+        const catalogue = new $Catalogue(`$${this.#name}[${this.#topics.map(topic => topic.toString())},$${this.#name}]`);
+        
+        // Only add valid catalogues as topics
+        for (const topic of topics) {
+            if (topic instanceof $Catalogue) {
+                catalogue.#topics.push(topic);
+            }
+        }
+        
+        catalogue.#topics.push(this);
+        this.#subjects.add(catalogue);
+        return catalogue;
+    }
+    
+    $find<T = any>(ref: $Rep<T>): T | undefined;
+    $find<T = any>(ref: $Rep<T>, subject: $Subject): T | undefined;
+    $find<T = any>(ref: $Rep<T>, subject?: $Subject): T | undefined {
+        if (this.#dereferenced) return undefined;
+        
+        // The instanceof check - the internal handshake
+        if (subject && subject instanceof $Catalogue && subject !== this) {
+            if (this.#subjects.has(subject)) {
+                return subject.$find(ref);
+            }
+            return undefined;
+        }
+        
+        // Check own literature
+        const canonical = this.#references.get(ref.ref);
+        if (canonical) {
+            const value = this.#literature.get(canonical);
+            if (value !== undefined) return value;
+        }
+        
+        // Walk the topics chain
+        for (const topic of this.#topics) {
+            if (topic instanceof $Catalogue) {
+                const value = topic.$find(ref);
+                if (value !== undefined) return value;
+            }
+        }
+        
+        return undefined;
+    }
+    
+    $index<T = any>(ref: $Rep, literal: T): void;
+    $index<T = any>(ref: $Rep, literal: T, subject: $Subject): void;
+    $index<T = any>(ref: $Rep, literal: T, subject?: $Subject): void {
+        if (this.#dereferenced) return;
+        
+        // The instanceof check - validate the subject
+        if (subject && subject instanceof $Catalogue && subject !== this) {
+            if (this.#subjects.has(subject)) {
+                subject.$index(ref, literal);
+                return;
+            }
+            return;
+        }
+        
+        // Index locally
+        let canonical = this.#references.get(ref.ref);
+        if (!canonical) {
+            canonical = ref;
+            this.#references.set(ref.ref, canonical);
+        }
+        this.#literature.set(canonical, literal);
+    }
+    
+    $deref(): void;
+    $deref(subject: $Subject): void;
+    $deref(ref: $Rep): void;
+    $deref(ref: $Rep, subject: $Subject): void;
+    $deref(arg1?: $Rep | $Subject, arg2?: $Subject): void {
+        if (this.#dereferenced) return;
+        
+        if (!arg1 && ! arg2) {
+            this.#dereferenced = true;
+            this.#references.clear();
+            this.#literature.clear();
+            this.#subjects.clear();
+            this.#topics = [];
+            return;
+        }
+        
+        // Check if it's a catalogue to remove from topics
+        if (arg1 instanceof $Catalogue) {
+            this.#subjects.delete(arg1)
+            const index = this.#topics.indexOf(arg1);
+            if (index >= 0) {
+                this.#topics.splice(index, 1);
+            }
+            return;
+        }
+        
+        if (arg1?.ref) {
+            const ref: $Rep = arg1;
+            const subject: $Subject = arg2;
+            
+            // Delegate to subject if provided and valid
+            if (subject && subject instanceof $Catalogue) {
+                subject.$deref(ref);
+                return;
+            }
+            
+            // Remove from own literature
+            const canonical = this.#references.get(ref.ref);
+            if (canonical) {
+                this.#literature.delete(canonical);
+                this.#references.delete(ref.ref);
             }
         }
     }
 
-    private $make($$ref?: typeof $ref, ref?: symbol): typeof $ref {
-        $$ref = $$ref || this.$ref;
-        const refref = ref ? 
-            Symbol(`$${this.ref.description}`) : 
-            Symbol(`${this.ref.description}('new')`);
-        this.catalogues.set(refref, $$ref)
-        this.references.add(refref);
-        const catalogue = new $Catalogue($$ref, refref);
-        return catalogue.$ref
+    $reset() {
+        this.$deref();
+        this.#references = new Map();
+        this.#literature = new Map();
+        this.#subjects = new Set();
+        this.#topics = [];
+        this.#dereferenced = false;
     }
 
-    private $subject(ref: any): symbol | undefined {
-        if (typeof ref === "undefined") return this.ref;
-        if (typeof ref === 'symbol') return ref;
-        return undefined;
+    toString() {
+        return this.#name;
     }
 
-    private error = 'is not a valid way to create and make use of the $catalogue reference system!';
+    private static lastName = '';
+    private static newName() {
+        this.lastName = `{${this.lastName}}`;
+        return this.lastName;
+    }
 }
 
-const $catalogue = new $Catalogue();
-export const $ref = $catalogue.$ref;
+export const $lib = new $Catalogue("$Chemistry");
+export function $subject(name: string) { return new $Catalogue(name); }

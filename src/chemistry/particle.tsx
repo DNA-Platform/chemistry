@@ -1,6 +1,6 @@
 import React, { Fragment, ReactNode } from 'react';
 import {//Particle 
-    $cid, $symbol, $type, $prototype, $template, $isTemplate, $derived, $children, $apply, $bond, $$template, $$getNextCid, $$createSymbol, $$isSymbol, $$parseCid
+    $cid, $symbol, $type, $prototype, $template, $isTemplate, $derived, $particlar, $children, $apply, $bond, $$template, $$getNextCid, $$createSymbol, $$isSymbol, $$parseCid
 } from "../symbols";
 import { $Props } from "../types";
 
@@ -10,13 +10,14 @@ export class $Particle {
     [$symbol]: string;
     [$children]: ReactNode;
     [$template]: this;
+    [$particlar] = false;
     static [$$template]: $Particle;
     get [$isTemplate]() { return this == (this as any)[$type][$$template]; }
     get [$prototype]() { return Object.getPrototypeOf(this); }
     get [$derived]() { return this == this[$template]; }
 
-    constructor() {
-        const $this: any = this;
+    constructor(particular?: object) {
+        let $this: any = this;
         this[$cid] = $Particle[$$getNextCid]();
         this[$type] = this.constructor as any;
         if (!$this[$type][$$template] || 
@@ -24,7 +25,13 @@ export class $Particle {
             $this[$type][$$template] = $this;
         this[$template] = this;
         this[$symbol] = $Particle[$$createSymbol](this);
-        let prototype = Object.getPrototypeOf(this);
+        const isParticle = particular instanceof $Particle;
+        if (particular && !isParticle) {
+            Object.setPrototypeOf(particular, this);
+            this[$particlar] = true;
+            $this = particular;
+        }
+        let prototype = $this;
         let descriptor = Object.getOwnPropertyDescriptor(prototype, 'view');
         while (!descriptor?.value) {
             prototype = Object.getPrototypeOf(prototype);
@@ -44,10 +51,11 @@ export class $Particle {
             $this[$symbol] = $$symbol;
             return $result;
         };
-        $view.$this = this;
+        $view.$this = $this;
         $view.$view = view;
         $this.$view = $view;
         this.view = $view;
+        return $this;
     }
 
     view(): ReactNode {
@@ -81,8 +89,8 @@ export class $Particle {
 
     protected [$bond]() {}
 
-    static [$$getNextCid](): number { return $Particle.nextCid++; }
-    private static nextCid = 1;
+    static [$$getNextCid](): number { return $Particle.#nextCid++; }
+    static #nextCid = 1;
 
     static [$$createSymbol](particle: $Particle) {
         const type = particle[$type] as any
@@ -95,12 +103,12 @@ export class $Particle {
 
     static [$$parseCid](symbol: string): number | undefined {
         if (!$Particle[$$isSymbol](symbol)) return undefined;
-        const match = symbol.match($Particle.symbolPattern);
+        const match = symbol.match($Particle.#symbolPattern);
         if (!match) throw new Error(`Invalid chemical symbol: ${symbol}`);
         return Number(match[1]);
     }
 
-    private static symbolPattern = /\[(\d+)\]$/;
+    static #symbolPattern = /\[(\d+)\]$/;
 }
 
 export const Particle = new $Particle().view!
