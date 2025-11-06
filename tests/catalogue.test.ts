@@ -2,12 +2,11 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { $lib } from '../src/catalogue';
 import { $Rep } from '@/types';
 
-function $rep<T = any>(ref: string) { 
-    return { ref: ref } as any as $Rep;
+function $rep<T = any>(ref: string): $Rep { 
+    return { $ref: ref };
 };
 
 describe('$Catalogue', () => {
-    // Fresh start for each test
     beforeEach(() => {
         $lib.$reset();
     });

@@ -1,15 +1,15 @@
 import React, { ReactNode, useState, useEffect, JSX, useLayoutEffect, useRef } from 'react';
 import {// $Chemical
-    $cid, $symbol, $destroyed, $remove, $decorators, $type, $molecule, $reaction, $$reaction, $template, $isTemplate, $isBound, $parent$, $parent, $orchestrator, $component, $children, $props, $lastProps, $render, $apply, $bond, $createComponent, $destroy, $$template, $$getNextCid, $$createSymbol, $$isSymbol, $$parseCid 
+    $cid$, $symbol$, $destroyed$, $remove$, $decorators$, $type$, $molecule$, $reaction$, $$reaction$$, $template$, $isTemplate$, $isBound$, $$parent$$, $parent$, $orchestrator$, $component$, $children$, $props$, $lastProps$, $render$, $apply$, $bond$, $createComponent$, $destroy$, $$template$$, $$getNextCid$$, $$createSymbol$$, $$isSymbol$$, $$parseCid$$ 
 } from "../symbols";
 import {// $Atom
-    $formed, $formation, $remembered 
+    $formed$, $formation$, $remembered$ 
 } from "../symbols";
 import {// $Componment$
-    $transient 
+    $transient$ 
 } from "../symbols";
 import {// $promise
-    $cancelled 
+    $cancelled$ 
 } from "../symbols";
 
 export type $Type<T = any> = $Constructor<T>;
@@ -199,33 +199,33 @@ export function reactive() {
 }
 
 export class $Particle {
-    [$cid]: number;
-    [$symbol]: string;
-    [$type]: typeof $Particle;
-    [$remove] = false;
-    [$destroyed] = false;
-    [$decorators]!: $Reflection;
-    [$children]: ReactNode;
-    [$lastProps]?: $Props;
-    [$component]?: $Component$<any>;
+    [$cid$]: number;
+    [$symbol$]: string;
+    [$type$]: typeof $Particle;
+    [$remove$] = false;
+    [$destroyed$] = false;
+    [$decorators$]!: $Reflection;
+    [$children$]: ReactNode;
+    [$lastProps$]?: $Props;
+    [$component$]?: $Component$<any>;
 
-    [$template]: this;
-    static [$$template]: $Particle;
-    get [$isTemplate]() { return this == this[$type][$$template]; }
+    [$template$]: this;
+    static [$$template$$]: $Particle;
+    get [$isTemplate$]() { return this == this[$type$][$$template$$]; }
 
     constructor() {
-        this[$cid] = $Chemical[$$getNextCid]();
-        this[$type] = this.constructor as any;
-        if (!this[$type][$$template] || 
-           !(this[$type][$$template] instanceof this[$type]))
-            this[$type][$$template] = this;
-        this[$template] = this;
-        this[$symbol] = this.toString();
-        const descriptor = Object.getOwnPropertyDescriptor(this[$type].prototype, 'view');
+        this[$cid$] = $Chemical[$$getNextCid$$]();
+        this[$type$] = this.constructor as any;
+        if (!this[$type$][$$template$$] || 
+           !(this[$type$][$$template$$] instanceof this[$type$]))
+            this[$type$][$$template$$] = this;
+        this[$template$] = this;
+        this[$symbol$] = this.toString();
+        const descriptor = Object.getOwnPropertyDescriptor(this[$type$].prototype, 'view');
         const view = descriptor?.value;
         const $view = function(props?: $Props) {
-            $view.$this[$apply](props);
-            $view.$this[$bond]();
+            $view.$this[$apply$](props);
+            $view.$this[$bond$]();
             return $view.$view.bind($view.$this)();
         }
         $view.$this = this;
@@ -238,14 +238,14 @@ export class $Particle {
     }
 
     toString() {
-        if (this[$symbol]) return this[$symbol];
-        return $Chemical[$$createSymbol](this);
+        if (this[$symbol$]) return this[$symbol$];
+        return $Chemical[$$createSymbol$$](this);
     }
 
-    protected [$apply](props?: $Props) {
+    protected [$apply$](props?: $Props) {
         if (!props) return;
         const $this = this as any;
-        $this[$children] = props.children;
+        $this[$children$] = props.children;
         for (const prop in props) {
             if (typeof prop === 'symbol' || prop === 'children' || prop === 'key' || prop === 'ref') 
                 continue;
@@ -254,37 +254,37 @@ export class $Particle {
         }
     }
 
-    protected [$bond]() {}
+    protected [$bond$]() {}
 }
 
 export class $Chemical extends $Particle {
-    [$type]!: typeof $Chemical;
-    [$molecule]: $Molecule;
-    [$reaction]: $Reaction;
-    [$orchestrator]: $BondOrchestrator<this>;
-    [$$reaction]: $Reaction | undefined;
-    static [$$template]: $Chemical;
+    [$type$]!: typeof $Chemical;
+    [$molecule$]: $Molecule;
+    [$reaction$]: $Reaction;
+    [$orchestrator$]: $BondOrchestrator<this>;
+    [$$reaction$$]: $Reaction | undefined;
+    static [$$template$$]: $Chemical;
 
-    get [$isBound]() { return this == this?.[$component]?.$chemical; }
+    get [$isBound$]() { return this == this?.[$component$]?.$chemical; }
 
-    [$parent$]?: $Chemical;
-    get [$parent](): $Chemical | undefined { return this?.[$parent$]; }
-    set [$parent](parent: $Chemical) {
-        if (!$parent)
-            throw new Error(`The parent of ${this[$symbol]} was not specified`);
-        if (this[$parent$])
-            throw new Error(`The parent of ${this[$symbol]} has already been set`);
-        this[$parent$] = parent; 
+    [$$parent$$]?: $Chemical;
+    get [$parent$](): $Chemical | undefined { return this?.[$$parent$$]; }
+    set [$parent$](parent: $Chemical) {
+        if (!$parent$)
+            throw new Error(`The parent of ${this[$symbol$]} was not specified`);
+        if (this[$$parent$$])
+            throw new Error(`The parent of ${this[$symbol$]} has already been set`);
+        this[$$parent$$] = parent; 
     }
 
-    get children() { return this[$children]; }
+    get children() { return this[$children$]; }
 
     get Component(): $Component<this> {
-        if (!this[$component]) {
-            if (!this[$template][$component])
-                this[$template][$component] = this[$template][$createComponent]() as any;
+        if (!this[$component$]) {
+            if (!this[$template$][$component$])
+                this[$template$][$component$] = this[$template$][$createComponent$]() as any;
         }
-        return this[$component] ?? this[$template][$component] as any;
+        return this[$component$] ?? this[$template$][$component$] as any;
     }
 
     get $Component(): $$Component<this> {
@@ -293,56 +293,56 @@ export class $Chemical extends $Particle {
 
     constructor() {
         super();
-        this[$molecule] = new $Molecule(this);
-        this[$reaction] = new $Reaction(this);
-        this[$orchestrator] = new $BondOrchestrator(this);
-        if (this[$isTemplate]) $set(this[$type], this);
+        this[$molecule$] = new $Molecule(this);
+        this[$reaction$] = new $Reaction(this);
+        this[$orchestrator$] = new $BondOrchestrator(this);
+        if (this[$isTemplate$]) $set(this[$type$], this);
     }
 
     view(): ReactNode {
         return this.children;
     }
 
-    async mount() { return this[$reaction].mount(); } 
-    async render() { return this[$reaction].render(); } 
-    async layout() { return this[$reaction].layout(); } 
-    async effect() { return this[$reaction].effect(); } 
-    async unmount() { return this[$reaction].unmount(); } 
+    async mount() { return this[$reaction$].mount(); } 
+    async render() { return this[$reaction$].render(); } 
+    async layout() { return this[$reaction$].layout(); } 
+    async effect() { return this[$reaction$].effect(); } 
+    async unmount() { return this[$reaction$].unmount(); } 
 
-    [$render](props: $Props): ReactNode {
-        return this[$orchestrator].render(props);
+    [$render$](props: $Props): ReactNode {
+        return this[$orchestrator$].render(props);
     }
 
-    [$props](): any {
-        this[$molecule].reactivate();
+    [$props$](): any {
+        this[$molecule$].reactivate();
         const props: Record<string, any> = this.children ? 
-            { key: this[$symbol], children: this.children } : 
-            { key: this[$symbol] };
-        for (const bond of this[$molecule].bonds.values())
+            { key: this[$symbol$], children: this.children } : 
+            { key: this[$symbol$] };
+        for (const bond of this[$molecule$].bonds.values())
             if (bond.isProp && bond.lastValue) 
                 props[bond.property.slice(1)] = bond.lastValue;
         return props;
     }
 
-    [$destroy]() {
-        if (this[$isTemplate] || this[$isBound]) return;
-        this[$parent$] = undefined as any
-        this[$molecule]?.destroy();
-        this[$reaction]?.destroy();
-        this[$destroyed] = true;
+    [$destroy$]() {
+        if (this[$isTemplate$] || this[$isBound$]) return;
+        this[$$parent$$] = undefined as any
+        this[$molecule$]?.destroy();
+        this[$reaction$]?.destroy();
+        this[$destroyed$] = true;
     }
 
-    protected [$createComponent](): $Component<this> {
-        if (this[$component]) 
+    protected [$createComponent$](): $Component<this> {
+        if (this[$component$]) 
             throw new Error(`The Component for ${this} has already been created`);
 
         this.assertViewConstructors();
-        this[$template][$molecule].reactivate();
-        return new $Component$(this[$template]) as any;
+        this[$template$][$molecule$].reactivate();
+        return new $Component$(this[$template$]) as any;
     }
 
     private assertViewConstructors(prototype?: any, childConstructor?: any) {
-        if (!prototype) prototype = Object.getPrototypeOf(this[$template]);
+        if (!prototype) prototype = Object.getPrototypeOf(this[$template$]);
         if (!prototype || prototype === $Chemical.prototype) return;
         
         const className = prototype.constructor.name;
@@ -355,19 +355,19 @@ export class $Chemical extends $Particle {
         this.assertViewConstructors(Object.getPrototypeOf(prototype), thisConstructor);
     }
 
-    static [$$getNextCid](): number { return $Chemical.nextCid++; }
+    static [$$getNextCid$$](): number { return $Chemical.nextCid++; }
     private static nextCid = 1;
 
-    static [$$createSymbol](chemical: $Particle) {
-        return `$Chemistry.${chemical[$type].name}[${chemical[$cid]}]`;
+    static [$$createSymbol$$](chemical: $Particle) {
+        return `$Chemistry.${chemical[$type$].name}[${chemical[$cid$]}]`;
     }
 
-    static [$$isSymbol](symbol: string): boolean {
+    static [$$isSymbol$$](symbol: string): boolean {
         return symbol.startsWith('$Chemistry.');
     }
 
-    static [$$parseCid](symbol: string): number | undefined {
-        if (!$Chemical[$$isSymbol](symbol)) return undefined;
+    static [$$parseCid$$](symbol: string): number | undefined {
+        if (!$Chemical[$$isSymbol$$](symbol)) return undefined;
         const match = symbol.match($Chemical.symbolPattern);
         if (!match) throw new Error(`Invalid chemical symbol: ${symbol}`);
         return Number(match[1]);
@@ -377,28 +377,28 @@ export class $Chemical extends $Particle {
 }
 
 export class $Atom extends $Chemical {
-    override set [$parent](value: $Chemical) {
-        this[$parent$] = value || this[$parent$];
+    override set [$parent$](value: $Chemical) {
+        this[$$parent$$] = value || this[$$parent$$];
     } 
 
     constructor() {
         super();
-        if (this == this[$type][$$template]) {
-            this[$parent$] = this;
-            this[$component] = new $Component$(this, this) as any;
-            this[$molecule].reactivate();
+        if (this == this[$type$][$$template$$]) {
+            this[$$parent$$] = this;
+            this[$component$] = new $Component$(this, this) as any;
+            this[$molecule$].reactivate();
         }
-        return this[$type][$$template] as this;
+        return this[$type$][$$template$$] as this;
     }
 
     static particle<T extends $Atom = $Atom>(): T {
         try {
-            if (!this[$$template]) 
+            if (!this[$$template$$]) 
                 new this();
         } catch (error) { 
             console.error(error); 
         }
-        return this[$$template] as any;
+        return this[$$template$$] as any;
     }
 }
 
@@ -414,11 +414,11 @@ export class $Function$<P = any> extends $Chemical {
     constructor(component: React.FC<P>) {
         super();
         this._component = component;
-        this[$component] = new $Component$(this) as any;
+        this[$component$] = new $Component$(this) as any;
     }
 
     view() { 
-        return React.createElement(this._component as any, this[$props]());
+        return React.createElement(this._component as any, this[$props$]());
     }
 }
 
@@ -433,7 +433,7 @@ export class $Html$<T extends keyof JSX.IntrinsicElements = any> extends $Chemic
     }
 
     view() {
-        return React.createElement(this._type, this[$props]());
+        return React.createElement(this._type, this[$props$]());
     }
 }
 
@@ -454,7 +454,7 @@ class $Component$<T extends $Chemical> {
     private _template: T;
     private _chemical?: T;
     private _transient: T;
-    get [$transient]() { return this._transient; }
+    get [$transient$]() { return this._transient; }
     
     constructor(template: T, chemical?: T) {
         this._template = template;
@@ -475,9 +475,9 @@ class $Component$<T extends $Chemical> {
             }
 
             if (newChemical)
-                setChemicalId(chemical[$cid]);
+                setChemicalId(chemical[$cid$]);
 
-            const reaction = chemical[$reaction];
+            const reaction = chemical[$reaction$];
             const [token, update] = useState({});
             reaction.bind(update);
 
@@ -487,8 +487,8 @@ class $Component$<T extends $Chemical> {
                     reaction.resolve('unmount');
                     if (!this.$bound) {
                         // Two checks to handle strict mode render after unmount
-                        if (!chemical[$remove]) chemical[$remove] = true;
-                        else if (!chemical[$destroyed]) chemical[$destroy]();
+                        if (!chemical[$remove$]) chemical[$remove$] = true;
+                        else if (!chemical[$destroyed$]) chemical[$destroy$]();
                     }
                 };
             }, [chemical]);
@@ -501,11 +501,11 @@ class $Component$<T extends $Chemical> {
                 reaction.resolve('effect');
             }, [chemical, token]);
 
-            return chemical[$render](props);
+            return chemical[$render$](props);
         }) as any;
 
         if (this._chemical) 
-            this._chemical[$component] = this.Component as any;
+            this._chemical[$component$] = this.Component as any;
         
         Object.setPrototypeOf(this.Component, this);
         return this.Component as any;
@@ -530,23 +530,23 @@ class $Component$<T extends $Chemical> {
     }
 
     private createChemical(template: T): T {
-        let prototype = Object.getPrototypeOf(template[$type][$$template]);
+        let prototype = Object.getPrototypeOf(template[$type$][$$template$$]);
         let chemical = Object.create(prototype) as T;
-        chemical[$component] = this as any;
-        chemical[$template] = template;
-        chemical[$type] = template[$type];
-        chemical[$cid] = $Chemical[$$getNextCid]();
-        chemical[$symbol] = $Chemical[$$createSymbol](chemical);
-        chemical[$molecule] = new $Molecule(chemical);
-        chemical[$orchestrator] = new $BondOrchestrator(chemical);
-        chemical[$reaction] = new $Reaction(chemical);
+        chemical[$component$] = this as any;
+        chemical[$template$] = template;
+        chemical[$type$] = template[$type$];
+        chemical[$cid$] = $Chemical[$$getNextCid$$]();
+        chemical[$symbol$] = $Chemical[$$createSymbol$$](chemical);
+        chemical[$molecule$] = new $Molecule(chemical);
+        chemical[$orchestrator$] = new $BondOrchestrator(chemical);
+        chemical[$reaction$] = new $Reaction(chemical);
         return chemical;
     }
 
     private assignComponent(chemical: T, parent: $Chemical) {
-        chemical[$parent] = parent;
-        chemical[$component] = new $Component$(chemical[$template], chemical) as any;
-        chemical[$molecule].reactivate();
+        chemical[$parent$] = parent;
+        chemical[$component$] = new $Component$(chemical[$template$], chemical) as any;
+        chemical[$molecule$].reactivate();
         return chemical.$Component;
     }
 }
@@ -742,11 +742,11 @@ class $System {
 
     add(reaction: $Reaction) {
         const chemical = reaction.chemical;
-        this._chemicals.set(chemical[$cid], chemical);
+        this._chemicals.set(chemical[$cid$], chemical);
     }
 
     remove(reaction: $Reaction) {
-        this._chemicals.delete(reaction.chemical[$cid]);
+        this._chemicals.delete(reaction.chemical[$cid$]);
     }
 
     find(cid: number): $Chemical | undefined {
@@ -794,7 +794,7 @@ class $State {
     }
 
     add(bond: $Bond) {
-        this._current.set(bond.chemical[$symbol], bond);
+        this._current.set(bond.chemical[$symbol$], bond);
     }
 
     reset() {
@@ -987,12 +987,12 @@ class $Molecule {
         if (this._reactive && !refresh) return;
         
         const chemical = this._chemical;
-        const template = chemical[$template];
+        const template = chemical[$template$];
         const properties = new Map<string, PropertyDescriptor>();
         let bonds: $Bond<$Chemical>[] = [];
         if (template !== chemical) {
-            template[$molecule]._reactivate(false);
-            bonds = template[$molecule].bonds.values().toArray();
+            template[$molecule$]._reactivate(false);
+            bonds = template[$molecule$].bonds.values().toArray();
         } else if (!this.reactive) {
             this.collectProperties().forEach((descriptor, property) => properties.set(property, descriptor));
         }
@@ -1073,7 +1073,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
     protected _bid?: string;
     get bid() { 
         if (!this._bid) 
-            this._bid = `${this._chemical[$type].name}[${this.chemical[$cid]}].${this._property}`; 
+            this._bid = `${this._chemical[$type$].name}[${this.chemical[$cid$]}].${this._property}`; 
         return this._bid 
     }
     
@@ -1083,15 +1083,15 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
     get template(): T | undefined { 
         if (this._template)
             return this._template;
-        if (this._chemical !== this._chemical[$template])
-            this._template = this._chemical[$template];
+        if (this._chemical !== this._chemical[$template$])
+            this._template = this._chemical[$template$];
         return this._template as any; 
     }
     protected _template?: T | undefined;
 
     get parentBond(): $Bond<T, P> | undefined {
         if (!this._parentBond && this.template)
-            this._parentBond = this.template?.[$molecule].bonds.get(this.property) as any;
+            this._parentBond = this.template?.[$molecule$].bonds.get(this.property) as any;
         return this._parentBond;
     }
     protected _parentBond?: $Bond<T, P>;
@@ -1194,7 +1194,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
             value = this._backingField;
         } else if (this.isProperty && this.isReadable) {
             value = this._getter!.apply(this._chemical);
-            this._chemical[$molecule].reactivate();
+            this._chemical[$molecule$].reactivate();
         }
 
         const parent = this.parentBond;
@@ -1206,7 +1206,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         this._lastValueHere = this.bindIf(value);
 
         this.update();
-        console.log("$Bond get", this._chemical[$symbol], this._lastValue)
+        console.log("$Bond get", this._chemical[$symbol$], this._lastValue)
         return this._lastValue;
     }
 
@@ -1224,16 +1224,16 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
             this._backingField = value;
         } else if (this.isWritable) {
             this.setter!.apply(chemical, [value]);
-            chemical[$molecule].reactivate();
+            chemical[$molecule$].reactivate();
         } else {
-            throw new Error(`${this._property} property on ${this._chemical[$type].name} not settable`);
+            throw new Error(`${this._property} property on ${this._chemical[$type$].name} not settable`);
         }
 
         this._lastValue = value;
         if (!this.isMethod)
             this.bondGet();
         
-        console.log("$Bond set", this._chemical[$symbol], this._lastValue)
+        console.log("$Bond set", this._chemical[$symbol$], this._lastValue)
         for (const child of this._children)
             child.bondSet(value);
     }
@@ -1244,7 +1244,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         const updateRequired = reaction === undefined; 
 
         if (updateRequired) {
-            reaction = chemical[$reaction];
+            reaction = chemical[$reaction$];
             reaction.activate('change');
         }
         if (reaction) {
@@ -1270,7 +1270,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
         const isChemical = dependency instanceof $Chemical;
         const isArray = Array.isArray(dependency);
         if (!isChemical && !isArray) return dependency;
-        if (isChemical) return dependency[$destroyed] ? undefined : this.bindIf(dependency);
+        if (isChemical) return dependency[$destroyed$] ? undefined : this.bindIf(dependency);
         if (isArray) this.bindIf(dependency);
         return dependency;
     }
@@ -1284,7 +1284,7 @@ class $Bond<T extends $Chemical = $Chemical, P = any> {
     }
 
     protected isUnboundChemical(dependency: any): dependency is $Chemical {
-        return (dependency instanceof $Chemical) && !dependency[$isBound];
+        return (dependency instanceof $Chemical) && !dependency[$isBound$];
     }
 
     protected hasUnboundChemical(dependency: any): dependency is $Chemical[] {
@@ -1367,13 +1367,13 @@ class $Bonding<T extends $Chemical = any, P = any> extends $Bond<T, P> {
         const updateRequired = reaction === undefined || !reaction.tracking; 
 
         if (updateRequired) {
-            reaction = chemical[$reaction];
+            reaction = chemical[$reaction$];
             reaction.activate('change');
         }
 
         try {
             let result = this.action!.apply(chemical, actualArgs);
-            chemical[$molecule].reactivate();
+            chemical[$molecule$].reactivate();
             if (!(result instanceof Promise)) {
                 result = this.replaceIf(result);
                 this._lastValue = result;
@@ -1394,7 +1394,7 @@ class $Bonding<T extends $Chemical = any, P = any> extends $Bond<T, P> {
         this._isAsync = true;
         const $action = action.then(async result => {
             result = this.replaceIf(result);
-            this._chemical[$molecule].reactivate();
+            this._chemical[$molecule$].reactivate();
             $action.result = result;
             if (this._lastSeenActive !== $action) 
                 return result;
@@ -1517,9 +1517,9 @@ class $BondOrchestrationContext {
     }
 
     child(chemical: $Chemical, props: $Props): $Props {
-        if (chemical[$lastProps] === props) return props;
-        props = chemical[$orchestrator].bond(props, this);
-        chemical[$lastProps] = props;
+        if (chemical[$lastProps$] === props) return props;
+        props = chemical[$orchestrator$].bond(props, this);
+        chemical[$lastProps$] = props;
         return props;
     }
 
@@ -1543,7 +1543,7 @@ class $BondOrchestrator<T extends $Chemical> {
     private _bondConstructor?: Function;
     private _parameters: { isArray: boolean, isSpread: boolean }[] = [];
     
-    get viewSymbol() { return `$${this._chemical[$symbol]}`; }
+    get viewSymbol() { return `$${this._chemical[$symbol$]}`; }
 
     isViewSymbol(symbol: string): boolean { 
         return symbol.startsWith('$$Chemistry.');
@@ -1551,15 +1551,15 @@ class $BondOrchestrator<T extends $Chemical> {
 
     constructor(chemical: T) {
         this._chemical = chemical;
-        const name = chemical[$type].name;
+        const name = chemical[$type$].name;
         this._bondConstructor = (chemical as any)[name];
         this.parseBondConstructor();
     }
 
     render(props: $Props): ReactNode {
         const chemical = this._chemical;
-        const molecule = chemical[$molecule];
-        const reaction = chemical[$reaction];
+        const molecule = chemical[$molecule$];
+        const reaction = chemical[$reaction$];
 
         // Build the chemical
         reaction.activate();
@@ -1589,7 +1589,7 @@ class $BondOrchestrator<T extends $Chemical> {
             props = { ...props, children: children || [] };
         }
 
-        chemical[$children] = props.children;
+        chemical[$children$] = props.children;
 
         if (this._bondConstructor && context.argsValid) {
             $paramValidation.reset();
@@ -1615,7 +1615,7 @@ class $BondOrchestrator<T extends $Chemical> {
         if (!this._bondConstructor) return;
         
         const match = this._bondConstructor.toString().match(/\(([^)]*)\)/);
-        if (!match) throw new Error(`Cannot parse constructor for ${this._chemical[$type].name}`);
+        if (!match) throw new Error(`Cannot parse constructor for ${this._chemical[$type$].name}`);
         
         const paramString = match[1].trim();
         if (!paramString) return;
@@ -1630,7 +1630,7 @@ class $BondOrchestrator<T extends $Chemical> {
 
     private bindProps(chemical: $Chemical, props: $Props) {
         const $chemical$: any = chemical;
-        const lastProps = chemical[$lastProps] || {};
+        const lastProps = chemical[$lastProps$] || {};
         for (const prop in props) {
             if (typeof prop === 'symbol' || prop === 'children' || prop === 'key' || prop === 'ref') 
                 continue;
@@ -1640,7 +1640,7 @@ class $BondOrchestrator<T extends $Chemical> {
             $chemical$['$' + prop] = value;
         }
 
-        chemical[$molecule].reactivate();
+        chemical[$molecule$].reactivate();
     }
 
     private process(children: ReactNode, context: $BondOrchestrationContext) {
@@ -1667,7 +1667,7 @@ class $BondOrchestrator<T extends $Chemical> {
         let type = element.type as any;
         let key = element.key?.toString() || '';
         if (this.isViewSymbol(key)) {
-            const cid = $Chemical[$$parseCid](key.slice(1))!;
+            const cid = $Chemical[$$parseCid$$](key.slice(1))!;
             const chemical = $system.find(cid)!;
             context.args.push(chemical);
             context.children.push(element);
@@ -1683,15 +1683,15 @@ class $BondOrchestrator<T extends $Chemical> {
                 let func = type as React.FC;
                 component = $wrap(func).$Component;
             }
-            if (component.$chemical?.[$parent$] !== parent) {
+            if (component.$chemical?.[$$parent$$] !== parent) {
                 component = component.$bind(parent);
             }
             const chemical = component.$chemical;
             const props = context.child(chemical, element.props);
-            const key = `${chemical[$cid]}`;
+            const key = `${chemical[$cid$]}`;
             context.args.push(chemical);
             if (props !== element.props || key !== element.key) {
-                context.children.push({ type: component, props: props, key: chemical[$symbol] });
+                context.children.push({ type: component, props: props, key: chemical[$symbol$] });
                 context.isModified = true;
             }
         } else if (Array.isArray(element)) {
@@ -1707,7 +1707,7 @@ class $BondOrchestrator<T extends $Chemical> {
             context.children.push({ 
                 type: $type, 
                 props: props, 
-                key: chemical[$symbol] 
+                key: chemical[$symbol$] 
             });
         } else {
             const isFragment = type === React.Fragment;
@@ -1723,7 +1723,7 @@ class $BondOrchestrator<T extends $Chemical> {
                     'Iterable (non-array)';
 
                 throw new Error(
-                    `Chemistry Error: ${invalidType} cannot be used as child in ${this._chemical[$type].name}. ` +
+                    `Chemistry Error: ${invalidType} cannot be used as child in ${this._chemical[$type$].name}. ` +
                     `Only Chemistry components, function components, arrays, and primitives are supported.`
                 );
             }
@@ -1781,7 +1781,7 @@ class $BondOrchestrator<T extends $Chemical> {
         let $key = element.key;
 
         if (typeof $type === 'function' && $type.$bound) {
-            $props = $type.$chemical[$lastProps] || {};
+            $props = $type.$chemical[$lastProps$] || {};
             $props = { ...$props };
             if (Object.keys(props).length > 0) {
                 if ($type.$chemical !== chemical)
@@ -1789,7 +1789,7 @@ class $BondOrchestrator<T extends $Chemical> {
                 for (const prop in props)
                     $props[prop] = props[prop];
                 if (!first)
-                    $props.key = $type.$chemical[$symbol];
+                    $props.key = $type.$chemical[$symbol$];
             }
             if (first) { 
                 $key = viewSymbol;
@@ -1824,7 +1824,7 @@ class $Parent<T extends $Chemical, P extends $Chemical> extends $Bond<T, P> {
         this._isProp = false;
         this._backingField = undefined as any;
         this._getter = () => {
-            const parent = this._chemical[$parent]; 
+            const parent = this._chemical[$parent$]; 
             return this._type && parent instanceof this._type ? parent : undefined;
         }
         this._setter = () => { throw new Error("The parent cannot be set directly"); };
@@ -2292,7 +2292,7 @@ class $Represent {
         return (key: string, value: any) => {
             if (key === '') return value;
             if (value === null) return undefined;
-            if (value instanceof $Chemical) return referential ? value[$symbol] : undefined;
+            if (value instanceof $Chemical) return referential ? value[$symbol$] : undefined;
             if (React.isValidElement(value)) return referential ? value.key : undefined;
             if (typeof value === 'function') return value.name;
             if (value?.constructor?.name === 'Proxy') return referential ? '[Proxy]' : undefined;
@@ -2390,13 +2390,13 @@ export function $promise<T = any>(executor: (resolve: (value?: T) => void) => vo
             return value; 
         }).catch(err => {
             promise.complete = true;
-            if (err === $cancelled) return undefined as T;
+            if (err === $cancelled$) return undefined as T;
             throw err;
         }) as $Promise<T>;
     
     const then = promise.then.bind(promise);
     promise.complete = false;
-    promise.cancel = (action?: () => any) => { reject?.($cancelled); action?.(); }
+    promise.cancel = (action?: () => any) => { reject?.($cancelled$); action?.(); }
     promise.then = (<U>(fulfilled?: (value: T) => U, rejected?: any) => {
         const next = $promise<U>(resolve => {
             then(
@@ -2406,7 +2406,7 @@ export function $promise<T = any>(executor: (resolve: (value?: T) => void) => vo
                     Promise.resolve(result).then(resolve);
                 },
                 err => {
-                    if (err === $cancelled) return reject?.(err);
+                    if (err === $cancelled$) return reject?.(err);
                     if (rejected) return rejected(err);
                     throw err;
                 }
@@ -2429,7 +2429,7 @@ export function $use<T extends $Chemical>(chemical: T, key: 'key'): [$$Component
 export function $use<T extends $Chemical>(chemical?: T, key?: 'key'): [$$Component<T> | undefined, string | undefined] | ($$Component<T> | undefined) {
     if (!chemical) return key == 'key' ? [undefined, undefined] : undefined;
     if (!chemical.$Component) throw new Error(`Chemical ${chemical.constructor.name} has no $Component`);
-    return key == 'key' ? [chemical.$Component, `${chemical[$symbol]}`] : chemical.$Component;
+    return key == 'key' ? [chemical.$Component, `${chemical[$symbol$]}`] : chemical.$Component;
 }
 
 export function $await(future: Promise<void>): void
@@ -2670,7 +2670,7 @@ function extract(module: any, parent?: $Chemical): $Chemical | undefined {
     // If we found a Component, bind it and get the chemical
     if (Component) {
         const $Component = Component as $Component$<$Chemical>;
-        return parent ? Component.$bind(parent).$chemical : $Component[$transient];
+        return parent ? Component.$bind(parent).$chemical : $Component[$transient$];
     }
     
     return undefined;
@@ -2679,10 +2679,10 @@ function extract(module: any, parent?: $Chemical): $Chemical | undefined {
 const $system = new $System();
 const $particle = new $Particle();
 export const Chemical = new $Chemical().Component;
-$Chemical[$$template][$molecule].reactivate();
+$Chemical[$$template$$][$molecule$].reactivate();
 
 export const Atom = new $Atom().Component;
-$Atom[$$template][$molecule].reactivate();
+$Atom[$$template$$][$molecule$].reactivate();
 
 new $Html$('span').Component;
 export const Include = new $Include().Component;

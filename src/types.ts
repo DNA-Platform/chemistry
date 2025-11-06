@@ -3,8 +3,10 @@ import { $Function$, $Html$ } from "./archive/chemistry";
 import { $Particle } from "./chemistry/particle";
 import { $Chemical } from "./chemistry/chemical";
 
-export type $Constructor<Result = any, Parameters extends any[] = any[]> = new (...args: Parameters) => Result;
-export type $Type<T = any> = $Constructor<T> & { name: string }
+export type Constructor<Result = any, Parameters extends any[] = any[]> = new (...args: Parameters) => Result;
+export type Type<T = any> = Constructor<T> & { name: string };
+export type PrimitiveType = typeof String | typeof Number | typeof BigInt | typeof Boolean | typeof Symbol;
+export type Typeof = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function";
 export type $SymbolFeature = 'fast' | 'slow' | 'self-contained' | 'referential';
 export type $Phase = 'setup' | 'mount' | 'render' | 'layout' | 'effect' | 'unmount';
 export type $Promise<T = any> = Promise<T> & {
@@ -15,7 +17,7 @@ export type $Promise<T = any> = Promise<T> & {
 }
 
 export interface $Rep<T = any> {
-    ref: string;
+    $ref: string;
 }
 
 export type $Props = {
@@ -102,7 +104,7 @@ export interface $Particular<T> {
 }
 
 export type $ParameterType =
-    | $Constructor<$Particle>
+    | Constructor<$Particle>
     | React.FC
     | Function
     | StringConstructor
@@ -120,7 +122,7 @@ export type $ParameterType =
 
 export type $Parameter<T = $ParameterType> =
     T extends readonly (infer U)[] ? $Parameter<U>[] :
-    T extends $Constructor<infer C> ? (C extends $Chemical ? C : never) :
+    T extends Constructor<infer C> ? (C extends $Chemical ? C : never) :
     T extends React.FC<any> ? $Function<T> :
     T extends StringConstructor ? string :
     T extends NumberConstructor ? number :

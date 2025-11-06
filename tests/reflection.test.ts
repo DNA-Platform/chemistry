@@ -1,5 +1,6 @@
-import { parseFunctionInfo, $FunctionInfo } from '@/reflection';
-import { describe, it, expect } from 'vitest';
+import { $lib } from '@/catalogue';
+import { parseFunctionInfo, $FunctionInfo, $type, $typeof } from '@/reflection';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 class Test {
     get prop() { return 0; }
@@ -7,39 +8,143 @@ class Test {
 }
 
 describe('$Reflection', () => {
-    describe('parseFunctionInfo', () => {
-        describe('parameter variations', () => {
-            const testCases: Array<{
-                name: string,
-                func: Function,
-                expected: { count: number, rest: boolean }
-            }> = [
-                    { name: 'no parameters - lambda', func: [() => { }][0], expected: { count: 0, rest: false } },
-                    { name: 'no parameters - function', func: [function () { }][0], expected: { count: 0, rest: false } },
-                    { name: 'no parameters - method', func: [({ m() { } }).m][0], expected: { count: 0, rest: false } },
-                    { name: 'single parameter - lambda parens', func: [(x: any) => x][0], expected: { count: 1, rest: false } },
-                    { name: 'single parameter - lambda no parens', func: [(x: any) => x][0], expected: { count: 1, rest: false } },
-                    { name: 'single parameter - function', func: [function (x: any) { }][0], expected: { count: 1, rest: false } },
-                    { name: 'single parameter - method', func: [({ m(x: any) { } }).m][0], expected: { count: 1, rest: false } },
-                    { name: 'multiple parameters - lambda', func: [(x: any, y: any, z: any) => { }][0], expected: { count: 3, rest: false } },
-                    { name: 'multiple parameters - function', func: [function (a: any, b: any, c: any) { }][0], expected: { count: 3, rest: false } },
-                    { name: 'multiple parameters - method', func: [({ m(x: any, y: any) { } }).m][0], expected: { count: 2, rest: false } },
-                    { name: 'rest only - lambda', func: [(...args: any[]) => { }][0], expected: { count: 0, rest: true } },
-                    { name: 'rest only - function', func: [function (...args: any[]) { }][0], expected: { count: 0, rest: true } },
-                    { name: 'rest only - method', func: [({ m(...args: any[]) { } }).m][0], expected: { count: 0, rest: true } },
-                    { name: 'params + rest - lambda', func: [(a: any, b: any, ...rest: any[]) => { }][0], expected: { count: 2, rest: true } },
-                    { name: 'params + rest - function', func: [function (x: any, ...rest: any[]) { }][0], expected: { count: 1, rest: true } },
-                    { name: 'params + rest - method', func: [({ m(a: any, ...rest: any[]) { } }).m][0], expected: { count: 1, rest: true } },
-                ];
+     beforeEach(() => {
+        $lib.$reset();
+    });
+    
+    describe('$ObjectiveRep', () => {
+        describe('$type function', () => {
+            it('should return the right metadata for undefined', () => {
+                const type = $type(undefined);
+                expect(type.literal).toBeUndefined();
+                expect(type.$name).toBe('undefined');
+                expect(type.$ref).toBe('type(undefined)');
+                expect(type.$role).toBe('typeof(undefined)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
 
-            testCases.forEach(({ name, func, expected }) => {
-                it(name, () => {
-                    const result = parseFunctionInfo(func);
-                    expect(result.params).toEqual(expected);
-                });
+            it('should have the right metadata for null', () => {
+                const type = $type(null);
+                expect(type.literal).toBeNull();
+                expect(type.$name).toBe('null');
+                expect(type.$ref).toBe('type(null)');
+                expect(type.$role).toBe('typeof(null)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for string', () => {
+                const type = $type(String);
+                expect(type.literal).toBe(String);
+                expect(type.$name).toBe('string');
+                expect(type.$ref).toBe('type(string)');
+                expect(type.$role).toBe('typeof(string)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for number', () => {
+                const type = $type(Number);
+                expect(type.literal).toBe(Number);
+                expect(type.$name).toBe('number');
+                expect(type.$ref).toBe('type(number)');
+                expect(type.$role).toBe('typeof(number)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for bigint', () => {
+                const type = $type(BigInt);
+                expect(type.literal).toBe(BigInt);
+                expect(type.$name).toBe('bigint');
+                expect(type.$ref).toBe('type(bigint)');
+                expect(type.$role).toBe('typeof(bigint)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for boolean', () => {
+                const type = $type(Boolean);
+                expect(type.literal).toBe(Boolean);
+                expect(type.$name).toBe('boolean');
+                expect(type.$ref).toBe('type(boolean)');
+                expect(type.$role).toBe('typeof(boolean)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for symbol', () => {
+                const type = $type(Symbol);
+                expect(type.literal).toBe(Symbol);
+                expect(type.$name).toBe('symbol');
+                expect(type.$ref).toBe('type(symbol)');
+                expect(type.$role).toBe('typeof(symbol)');
+                expect(type.$equals(type.$type)).toBe(true);
             });
         });
 
+        describe('$typeof function', () => {
+            it('should return the right metadata for undefined', () => {
+                const type = $typeof(undefined);
+                expect(type.literal).toBeUndefined();
+                expect(type.$name).toBe('undefined');
+                expect(type.$ref).toBe('type(undefined)');
+                expect(type.$role).toBe('typeof(undefined)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for null', () => {
+                const type = $typeof(null);
+                expect(type.literal).toBeNull();
+                expect(type.$name).toBe('null');
+                expect(type.$ref).toBe('type(null)');
+                expect(type.$role).toBe('typeof(null)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for a string', () => {
+                const type = $typeof("test");
+                expect(type.literal).toBe(String);
+                expect(type.$name).toBe('string');
+                expect(type.$ref).toBe('type(string)');
+                expect(type.$role).toBe('typeof("test":string)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for number', () => {
+                const type = $typeof(0);
+                expect(type.literal).toBe(Number);
+                expect(type.$name).toBe('number');
+                expect(type.$ref).toBe('type(number)');
+                expect(type.$role).toBe('typeof(0:number)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for bigint', () => {
+                const type = $typeof(BigInt(1000));
+                expect(type.literal).toBe(BigInt);
+                expect(type.$name).toBe('bigint');
+                expect(type.$ref).toBe('type(bigint)');
+                expect(type.$role).toBe('typeof(1000:bigint)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+
+            it('should have the right metadata for boolean', () => {
+                const type = $typeof(true);
+                expect(type.literal).toBe(Boolean);
+                expect(type.$name).toBe('boolean');
+                expect(type.$ref).toBe('type(boolean)');
+                expect(type.$role).toBe('typeof(true:boolean)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+            
+            it('should have the right metadata for symbol', () => {
+                const type = $typeof(Symbol("test"));
+                expect(type.literal).toBe(Symbol);
+                expect(type.$name).toBe('symbol');
+                expect(type.$ref).toBe('type(symbol)');
+                expect(type.$role).toBe('typeof(${test}:symbol)');
+                expect(type.$equals(type.$type)).toBe(true);
+            });
+        }); 
+    });
+
+    describe('parseFunctionInfo', () => {
         describe('async modifier', () => {
             const testCases: Array<{ name: string, func: Function }> = [
                 { name: 'async lambda', func: [async () => { }][0] },
@@ -199,7 +304,7 @@ describe('$Reflection', () => {
                     expect(result.async).toBeUndefined();
                     expect(result.generator).toBeUndefined();
                     expect(result.native).toBeUndefined();
-                    expect(result.params).toEqual({ count: undefined, rest: undefined });
+                    expect(result.params).toEqual(undefined);
                 });
             });
         });
@@ -209,15 +314,15 @@ describe('$Reflection', () => {
                 const result = parseFunctionInfo([async (...args: any[]) => { }][0]);
                 expect(result.form).toBe('lambda');
                 expect(result.async).toBe(true);
-                expect(result.params).toEqual({ count: 0, rest: true });
+                expect(result.params).toEqual([{ spread: true }]);
             });
 
             it('async generator with params and rest', () => {
-                const result = parseFunctionInfo([async function* (a: any, b: any, ...rest: any[]) { }][0]);
+                const result = parseFunctionInfo([async function* (a: any, b: any, ...spread: any[]) { }][0]);
                 expect(result.form).toBe('function');
                 expect(result.async).toBe(true);
                 expect(result.generator).toBe(true);
-                expect(result.params).toEqual({ count: 2, rest: true });
+                expect(result.params).toEqual([{ spread: false }, { spread: false }, { spread: true }]);
             });
 
             it('async generator method with rest', () => {
@@ -225,7 +330,49 @@ describe('$Reflection', () => {
                 expect(result.form).toBe('method');
                 expect(result.async).toBe(true);
                 expect(result.generator).toBe(true);
-                expect(result.params).toEqual({ count: 0, rest: true });
+                expect(result.params).toEqual([{ spread: true }]);
+            });
+        });
+
+        describe('parameter array structure', () => {
+            const testCases: Array<{name: string, func: Function, expected: Array<{ spread: boolean }>}> = [
+                { name: 'no params - lambda', func: [() => { }][0], expected: [] },
+                { name: 'no params - function', func: [function() { }][0], expected: [] },
+                { name: 'no params - method', func: [({ m() { } }).m][0], expected: [] },
+                { name: 'single param - lambda', func: [(x: any) => { }][0], expected: [{ spread: false }] },
+                { name: 'single param - function', func: [function(x: any) { }][0], expected: [{ spread: false }] },
+                { name: 'single param - method', func: [({ m(x: any) { } }).m][0], expected: [{ spread: false }] },
+                { name: 'two params - lambda', func: [(x: any, y: any) => { }][0], expected: [{ spread: false }, { spread: false }] },
+                { name: 'two params - function', func: [function(x: any, y: any) { }][0], expected: [{ spread: false }, { spread: false }] },
+                { name: 'two params - method', func: [({ m(x: any, y: any) { } }).m][0], expected: [{ spread: false }, { spread: false }] },
+                { name: 'three params - lambda', func: [(x: any, y: any, z: any) => { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }] },
+                { name: 'three params - function', func: [function(x: any, y: any, z: any) { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }] },
+                { name: 'three params - method', func: [({ m(x: any, y: any, z: any) { } }).m][0], expected: [{ spread: false }, { spread: false }, { spread: false }] },
+                { name: 'four params - lambda', func: [(a: any, b: any, c: any, d: any) => { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: false }] },
+                { name: 'four params - function', func: [function(a: any, b: any, c: any, d: any) { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: false }] },
+                { name: 'four params - method', func: [({ m(a: any, b: any, c: any, d: any) { } }).m][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: false }] },
+                { name: 'rest only - lambda', func: [(...args: any[]) => { }][0], expected: [{ spread: true }] },
+                { name: 'rest only - function', func: [function(...args: any[]) { }][0], expected: [{ spread: true }] },
+                { name: 'rest only - method', func: [({ m(...args: any[]) { } }).m][0], expected: [{ spread: true }] },
+                { name: 'single param + rest - lambda', func: [(x: any, ...rest: any[]) => { }][0], expected: [{ spread: false }, { spread: true }] },
+                { name: 'single param + rest - function', func: [function(x: any, ...rest: any[]) { }][0], expected: [{ spread: false }, { spread: true }] },
+                { name: 'single param + rest - method', func: [({ m(x: any, ...rest: any[]) { } }).m][0], expected: [{ spread: false }, { spread: true }] },
+                { name: 'two params + rest - lambda', func: [(a: any, b: any, ...rest: any[]) => { }][0], expected: [{ spread: false }, { spread: false }, { spread: true }] },
+                { name: 'two params + rest - function', func: [function(a: any, b: any, ...rest: any[]) { }][0], expected: [{ spread: false }, { spread: false }, { spread: true }] },
+                { name: 'two params + rest - method', func: [({ m(a: any, b: any, ...rest: any[]) { } }).m][0], expected: [{ spread: false }, { spread: false }, { spread: true }] },
+                { name: 'three params + rest - lambda', func: [(a: any, b: any, c: any, ...rest: any[]) => { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: true }] },
+                { name: 'three params + rest - function', func: [function(a: any, b: any, c: any, ...rest: any[]) { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: true }] },
+                { name: 'three params + rest - method', func: [({ m(a: any, b: any, c: any, ...rest: any[]) { } }).m][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: true }] },
+                { name: 'four params + rest - lambda', func: [(a: any, b: any, c: any, d: any, ...rest: any[]) => { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: false }, { spread: true }] },
+                { name: 'four params + rest - function', func: [function(a: any, b: any, c: any, d: any, ...rest: any[]) { }][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: false }, { spread: true }] },
+                { name: 'four params + rest - method', func: [({ m(a: any, b: any, c: any, d: any, ...rest: any[]) { } }).m][0], expected: [{ spread: false }, { spread: false }, { spread: false }, { spread: false }, { spread: true }] },
+            ];
+
+            testCases.forEach(({ name, func, expected }) => {
+                it(name, () => {
+                    const result = parseFunctionInfo(func);
+                    expect(result.params).toEqual(expected);
+                });
             });
         });
     });

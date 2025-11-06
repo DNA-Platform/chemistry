@@ -1,34 +1,34 @@
 import React, { Fragment, ReactNode } from 'react';
 import {//Particle 
-    $cid, $symbol, $type, $prototype, $template, $isTemplate, $derived, $particlar, $children, $apply, $bond, $$template, $$getNextCid, $$createSymbol, $$isSymbol, $$parseCid
+    $cid$, $symbol$, $type$, $prototype$, $template$, $isTemplate$, $derived$, $particlar$, $children$, $apply$, $bond$, $$template$$, $$getNextCid$$, $$createSymbol$$, $$isSymbol$$, $$parseCid$$
 } from "../symbols";
 import { $Props } from "../types";
 
 export class $Particle {
-    [$cid]: number;
-    [$type]: typeof this;
-    [$symbol]: string;
-    [$children]: ReactNode;
-    [$template]: this;
-    [$particlar] = false;
-    static [$$template]: $Particle;
-    get [$isTemplate]() { return this == (this as any)[$type][$$template]; }
-    get [$prototype]() { return Object.getPrototypeOf(this); }
-    get [$derived]() { return this == this[$template]; }
+    [$cid$]: number;
+    [$type$]: typeof this;
+    [$symbol$]: string;
+    [$children$]: ReactNode;
+    [$template$]: this;
+    [$particlar$] = false;
+    static [$$template$$]: $Particle;
+    get [$isTemplate$]() { return this == (this as any)[$type$][$$template$$]; }
+    get [$prototype$]() { return Object.getPrototypeOf(this); }
+    get [$derived$]() { return this == this[$template$]; }
 
     constructor(particular?: object) {
         let $this: any = this;
-        this[$cid] = $Particle[$$getNextCid]();
-        this[$type] = this.constructor as any;
-        if (!$this[$type][$$template] || 
-           !($this[$type][$$template] instanceof $this[$type]))
-            $this[$type][$$template] = $this;
-        this[$template] = this;
-        this[$symbol] = $Particle[$$createSymbol](this);
+        this[$cid$] = $Particle[$$getNextCid$$]();
+        this[$type$] = this.constructor as any;
+        if (!$this[$type$][$$template$$] || 
+           !($this[$type$][$$template$$] instanceof $this[$type$]))
+            $this[$type$][$$template$$] = $this;
+        this[$template$] = this;
+        this[$symbol$] = $Particle[$$createSymbol$$](this);
         const isParticle = particular instanceof $Particle;
         if (particular && !isParticle) {
             Object.setPrototypeOf(particular, this);
-            this[$particlar] = true;
+            this[$particlar$] = true;
             $this = particular;
         }
         let prototype = $this;
@@ -41,14 +41,14 @@ export class $Particle {
         const $view = (props?: $Props): ReactNode => {
             const $this = $view.$this as $Particle;
             const view = $view.$view;
-            const $$cid = $this[$cid];
-            const $$symbol = $this[$symbol];
-            $this[$symbol] = this[$symbol];
-            $this[$apply](props);
-            $this[$bond]();
+            const $$cid = $this[$cid$];
+            const $$symbol = $this[$symbol$];
+            $this[$symbol$] = this[$symbol$];
+            $this[$apply$](props);
+            $this[$bond$]();
             const $result = view.bind($this)();
-            $this[$cid] = $$cid;
-            $this[$symbol] = $$symbol;
+            $this[$cid$] = $$cid;
+            $this[$symbol$] = $$symbol;
             return $result;
         };
         $view.$this = $this;
@@ -64,21 +64,21 @@ export class $Particle {
 
     frame($this: this = this): ReactNode {
         return (
-            <Fragment key={this[$symbol]}>
+            <Fragment key={this[$symbol$]}>
                 { $this.view() }
             </Fragment>
         );
     }
 
     toString() {
-        if (this[$symbol]) return this[$symbol];
-        return $Particle[$$createSymbol](this);
+        if (this[$symbol$]) return this[$symbol$];
+        return $Particle[$$createSymbol$$](this);
     }
 
-    protected [$apply](props?: $Props) {
+    protected [$apply$](props?: $Props) {
         if (!props) return;
         const $this = this as any;
-        $this[$children] = props.children;
+        $this[$children$] = props.children;
         for (const prop in props) {
             if (typeof prop === 'symbol' || prop === 'children' || prop === 'key' || prop === 'ref') 
                 continue;
@@ -87,22 +87,22 @@ export class $Particle {
         }
     }
 
-    protected [$bond]() {}
+    protected [$bond$]() {}
 
-    static [$$getNextCid](): number { return $Particle.#nextCid++; }
+    static [$$getNextCid$$](): number { return $Particle.#nextCid++; }
     static #nextCid = 1;
 
-    static [$$createSymbol](particle: $Particle) {
-        const type = particle[$type] as any
-        return `$Chemistry.${type.name}[${particle[$cid]}]`;
+    static [$$createSymbol$$](particle: $Particle) {
+        const type = particle[$type$] as any
+        return `$Chemistry.${type.name}[${particle[$cid$]}]`;
     }
 
-    static [$$isSymbol](symbol: string): boolean {
+    static [$$isSymbol$$](symbol: string): boolean {
         return symbol.startsWith('$Chemistry.');
     }
 
-    static [$$parseCid](symbol: string): number | undefined {
-        if (!$Particle[$$isSymbol](symbol)) return undefined;
+    static [$$parseCid$$](symbol: string): number | undefined {
+        if (!$Particle[$$isSymbol$$](symbol)) return undefined;
         const match = symbol.match($Particle.#symbolPattern);
         if (!match) throw new Error(`Invalid chemical symbol: ${symbol}`);
         return Number(match[1]);

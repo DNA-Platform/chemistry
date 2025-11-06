@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { $BondOrchestrator, $Component$, $Molecule, $Reaction, $Reflection } from "@/archive/chemistry";
 import {// $Chemical
-    $cid, $symbol, $destroyed, $remove, $decorators, $type, $molecule, $reaction, $$reaction, $template, $isTemplate, $isBound, $parent$, $parent, $orchestrator, $component, $children, $props, $lastProps, $render, $apply, $bond, $createComponent, $destroy, $$template, $$getNextCid, $$createSymbol, $$isSymbol, $$parseCid 
+    $cid$, $symbol$, $destroyed$, $remove$, $decorators$, $type$, $molecule$, $reaction$, $$reaction$$, $template$, $isTemplate$, $isBound$, $$parent$$, $parent$, $orchestrator$, $component$, $children$, $props$, $lastProps$, $render$, $apply$, $bond$, $createComponent$, $destroy$, $$template$$, $$getNextCid$$, $$createSymbol$$, $$isSymbol$$, $$parseCid$$ 
 } from "../symbols";
 import { $$Component, $Component, $Props } from "../types";
 import { $Particle } from "./particle";
@@ -11,22 +11,22 @@ export class $Chemical extends $Particle {
     // [$reaction]: $Reaction;
     // [$orchestrator]: $BondOrchestrator<any>;
     // [$$reaction]: $Reaction | undefined;
-    [$component]?: $Component<this>;
-    static [$$template]: $Chemical;
+    [$component$]?: $Component<this>;
+    static [$$template$$]: $Chemical;
 
-    get [$isBound]() { return this == this?.[$component]?.$chemical; }
+    get [$isBound$]() { return this == this?.[$component$]?.$chemical; }
 
-    [$parent$]?: $Chemical;
-    get [$parent](): $Chemical | undefined { return this?.[$parent$]; }
-    set [$parent](parent: $Chemical) {
-        if (!$parent)
-            throw new Error(`The parent of ${this[$symbol]} was not specified`);
-        if (this[$parent$])
-            throw new Error(`The parent of ${this[$symbol]} has already been set`);
-        this[$parent$] = parent; 
+    [$$parent$$]?: $Chemical;
+    get [$parent$](): $Chemical | undefined { return this?.[$$parent$$]; }
+    set [$parent$](parent: $Chemical) {
+        if (!$parent$)
+            throw new Error(`The parent of ${this[$symbol$]} was not specified`);
+        if (this[$$parent$$])
+            throw new Error(`The parent of ${this[$symbol$]} has already been set`);
+        this[$$parent$$] = parent; 
     }
 
-    get children() { return this[$children]; }
+    get children() { return this[$children$]; }
 
     // get Component(): $Component<any> {
     //     if (!this[$component]) {
@@ -91,7 +91,7 @@ export class $Chemical extends $Particle {
     // }
 
     private assertViewConstructors(prototype?: any, childConstructor?: any) {
-        if (!prototype) prototype = Object.getPrototypeOf(this[$template]);
+        if (!prototype) prototype = Object.getPrototypeOf(this[$template$]);
         if (!prototype || prototype === $Chemical.prototype) return;
         
         const className = prototype.constructor.name;

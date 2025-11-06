@@ -2,8 +2,9 @@ import { $Rep } from "./types";
 
 export type $Subject = any;
 export type $Topc = any;
+export type $Library = typeof $lib;
 
-class $Catalogue {
+class $Catalogue implements $Rep {
     #literature = new Map<$Rep, any>();
     #references = new Map<string, $Rep>();
     #subjects = new Set<$Subject>();
@@ -19,6 +20,8 @@ class $Catalogue {
         this.$subject = this;
         this.#subjects.add(this);
     }
+
+    get $ref(): string { return`${this.$subject}`; }
     
     $empty(): $Catalogue {
         if (this.#dereferenced) return undefined as any;
@@ -64,7 +67,7 @@ class $Catalogue {
         }
         
         // Check own literature
-        const canonical = this.#references.get(ref.ref);
+        const canonical = this.#references.get(ref.$ref);
         if (canonical) {
             const value = this.#literature.get(canonical);
             if (value !== undefined) return value;
@@ -81,10 +84,13 @@ class $Catalogue {
         return undefined;
     }
     
+    $index<T = any>(ref: $Rep): void;
     $index<T = any>(ref: $Rep, literal: T): void;
     $index<T = any>(ref: $Rep, literal: T, subject: $Subject): void;
-    $index<T = any>(ref: $Rep, literal: T, subject?: $Subject): void {
+    $index<T = any>(ref: $Rep, literal?: T, subject?: $Subject): void {
         if (this.#dereferenced) return;
+        if (literal === undefined)
+            literal = ref as any;
         
         // The instanceof check - validate the subject
         if (subject && subject instanceof $Catalogue && subject !== this) {
@@ -96,10 +102,10 @@ class $Catalogue {
         }
         
         // Index locally
-        let canonical = this.#references.get(ref.ref);
+        let canonical = this.#references.get(ref.$ref);
         if (!canonical) {
             canonical = ref;
-            this.#references.set(ref.ref, canonical);
+            this.#references.set(ref.$ref, canonical);
         }
         this.#literature.set(canonical, literal);
     }
@@ -130,7 +136,7 @@ class $Catalogue {
             return;
         }
         
-        if (arg1?.ref) {
+        if (arg1?.$ref) {
             const ref: $Rep = arg1;
             const subject: $Subject = arg2;
             
@@ -141,10 +147,10 @@ class $Catalogue {
             }
             
             // Remove from own literature
-            const canonical = this.#references.get(ref.ref);
+            const canonical = this.#references.get(ref.$ref);
             if (canonical) {
                 this.#literature.delete(canonical);
-                this.#references.delete(ref.ref);
+                this.#references.delete(ref.$ref);
             }
         }
     }

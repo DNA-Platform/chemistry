@@ -3,29 +3,29 @@ import React, { ReactElement } from 'react';
 import { $Particle } from '@/chemistry/particle';
 import { $View } from '@/types';
 import {
-    $cid, $symbol, $type, $template, $isTemplate, $children, $apply, $bond, $$template
+    $cid$, $symbol$, $type$, $template$, $isTemplate$, $children$, $apply$, $bond$, $$template$$
 } from "@/symbols";
 
 describe('$Particle', () => {
     it('should establish template singleton correctly', () => {
         // The template already exists from module export
-        const template = $Particle[$$template];
+        const template = $Particle[$$template$$];
         expect(template).toBeInstanceOf($Particle);
         
         const p1 = new $Particle();
         const p2 = new $Particle();
         
         // Template should remain the same
-        expect($Particle[$$template]).toBe(template);
+        expect($Particle[$$template$$]).toBe(template);
         
         // Only the class template is the template
-        expect(template[$isTemplate]).toBe(true);
-        expect(p1[$isTemplate]).toBe(false);
-        expect(p2[$isTemplate]).toBe(false);
+        expect(template[$isTemplate$]).toBe(true);
+        expect(p1[$isTemplate$]).toBe(false);
+        expect(p2[$isTemplate$]).toBe(false);
         
         // Each instance's $template points to itself (for now)
-        expect(p1[$template]).toBe(p1);
-        expect(p2[$template]).toBe(p2);
+        expect(p1[$template$]).toBe(p1);
+        expect(p2[$template$]).toBe(p2);
     });
 
     it('should carry instance and implementation on view function', () => {
@@ -42,14 +42,14 @@ describe('$Particle', () => {
         const p1 = new $Particle();
         const p2 = new $Particle();
         
-        expect(p1[$symbol]).toBeDefined();
-        expect(p2[$symbol]).toBeDefined();
-        expect(p1[$symbol]).not.toBe(p2[$symbol]);
+        expect(p1[$symbol$]).toBeDefined();
+        expect(p2[$symbol$]).toBeDefined();
+        expect(p1[$symbol$]).not.toBe(p2[$symbol$]);
     });
 
     it('should store constructor as type', () => {
         const particle = new $Particle();
-        expect(particle[$type]).toBe($Particle);
+        expect(particle[$type$]).toBe($Particle);
     });
 });
 
@@ -59,14 +59,14 @@ describe('$Particle View Swapping', () => {
         const $view = p1.view as $View<$Particle>;
         
         const customView = function(this: $Particle) {
-            return `Custom: ${this[$symbol]}`;
+            return `Custom: ${this[$symbol$]}`;
         };
         
         $view.$view = customView as any;
         const result = p1.view();
         
         expect(result).toContain('Custom:');
-        expect(result).toContain(p1[$symbol]);
+        expect(result).toContain(p1[$symbol$]);
     });
 
     it('should allow swapping view instance', () => {
@@ -78,21 +78,21 @@ describe('$Particle View Swapping', () => {
         const result = p1.view();
         
         // Should render p1's symbol (vessel identity) even though using p2 as $this
-        expect(result).toBe(p1[$symbol]);
-        expect(result).not.toBe(p2[$symbol]);
+        expect(result).toBe(p1[$symbol$]);
+        expect(result).not.toBe(p2[$symbol$]);
     });
 
     it('should preserve vessel symbol during render', () => {
         const vessel = new $Particle();
         const content = new $Particle();
-        const vesselSymbol = vessel[$symbol];
+        const vesselSymbol = vessel[$symbol$];
         const $view = vessel.view as $View<$Particle>;
         
         $view.$this = content;
         vessel.view();
         
         // Vessel's symbol should be unchanged after render
-        expect(vessel[$symbol]).toBe(vesselSymbol);
+        expect(vessel[$symbol$]).toBe(vesselSymbol);
     });
 });
 
@@ -112,7 +112,7 @@ describe('$Particle Props Application', () => {
         const $view = particle.view as $View<TestParticle>;
         
         // Verify TestParticle has its own template
-        expect(TestParticle[$$template]).toBe(particle);
+        expect(TestParticle[$$template$$]).toBe(particle);
         
         $view({ color: 'red', size: 10 });
         
@@ -127,7 +127,7 @@ describe('$Particle Props Application', () => {
         
         $view({ children });
         
-        expect(particle[$children]).toBe(children);
+        expect(particle[$children$]).toBe(children);
     });
 
     it('should ignore React reserved props', () => {
@@ -154,7 +154,7 @@ describe('$Particle Frame Method', () => {
         const result = owner.frame(content);
         const $element = result as ReactElement<any, any>;
         
-        expect($element.key).toBe(owner[$symbol]);
+        expect($element.key).toBe(owner[$symbol$]);
     });
 
     it('should render passed particle view', () => {
@@ -180,14 +180,14 @@ describe('$Particle Frame Method', () => {
         
         // Give content a custom view
         $contentView.$view = function(this: $Particle) {
-            return `Frame Test: ${this[$symbol]}`;
+            return `Frame Test: ${this[$symbol$]}`;
         } as any;
         
         const result = frame.frame(content);
         const $element = result as ReactElement<any, any>;
         
         expect($element.props.children).toContain('Frame Test:');
-        expect($element.props.children).toContain(content[$symbol]);
+        expect($element.props.children).toContain(content[$symbol$]);
     });
 });
 
@@ -199,7 +199,7 @@ describe('$Particle Module Export', () => {
         expect($particle).toBeDefined();
         expect($particle).toHaveProperty('$this');
         expect($particle).toHaveProperty('$view');
-        expect($particle.$this).toBe($Particle[$$template]);
+        expect($particle.$this).toBe($Particle[$$template$$]);
     });
 
     it('should allow using exported Particle as component', async () => {
