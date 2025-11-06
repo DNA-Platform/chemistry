@@ -5,8 +5,14 @@ import { $Chemical } from "./chemistry/chemical";
 
 export type Constructor<Result = any, Parameters extends any[] = any[]> = new (...args: Parameters) => Result;
 export type Type<T = any> = Constructor<T> & { name: string };
-export type PrimitiveType = typeof String | typeof Number | typeof BigInt | typeof Boolean | typeof Symbol;
 export type Typeof = "string" | "number" | "bigint" | "boolean" | "symbol" | "undefined" | "object" | "function";
+export type PrimitiveType = typeof String | typeof Number | typeof BigInt | typeof Boolean | typeof Symbol;
+export const primitives = new Map<Typeof, PrimitiveType>([['string', String], ['number', Number], ['boolean', Boolean], ['bigint', BigInt], ['symbol', Symbol]] as any);
+export const primitiveTypes = new Set<PrimitiveType>([String, Number, Boolean, BigInt, Symbol]);
+export type TypeofType = PrimitiveType | typeof Object | typeof Function | null | undefined;
+export const typeofTypes = new Set<TypeofType>([String, Number, Boolean, BigInt, Symbol, Object, Function, null, undefined]);
+
+
 export type $SymbolFeature = 'fast' | 'slow' | 'self-contained' | 'referential';
 export type $Phase = 'setup' | 'mount' | 'render' | 'layout' | 'effect' | 'unmount';
 export type $Promise<T = any> = Promise<T> & {
