@@ -1,7 +1,7 @@
 import { $Rep, PrimitiveType, Type, Typeof, Constructor, primitives, primitiveTypes, TypeofType, typeofTypes } from "./types";
 import { $lib, $Library } from './catalogue';
 import {// $ObjectiveRep
-    $lib$, $ref$, $rolesmap$, $roles$, $role$, $of$, $rolesof$, $literal$, $typeof$, $type$, $prototype$, $canonical$, $members$, $membersOwn$, $membersMap$, $membersOwnMap$
+    $lib$, $ref$, $rolesmap$, $roles$, $role$, $of$, $literal$, $typeof$, $type$, $prototype$, $canonical$, $properties$, $propertiesOwn$, $propertiesMap$, $propertiesOwnMap$
 } from './symbols'
 
 export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'JavaScript';
@@ -11,14 +11,14 @@ export function $instanceof(literal: any): $ObjectiveRep {
 }
 
 export function $typeof(literal: any): $ObjectiveRep {
-    if (literal === null || literal === undefined) 
+    if (literal === null || literal === undefined)
         return $type(undefined);
     if (literal == Object.prototype) {
         const $object = $type(Object);
         return $object.$of($object.$prototype);
     }
-    const $$type = primitives.has(typeof literal) ? 
-        $type(primitives.get(typeof literal)!) : 
+    const $$type = primitives.has(typeof literal) ?
+        $type(primitives.get(typeof literal)!) :
         $type(Object.getPrototypeOf(literal).constructor);
 
     const $$instance = new $ObjectiveRep('instance', $$type, literal);
@@ -35,16 +35,15 @@ export class $ObjectiveRep {
     [$roles$] = new Map<string, $ObjectiveRep>;
     [$role$]: $ObjectiveRole;
     [$of$]: $ObjectiveRep | $ObjectiveRole
-    [$rolesof$] = new Map<string, $ObjectiveRep>;
     [$literal$]: any;
     [$type$]?: $ObjectiveRep;
     [$typeof$]: Typeof;
     [$prototype$]?: $ObjectiveRep;
     [$canonical$]!: $ObjectiveRep;
-    [$members$]?: $ObjectiveRep[];
-    [$membersOwn$]?: $ObjectiveRep[];
-    [$membersMap$]?: Map<string, $ObjectiveRep>;
-    [$membersOwnMap$]?: Map<string, $ObjectiveRep>;
+    [$properties$]?: $ObjectiveRep[];
+    [$propertiesOwn$]?: $ObjectiveRep[];
+    [$propertiesMap$]?: Map<string, $ObjectiveRep>;
+    [$propertiesOwnMap$]?: Map<string, $ObjectiveRep>;
 
     get literal() { return this[$literal$]; }
 
@@ -55,39 +54,31 @@ export class $ObjectiveRep {
     }
 
     get $role(): string {
-        let $rep = 
-             this[$of$] === 'JavaScript' ? this.$name : 
-            typeof this[$of$] === 'string' ? this[$of$] : 
-            this.describe(this[$of$][$literal$]);
-        if (this.$name && $rep !== this.$name) 
+        let $rep =
+            this[$of$] === 'JavaScript' ? this.$name :
+                typeof this[$of$] === 'string' ? this[$of$] :
+                    this[$of$].describe();
+        if (this.$name && $rep !== this.$name)
             $rep = `${$rep}:${this.$name}`;
         return `${this[$role$]}of(${$rep})`;
     }
 
-    get $ref(): string { 
-        if (this[$ref$]) return this[$ref$];
-        if (this[$canonical$] !== this) 
-            this[$ref$] = this[$canonical$].$ref;
-        else
-            this[$ref$] = `${this[$role$]}(${this.$name})`;
-        return this[$ref$]
+    get $ref(): string {
+        if (this[$canonical$][$ref$]) return this[$canonical$][$ref$];
+        this[$canonical$][$ref$] = `${this[$canonical$][$role$]}(${this[$canonical$].$name})`;
+        return this[$canonical$][$ref$];
     }
 
-    get $type(): $ObjectiveRep { 
-        if (this[$type$]) return this[$type$];
-        this[$type$] = $typeof(this[$literal$]);
-        return this[$type$];
-     }
-
     get $prototype(): $ObjectiveRep {
-        if (this[$prototype$]) return this[$prototype$];
-        if (this.isNullOfUndefined())
-            return $type(undefined).$as('prototype').$of(this);
-        else if (primitives.has(this[$typeof$]))
-            this[$prototype$] = this.$type.$prototype.$of(this);
-        else
-            this[$prototype$] = new $ObjectiveRep('prototype', this, Object.getPrototypeOf(this[$literal$]), this[$lib$]);
-        return this[$prototype$];
+        return this.getPrototype();
+    }
+
+    get $type(): $ObjectiveRep {
+        return this.getType();
+    }
+
+    get $properties() {
+        return this.getProperties();
     }
 
     constructor(role: $ObjectiveRole, of: $ObjectiveRep | $ObjectiveRole, literal: any, lib?: $Library) {
@@ -96,7 +87,7 @@ export class $ObjectiveRep {
         this[$literal$] = literal;
         this[$typeof$] = typeof this;
         this[$of$] = of;
-        if (this[$of$] === 'JavaScript') 
+        if (this[$of$] === 'JavaScript')
             this[$canonical$] = this;
         if (lib && this[$canonical$]) {
             let $this = $lib.$find(this[$canonical$]) as $ObjectiveRep;
@@ -107,19 +98,19 @@ export class $ObjectiveRep {
                 this[$roles$].set(this.$role, this);
         } else {
             this[$canonical$] = this;
-        } 
+        }
     }
 
     protected is(type: Typeof): boolean { return typeof this[$typeof$] === type; }
-    $is(role: $ObjectiveRole) { 
+    $is(role: $ObjectiveRole) {
         return this[$roles$].has(role);
     }
 
-    $as(role: $ObjectiveRole): $ObjectiveRep { 
+    $as(role: $ObjectiveRole): $ObjectiveRep {
         if (this[$role$] == role) return this;
         if (this[$roles$].has(role))
             return this[$roles$].get(role)!;
-        const $this = Object.create(this) as $ObjectiveRep;
+        const $this = Object.create(this[$canonical$]) as $ObjectiveRep;
         $this[$role$] = role;
         $this[$roles$].set(role, $this);
         if (typeof this[$of$] === 'string')
@@ -141,6 +132,56 @@ export class $ObjectiveRep {
         return this.$ref === other.$ref;
     }
 
+    protected getPrototype(): $ObjectiveRep {
+        if (!this[$prototype$]) {
+            if (this.isNullOfUndefined())
+                this[$prototype$] = $type(undefined).$as('prototype').$of(this);
+            else if (this.isPrimitive())
+                this[$prototype$] = this.$type.$prototype.$of(this);
+            else if (this.isType())
+                this[$prototype$] = new $ObjectiveRep('prototype', this, this[$literal$].prototype, this[$lib$]);
+            else
+                this[$prototype$] = new $ObjectiveRep('prototype', this, Object.getPrototypeOf(this[$literal$]), this[$lib$]);
+        }
+        return this[$prototype$];
+    }
+
+    protected getType(of?: $ObjectiveRep): $ObjectiveRep {
+        if (!this[$type$]) {
+            if (this.isNullOfUndefined()) {
+                this[$type$] = $type(undefined).$of(this);
+                return this[$type$];
+            }
+            if (this.isPrimitive() || this.isType()) {
+                this[$type$] = this.$prototype.$type.$of(this);
+            } else {
+                this[$type$] = $typeof(this[$literal$]).$of(this);
+            }
+        }
+        return of ? this[$type$].$of(of) : this[$type$];
+    }
+
+    protected getProperties(of?: $ObjectiveRep): $ObjectiveRep[] {
+        if (!this[$properties$]) {
+            if (this.isNullOfUndefined()) {
+                this[$properties$] = [];
+                return this[$properties$];
+            }
+            let $this = this as $ObjectiveRep;
+            if (this.isPrimitive()) {
+                this[$properties$] = this.$type.getProperties(this);
+            } else if (this.isType()) {
+                this[$properties$] = this.$prototype.getProperties(this);
+            } else {
+                this[$properties$] = [];
+                const descriptors = Object.getOwnPropertyDescriptors(this[$literal$]);
+                for (const property in descriptors)
+                    this[$properties$].push(new $ObjectiveRep('property', $this, descriptors[property], this[$lib$]));
+            }
+        }
+        return !of ? this[$properties$] : this[$properties$].map(p => p.$of(of));
+    }
+
     protected isNullOfUndefined() {
         return this[$literal$] === null || this[$literal$] === undefined;
     }
@@ -149,15 +190,30 @@ export class $ObjectiveRep {
         return this[$of$] instanceof $ObjectiveRep ? this[$of$].isNullOfUndefined() : false;
     }
 
+    protected isType() {
+        return this[$role$] === 'type';
+    }
+
+    protected isPrimitive() {
+        return primitives.has(this[$typeof$]);
+    }
+
+    protected ofPrimitive() {
+        return this[$of$] instanceof $ObjectiveRep ? this[$of$].isPrimitive() : false;
+    }
+
     protected roleref(role: $ObjectiveRole, of?: string) {
         return of ? `${role}(${of})` : role;
     }
 
-    protected describe(value: any) {
-        if (value === null || value === undefined) return typeof value;
-        if (typeof value === "string") return `"${value}"`;
-        if (typeof value === "symbol") return `${'${'}${value.description}}`;
-        return value.toString();
+    protected describe() {
+        let literal = this[$literal$];
+        if (literal === null || literal === undefined) return typeof literal;
+        if (typeof literal === "string") return `"${literal}"`;
+        if (typeof literal === "symbol") return `${'${'}${literal.description}}`;
+        if (typeof literal === 'function') return literal.name ? `${literal.name}()` : `()`;
+        if (typeof literal === 'object') return `{properties:${this.$properties.length}}`;
+        return literal.toString();
     }
 }
 
@@ -362,12 +418,12 @@ export const $prototype = $object.$prototype;
 //     constructor(literal: any, kindOrName: any, libOrOwner?: any, owner?: $ObjectRep, lib?: $Library) {
 //         this.#kinds = $$object;
 //         this.#rid = $ObjectRep.#nextRid++;
-        
+
 //         // Functions get special treatment
 //         if (typeof literal === 'function' && kindOrName !== 'member') {
 //             return new $FunctionRep(literal, kindOrName, libOrOwner) as any;
 //         }
-        
+
 //         this.#literal = literal;
 //         if (kindOrName === 'prototype') {
 //             this.#kinds = $$prototype;
@@ -450,39 +506,39 @@ export const $prototype = $object.$prototype;
 //     get isPrototype(): boolean { return this.#kinds.has('prototype'); }
 //     get isFunction(): boolean { return false; }
 //     get isArray(): boolean { return this.#kinds.has('object') && Array.isArray(this.#literal); }
-    
+
 //     get isField(): boolean {
 //         if (!this.#kinds.has('member')) return false;
 //         const desc = this.#literal as PropertyDescriptor;
 //         return desc.value !== undefined && typeof desc.value !== 'function';
 //     }
-    
+
 //     get isProperty(): boolean {
 //         if (!this.#kinds.has('member')) return false;
 //         const desc = this.#literal as PropertyDescriptor;
 //         return desc.get !== undefined || desc.set !== undefined;
 //     }
-    
+
 //     get isMethod(): boolean { return this.#kinds.has('method'); }
-    
+
 //     get isReadable(): boolean {
 //         if (!this.#kinds.has('member')) return false;
 //         const desc = this.#literal as PropertyDescriptor;
 //         return desc.get !== undefined || desc.value !== undefined;
 //     }
-    
+
 //     get isWritable(): boolean {
 //         if (!this.#kinds.has('member')) return false;
 //         const desc = this.#literal as PropertyDescriptor;
 //         return desc.set !== undefined || (desc.writable === true);
 //     }
-    
+
 //     get isConfigurable(): boolean { 
 //         if (!this.#kinds.has('member')) return false;
 //         const desc = this.#literal as PropertyDescriptor;
 //         return desc.configurable === true;
 //     }
-    
+
 //     get isEnumerable(): boolean { 
 //         if (!this.#kinds.has('member')) return false;
 //         const desc = this.#literal as PropertyDescriptor;
@@ -500,7 +556,7 @@ export const $prototype = $object.$prototype;
 //         }
 //         return this.#type!;
 //     }
-    
+
 //     get $prototype(): $ObjectRep {
 //         if (!this.#kinds.has('object')) return undefined as any;
 //         if (this.#prototype === undefined) {
@@ -511,9 +567,9 @@ export const $prototype = $object.$prototype;
 //         }
 //         return this.#prototype!;
 //     }
-    
+
 //     get $owner(): $ObjectRep | undefined { return this.#owner; }
-    
+
 //     get $value(): $ObjectRep | undefined {
 //         if (!this.isField) return undefined;
 //         if (this.#value === undefined) {
@@ -522,7 +578,7 @@ export const $prototype = $object.$prototype;
 //         }
 //         return this.#value;
 //     }
-    
+
 //     get $get(): $ObjectRep | undefined {
 //         if (!this.isProperty) return undefined;
 //         const desc = this.#literal as PropertyDescriptor;
@@ -532,7 +588,7 @@ export const $prototype = $object.$prototype;
 //         }
 //         return this.#get;
 //     }
-    
+
 //     get $set(): $ObjectRep | undefined {
 //         if (!this.isProperty) return undefined;
 //         const desc = this.#literal as PropertyDescriptor;
@@ -561,26 +617,26 @@ export const $prototype = $object.$prototype;
 //                     return this.#asObject!;
 //                 }
 //                 return this;
-                
+
 //             case 'primitive':
 //                 if (!this.#kinds.has('object')) return undefined as any;
 //                 if (this.#asPrimitive === undefined) {
 //                     this.#asPrimitive = new $ObjectRep(this.#literal.valueOf(), 'primitive');
 //                 }
 //                 return this.#asPrimitive;
-                
+
 //             case 'prototype':
 //                 return this.$prototype;
-                
+
 //             case 'field':
 //                 return this.isField ? this : undefined as any;
-                
+
 //             case 'property':
 //                 return this.isProperty ? this : undefined as any;
-                
+
 //             case 'method':
 //                 return this.isMethod ? this : undefined as any;
-                
+
 //             default:
 //                 return undefined as any;
 //         }
@@ -599,31 +655,31 @@ export const $prototype = $object.$prototype;
 //         }
 //         return [];
 //     }
-    
+
 //     $fields(own: boolean = true): $ObjectRep[] { 
 //         return this.$members(own).filter(m => m.isField);
 //     }
-    
+
 //     $properties(own: boolean = true): $ObjectRep[] { 
 //         return this.$members(own).filter(m => m.isProperty);
 //     }
-    
+
 //     $methods(own: boolean = true): $ObjectRep[] { 
 //         return this.$members(own).filter(m => m.isMethod);
 //     }
-    
+
 //     $getField(name: string, own: boolean = true): $ObjectRep | undefined { 
 //         return this.$fields(own).find(f => f.name === name);
 //     }
-    
+
 //     $getProperty(name: string, own: boolean = true): $ObjectRep | undefined { 
 //         return this.$properties(own).find(p => p.name === name);
 //     }
-    
+
 //     $getMethod(name: string, own: boolean = true): $ObjectRep | undefined { 
 //         return this.$methods(own).find(m => m.name === name);
 //     }
-    
+
 //     $getMember(name: string, own: boolean = false): $ObjectRep | undefined { 
 //         return this.$members(own).find(m => m.name === name);
 //     }
@@ -707,7 +763,7 @@ export const $prototype = $object.$prototype;
 //         } else {
 //             return super.ref;
 //         }
-        
+
 //         // Cache it directly on the private field
 //         (this as any)['#ref'] = cachedRef;
 //         return cachedRef;
@@ -769,14 +825,14 @@ export const $prototype = $object.$prototype;
 //                     this.#asConstructor = $FunctionRep.constructor$(this.literal, this.#lib);
 //                 }
 //                 return this.#asConstructor!;
-                
+
 //             case 'function':
 //                 if (!this.isConstructor) return this;
 //                 if (this.#asFunction === undefined) {
 //                     this.#asFunction = $FunctionRep.function$(this.literal, this.#lib);
 //                 }
 //                 return this.#asFunction;
-                
+
 //             case 'type':
 //             case 'class':
 //                 if (!this.literal.prototype) return undefined as any;
@@ -784,10 +840,10 @@ export const $prototype = $object.$prototype;
 //                     this.#asType = $FunctionRep.type(this.literal, this.#lib);
 //                 }
 //                 return this.#asType;
-                
+
 //             case 'generic':
 //                 return undefined as any;
-                
+
 //             default:
 //                 return super.$as(kind) as any;
 //         }
