@@ -12,7 +12,7 @@ export function $instanceof(literal: any): $ObjectiveRep {
 
 export function $typeof(literal: any): $ObjectiveRep {
     if (literal === null || literal === undefined) 
-        return $type(literal)
+        return $type(undefined);
     if (literal == Object.prototype) {
         const $object = $type(Object);
         return $object.$of($object.$prototype);
@@ -136,7 +136,9 @@ export class $ObjectiveRep {
     }
 
     $equals(other: $ObjectiveRep): boolean {
-        return this[$canonical$].$ref === other[$canonical$].$ref;
+        if (this.$ref !== other.$ref)
+            throw `${this.$ref} ${other.$ref}`;
+        return this.$ref === other.$ref;
     }
 
     protected isNullOfUndefined() {

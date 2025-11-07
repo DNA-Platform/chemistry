@@ -31,7 +31,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('undefined');
                 expect(type.$ref).toBe('type(undefined)');
                 expect(type.$role).toBe('typeof(undefined)');
-                //expect(type.$type.$equals($type(undefined))).toBe(true);
+                expect(type.$type.$equals($type(undefined))).toBe(true);
             });
 
             it('should have the right metadata for null', () => {
@@ -40,7 +40,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('null');
                 expect(type.$ref).toBe('type(null)');
                 expect(type.$role).toBe('typeof(null)');
-                //expect(type.$type.$equals($type(undefined))).toBe(true);
+                expect(type.$type.$equals($type(undefined))).toBe(true);
             });
 
             it('should have the right metadata for string', () => {
@@ -49,7 +49,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('string');
                 expect(type.$ref).toBe('type(string)');
                 expect(type.$role).toBe('typeof(string)');
-                //expect(type.$type.$equals($typeof({}))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for number', () => {
@@ -58,7 +58,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('number');
                 expect(type.$ref).toBe('type(number)');
                 expect(type.$role).toBe('typeof(number)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for bigint', () => {
@@ -67,7 +67,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('bigint');
                 expect(type.$ref).toBe('type(bigint)');
                 expect(type.$role).toBe('typeof(bigint)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for boolean', () => {
@@ -76,7 +76,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('boolean');
                 expect(type.$ref).toBe('type(boolean)');
                 expect(type.$role).toBe('typeof(boolean)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for symbol', () => {
@@ -85,27 +85,39 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('symbol');
                 expect(type.$ref).toBe('type(symbol)');
                 expect(type.$role).toBe('typeof(symbol)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
         });
 
         describe('$typeof function', () => {
+            it('should cache equivalent instances', () => {
+                let type = $type(undefined);
+                let sameType = $typeof(undefined);
+                expect(type.$equals(sameType)).toBe(true);
+                type = $type(String);
+                sameType = $typeof("");
+                expect(type.$equals(sameType)).toBe(true);
+                type = $type(Boolean);
+                sameType = $typeof(true);
+                expect(type.$equals(sameType)).toBe(true);
+            });
+
             it('should return the right metadata for undefined', () => {
                 const type = $typeof(undefined);
                 expect(type.literal).toBeUndefined();
                 expect(type.$name).toBe('undefined');
                 expect(type.$ref).toBe('type(undefined)');
                 expect(type.$role).toBe('typeof(undefined)');
-                //expect(type.$type.$equals($type(undefined))).toBe(true);
+                expect(type.$type.$equals($type(undefined))).toBe(true);
             });
 
             it('should have the right metadata for null', () => {
                 const type = $typeof(null);
-                expect(type.literal).toBeNull();
-                expect(type.$name).toBe('null');
-                expect(type.$ref).toBe('type(null)');
-                expect(type.$role).toBe('typeof(null)');
-                //expect(type.$type.$equals($type(undefined))).toBe(true);
+                expect(type.literal).toBeUndefined();
+                expect(type.$name).toBe('undefined');
+                expect(type.$ref).toBe('type(undefined)');
+                expect(type.$role).toBe('typeof(undefined)');
+                expect(type.$type.$equals($type(undefined))).toBe(true);
             });
 
             it('should have the right metadata for a string', () => {
@@ -114,7 +126,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('string');
                 expect(type.$ref).toBe('type(string)');
                 expect(type.$role).toBe('typeof("test":string)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for number', () => {
@@ -123,7 +135,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('number');
                 expect(type.$ref).toBe('type(number)');
                 expect(type.$role).toBe('typeof(0:number)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for bigint', () => {
@@ -132,7 +144,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('bigint');
                 expect(type.$ref).toBe('type(bigint)');
                 expect(type.$role).toBe('typeof(1000:bigint)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
 
             it('should have the right metadata for boolean', () => {
@@ -141,7 +153,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('boolean');
                 expect(type.$ref).toBe('type(boolean)');
                 expect(type.$role).toBe('typeof(true:boolean)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
             
             it('should have the right metadata for symbol', () => {
@@ -150,7 +162,7 @@ describe('$Reflection', () => {
                 expect(type.$name).toBe('symbol');
                 expect(type.$ref).toBe('type(symbol)');
                 expect(type.$role).toBe('typeof(${test}:symbol)');
-                //expect(type.$type.$equals($type(Object))).toBe(true);
+                expect(type.$type.$equals($type(Function))).toBe(true);
             });
         }); 
 
