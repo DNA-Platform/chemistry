@@ -6,32 +6,389 @@ import {// $ObjectiveRep
 
 export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'identifier' | 'value' | 'JavaScript';
 
-export function $instanceof(literal: any): $ObjectiveRep {
+export function $instanceof<T>(literal: null): $Primitive<null>;
+export function $instanceof(literal: undefined): $Primitive<undefined>;
+export function $instanceof(literal: string): $Primitive<string>;
+export function $instanceof(literal: number): $Primitive<number>;
+export function $instanceof(literal: boolean): $Primitive<boolean>;
+export function $instanceof(literal: symbol): $Primitive<symbol>;
+export function $instanceof(literal: bigint): $Primitive<bigint>;
+export function $instanceof<T>(literal: T[]): $Array<T>;
+export function $instanceof<T extends Function>(literal: T): $Function<T>;
+export function $instanceof<T>(literal: T): $Object<T>;
+export function $instanceof(literal: any): any {
     if (literal === null || literal === undefined)
-        return $type(literal).$as('primitive');
-    const type = $typeof(literal);
+        return $$type(literal).$as('primitive');
+    const type = $$typeof(literal);
     const of = type[$of$];
     return of as $ObjectiveRep;
 }
 
-export function $typeof(literal: any): $ObjectiveRep {
+export function $typeof(literal: null): $PrimitiveType;
+export function $typeof(literal: undefined): $PrimitiveType;
+export function $typeof(literal: string): $PrimitiveType;
+export function $typeof(literal: number): $PrimitiveType;
+export function $typeof(literal: boolean): $PrimitiveType;
+export function $typeof(literal: symbol): $PrimitiveType;
+export function $typeof(literal: bigint): $PrimitiveType;
+export function $typeof<T>(literal: T[]): $Type<typeof Array>;
+export function $typeof<T extends Function>(literal: T): $Type<typeof Function>;
+export function $typeof(literal: object): $Type;
+export function $typeof(literal: any): $Type | $PrimitiveType;
+export function $typeof(literal: any): any {
     if (literal === null || literal === undefined)
-        return $type(undefined);
+        return $$type(undefined);
     if (literal == Object.prototype) {
-        const $object = $type(Object);
+        const $object = $$type(Object);
         return $object.$of($object.$prototype);
     }
-    const $$type = primitives.has(typeof literal) ?
-        $type(primitives.get(typeof literal)!) :
-        $type(Object.getPrototypeOf(literal)?.constructor);
+    const $$$type = primitives.has(typeof literal) ?
+        $$type(primitives.get(typeof literal)!) :
+        $$type(Object.getPrototypeOf(literal)?.constructor);
 
-    const $$instance = new $ObjectiveRep('instance', $$type, literal);
-    return $$type.$of($$instance);
+    const $$$instance = new $ObjectiveRep('instance', $$$type, literal);
+    return $$$type.$of($$$instance);
 }
 
-export function $type(type: Type | TypeofType): $ObjectiveRep {
+export function $type(type: undefined): $PrimitiveType;
+export function $type(type: null): $PrimitiveType;
+export function $type(type: typeof String): $PrimitiveType;
+export function $type(type: typeof Number): $PrimitiveType;
+export function $type(type: typeof Boolean): $PrimitiveType;
+export function $type(type: typeof Symbol): $PrimitiveType;
+export function $type(type: typeof BigInt): $PrimitiveType;
+export function $type<T extends Constructor>(type: T): $Type<T>;
+export function $type(type: Type | TypeofType): $Type | $PrimitiveType;
+export function $type(type: Type | TypeofType): any {
     return new $ObjectiveRep('type', 'JavaScript', type, $lib);
 }
+
+const $$instanceof: (literal: any) => $ObjectiveRep = $instanceof as any;
+const $$typeof: (literal: any) => $ObjectiveRep = $typeof as any;
+const $$type: (type: Type | TypeofType) => $ObjectiveRep = $type as any;
+
+export interface $Object<T = any> extends $Rep {
+    literal: T;
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $type: $Type;
+    $prototype: $Object;
+    $constructor: $Constructor;
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'primitive'): this is $Primitive;
+    $is(role: 'function'): this is $Function;
+    $is(role: 'type'): this is $Type;
+    $is(role: 'constructor'): this is $Constructor;
+    $is(role: 'array'): this is $Array;
+    $is(role: 'instance'): this is $Object<T>;
+    $is(role: 'object'): this is $Object<T>;
+    $is(role: 'prototype'): this is $Object;
+    $is(jstype: 'string'): this is $Primitive<string>;
+    $is(jstype: 'number'): this is $Primitive<number>;
+    $is(jstype: 'boolean'): this is $Primitive<boolean>;
+    $is(jstype: 'symbol'): this is $Primitive<symbol>;
+    $is(jstype: 'bigint'): this is $Primitive<bigint>;
+    $is(jstype: 'undefined'): this is $Primitive<undefined>;
+    $is(type: typeof String): boolean;
+    $is(type: typeof Number): boolean;
+    $is(type: typeof Boolean): boolean;
+    $is(type: typeof Symbol): boolean;
+    $is(type: typeof BigInt): boolean;
+    $is(type: typeof Object): boolean;
+    $is(type: typeof Array): boolean;
+    $is(type: typeof Function): boolean;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'primitive'): $Primitive;
+    $as(role: 'function'): $Function;
+    $as(role: 'type'): $Type;
+    $as(role: 'constructor'): $Constructor;
+    $as(role: 'array'): $Array;
+    $as(role: 'object'): $Object<T>;
+    $as(role: 'instance'): $Object<T>;
+    $as(role: 'prototype'): $Object;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Primitive<T extends string | number | boolean | symbol | bigint | null | undefined = any> extends $Rep {
+    literal: T;
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $type: $Type;
+    $prototype: $Object;
+    $constructor: $Constructor;
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'object'): this is $Object<T>;
+    $is(role: 'primitive'): this is $Primitive<T>;
+    $is(jstype: 'string'): this is $Primitive<string>;
+    $is(jstype: 'number'): this is $Primitive<number>;
+    $is(jstype: 'boolean'): this is $Primitive<boolean>;
+    $is(jstype: 'symbol'): this is $Primitive<symbol>;
+    $is(jstype: 'bigint'): this is $Primitive<bigint>;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'object'): $Object<T>;
+    $as(role: 'primitive'): $Primitive<T>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Function<T extends Function = Function> extends $Rep {
+    literal: T;
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $type: $Type;
+    $prototype: $Object;
+    $constructor: $Constructor;
+    $parameters: $Parameter[];
+    form: 'lambda' | 'function' | 'method' | 'getter' | 'setter' | 'class' | 'unknown';
+    isAsync: boolean | undefined;
+    isGenerator: boolean | undefined;
+    isNative: boolean | undefined;
+    hasRest: boolean;
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'type'): this is $Type;
+    $is(role: 'constructor'): this is $Constructor;
+    $is(role: 'function'): this is $Function<T>;
+    $is(role: 'object'): this is $Object<T>;
+    $is(jstype: 'function'): this is $Function<T>;
+    $is(type: typeof Function): boolean;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'type'): $Type;
+    $as(role: 'constructor'): $Constructor;
+    $as(role: 'function'): $Function<T>;
+    $as(role: 'object'): $Object<T>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $PrimitiveType extends $Rep {
+    literal: undefined | null | typeof String | typeof Number | typeof Boolean | typeof Symbol | typeof BigInt;
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $prototype: $Object;
+    $constructor: $Constructor;
+    $type: $Type;
+    $parameters: $Parameter[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'type'): this is $Type;
+    $is(type: typeof String): this is $Type<typeof String>;
+    $is(type: typeof Number): this is $Type<typeof Number>;
+    $is(type: typeof Boolean): this is $Type<typeof Boolean>;
+    $is(type: typeof Symbol): this is $Type<typeof Symbol>;
+    $is(type: typeof BigInt): this is $Type<typeof BigInt>;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'type'): $Type;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Type<T extends Constructor | Function = Constructor> extends $Rep {
+    literal: T;
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $prototype: $Object;
+    $constructor: $Constructor<T>;
+    $type: $Type;
+    $parameters: $Parameter[];
+
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'constructor'): this is $Constructor<T>;
+    $is(role: 'function'): this is $Function<T>;
+    $is(role: 'type'): this is $Type<T>;
+    $is(role: 'class'): this is $Type<T>;
+    $is(role: 'object'): this is $Object<T>;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'constructor'): $Constructor<T>;
+    $as(role: 'function'): $Function<T>;
+    $as(role: 'type'): $Type<T>;
+    $as(role: 'class'): $Type<T>;
+    $as(role: 'object'): $Object<T>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Constructor<T extends Constructor | Function = Constructor> extends $Rep {
+    literal: T;
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $prototype: $Object;
+    $type: $Type;
+    $constructor: $Constructor<T>;
+    $parameters: $Parameter[];
+
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'type'): this is $Type<T>;
+    $is(role: 'function'): this is $Function<T>;
+    $is(role: 'constructor'): this is $Constructor<T>;
+    $is(role: 'object'): this is $Object<T>;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'type'): $Type<T>;
+    $as(role: 'function'): $Function<T>;
+    $as(role: 'constructor'): $Constructor<T>;
+    $as(role: 'object'): $Object<T>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Array<T = any> extends $Rep {
+    literal: T[];
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $type: $Type;
+    $prototype: $Object;
+    $constructor: $Constructor;
+    $property(name: string | symbol | number, whos?: 'own' | 'all'): $Member;
+    $properties(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol | number, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
+    $is(literal: undefined): boolean;
+    $is(role: 'array'): this is $Array<T>;
+    $is(role: 'object'): this is $Object<T[]>;
+    $is(type: typeof Array): boolean;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'array'): $Array<T>;
+    $as(role: 'object'): $Object<T[]>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Member extends $Rep {
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $key: $Object<string | symbol>;
+    isReadable: boolean;
+    isWritable: boolean;
+    isConfigurable: boolean;
+    isEnumerable: boolean;
+    isField: boolean;
+    isMethod: boolean;
+    isProperty: boolean;
+    $is(role: 'member'): this is $Member;
+    $is(role: 'property'): this is $Property;
+    $is(role: 'field'): this is $Field;
+    $is(role: 'method'): this is $Method;
+    $as(role: 'member'): $Member;
+    $as(role: 'property'): $Property;
+    $as(role: 'field'): $Field;
+    $as(role: 'method'): $Method;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Property extends $Rep {
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $key: $Object<string | symbol>;
+    isReadable: boolean;
+    isWritable: boolean;
+    isConfigurable: boolean;
+    isEnumerable: boolean;
+    isField: boolean;
+    isMethod: boolean;
+    isProperty: boolean;
+    $getter: $Function;
+    $setter: $Function;
+    $is(role: 'member'): this is $Member;
+    $is(role: 'property'): this is $Property;
+    $is(role: 'getter'): boolean;
+    $is(role: 'setter'): boolean;
+    $as(role: 'member'): $Member;
+    $as(role: 'property'): $Property;
+    $as(role: 'getter'): $Function;
+    $as(role: 'setter'): $Function;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Field<T = any> extends $Rep {
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $key: $Object<string | symbol>;
+    isReadable: boolean;
+    isWritable: boolean;
+    isConfigurable: boolean;
+    isEnumerable: boolean;
+    isField: boolean;
+    isMethod: boolean;
+    isProperty: boolean;
+    $value: $Object<T>;
+    $is(role: 'member'): this is $Member;
+    $is(role: 'field'): this is $Field<T>;
+    $as(role: 'member'): $Member;
+    $as(role: 'field'): $Field<T>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Method<T extends Function = Function> extends $Rep {
+    $name: string;
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    $key: $Object<string | symbol>;
+    isReadable: boolean;
+    isWritable: boolean;
+    isConfigurable: boolean;
+    isEnumerable: boolean;
+    isField: boolean;
+    isMethod: boolean;
+    isProperty: boolean;
+    $value: $Function<T>;
+    $parameters: $Parameter[];
+    form: 'method' | 'function';
+    isAsync: boolean | undefined;
+    isGenerator: boolean | undefined;
+    $is(role: 'member'): this is $Member;
+    $is(role: 'method'): this is $Method<T>;
+    $is(role: 'function'): boolean;
+    $as(role: 'member'): $Member;
+    $as(role: 'method'): $Method<T>;
+    $as(role: 'function'): $Function<T>;
+    $equals(other: $Rep): boolean;
+}
+
+export interface $Parameter extends $Rep {
+    $ref: string;
+    $role: { role: string, of: any, $ref: string };
+    isRest: boolean;
+    $equals(other: $Rep): boolean;
+}
+
+export type LiteralOf<T> = T extends { literal: infer L } ? L : never;
+export type IsRole<T, R extends string> = T extends { $is(role: R): true } ? T : never;
+export type AsRole<T, R extends string> = T extends { $as(role: R): infer U } ? U : never;
 
 export class $ObjectiveRep {
     #lib?: $Library;
@@ -74,13 +431,13 @@ export class $ObjectiveRep {
 
     get $role(): { role: string, of: $ObjectiveRep | string, $ref: string } {
         const $this = this;
-        const $role = { 
-            role: this[$role$], 
-            of: this[$of$], 
+        const $role = {
+            role: this[$role$],
+            of: this[$of$],
             get $ref() {
                 let $rep = $this[$of$] === 'JavaScript' ? $this.$name :
                     typeof $this[$of$] === 'string' ? $this[$of$] :
-                    $this[$of$].getDescription();
+                        $this[$of$].getDescription();
                 // if ($this.$name && $rep !== $this.$name)
                 //     $rep = `${$rep}:${$this.$name}`;
                 return `${$this[$role$]}of(${$rep})`;
@@ -106,10 +463,10 @@ export class $ObjectiveRep {
 
     get $constructor(): $ObjectiveRep {
         if (!this[$constructor$]) {
-            this[$constructor$] = 
-                this[$literal$] === Object.prototype || this[$literal$] === null ? $typeof(undefined).$as('constructor').$of(this) :
-                this[$roles$].has('type') ? this.$as('constructor') : 
-                this.$type.$as('constructor');
+            this[$constructor$] =
+                this[$literal$] === Object.prototype || this[$literal$] === null ? $$typeof(undefined).$as('constructor').$of(this) :
+                    this[$roles$].has('type') ? this.$as('constructor') :
+                        this.$type.$as('constructor');
         }
         return this[$constructor$];
     }
@@ -144,7 +501,7 @@ export class $ObjectiveRep {
             if (!info.params) {
                 this[$parameters$] = [];
             } else {
-                this[$parameters$] = info.params.map(param => 
+                this[$parameters$] = info.params.map(param =>
                     new $ObjectiveRep('parameter', this, param, this[$canonical$].#lib)
                 );
             }
@@ -209,12 +566,12 @@ export class $ObjectiveRep {
 
     get hasRest(): boolean {
         const params = this.$parameters;
-        return params?.length > 0 && params[params.length-1].isRest;
+        return params?.length > 0 && params[params.length - 1].isRest;
     }
 
     $property(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
         this.getProperties(whos);
-        const $undefined = $instanceof(undefined).$as('property').$of(this);
+        const $undefined = $$instanceof(undefined).$as('property').$of(this);
         const $property = this[$propertiesMap$]!.get(name);
         if ($property) return $property;
         if (whos === 'own') return $property || $undefined;
@@ -228,7 +585,7 @@ export class $ObjectiveRep {
 
     $field(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
         this.getProperties(whos);
-        const $undefined = $instanceof(undefined).$as('field').$of(this);
+        const $undefined = $$instanceof(undefined).$as('field').$of(this);
         const $property = this.$property(name, whos);
         return $property.isField ? $property.$as('field') : $undefined;
     }
@@ -239,7 +596,7 @@ export class $ObjectiveRep {
 
     $method(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
         this.getProperties(whos);
-        const $undefined = $instanceof(undefined).$as('method').$of(this);
+        const $undefined = $$instanceof(undefined).$as('method').$of(this);
         const $property = this.$property(name, whos);
         return $property.isMethod ? $property.$as('method') : $undefined;
     }
@@ -276,7 +633,7 @@ export class $ObjectiveRep {
             return this[$literal$] === undefined;
         if (typeof role === 'string')
             return this[$typeof$] === role || this[$roles$].has(role);
-        return this.$equals($type(role));
+        return this.$equals($$type(role));
     }
 
     $as(role: $ObjectiveRole): $ObjectiveRep {
@@ -346,7 +703,7 @@ export class $ObjectiveRep {
     protected getPrototype(): $ObjectiveRep {
         if (!this[$prototype$$]) {
             if (this.isNullOfUndefined())
-                this[$prototype$$] = $type(undefined).$as('prototype').$of(this);
+                this[$prototype$$] = $$type(undefined).$as('prototype').$of(this);
             else if (this.isPrimitive())
                 this[$prototype$$] = this.$type.$as('prototype').$of(this);
             else if (this.isType())
@@ -360,15 +717,15 @@ export class $ObjectiveRep {
     protected getType(of?: $ObjectiveRep): $ObjectiveRep {
         if (!this[$type$$]) {
             if (this.isNullOfUndefined()) {
-                this[$type$$] = $type(undefined).$of(this);
+                this[$type$$] = $$type(undefined).$of(this);
                 return this[$type$$];
             }
-            if (this.isPrimitive()) { 
-                this[$type$$] = $type(primitives.get(this[$typeof$])).$of(this)
+            if (this.isPrimitive()) {
+                this[$type$$] = $$type(primitives.get(this[$typeof$])).$of(this)
             } else if (this.isType()) {
                 this[$type$$] = this.$prototype.$type.$of(this);
             } else {
-                this[$type$$] = $typeof(this[$literal$]).$of(this);
+                this[$type$$] = $$typeof(this[$literal$]).$of(this);
             }
         }
         return of ? this[$type$$].$of(of) : this[$type$$];
@@ -383,13 +740,13 @@ export class $ObjectiveRep {
             let $this = this as $ObjectiveRep;
             if (this.isPrimitive()) {
                 this[$propertiesOwn$] = this.$type.getProperties('own', this);
-                this[$propertiesMap$] =  new Map();
-                this[$propertiesOwn$].forEach($descriptor => 
+                this[$propertiesMap$] = new Map();
+                this[$propertiesOwn$].forEach($descriptor =>
                     this[$propertiesMap$]!.set($descriptor.$key!.literal, $descriptor));
             } else if (this.isType()) {
                 this[$propertiesOwn$] = this.$prototype.getProperties('own', this);
-                this[$propertiesMap$] =  new Map();
-                this[$propertiesOwn$].forEach($descriptor => 
+                this[$propertiesMap$] = new Map();
+                this[$propertiesOwn$].forEach($descriptor =>
                     this[$propertiesMap$]!.set($descriptor.$key!.literal, $descriptor));
             } else {
                 this[$propertiesOwn$] = [];
@@ -608,679 +965,3 @@ function createParams(count: number, rest: boolean): { rest: boolean }[] {
     if (rest) result[result.length - 1].rest = true;
     return result;
 }
-
-// ========== KIND SETS ==========
-// const $$object = new Set(['object']);
-// const $$primitive = new Set(['primitive']);
-// const $$prototype = new Set(['prototype']);
-// const $$function = new Set([...$$object, 'function']);q
-// const $$constructor = new Set([...$$function, 'constructor']);
-// const $$type = new Set([...$$constructor, 'type', 'class']);
-// const $$member = new Set(['member']);
-// const $$method = new Set([...$$member, 'method']);
-// const $$parameter = new Set(['parameter']);
-
-// // ========== INTERFACES ==========
-
-// export interface $Object extends $Rep {
-//     literal: any;
-//     isPrimitive: boolean;
-//     isPrototype: boolean;
-//     isFunction: boolean;
-//     isArray: boolean;
-//     $as(kind: 'primitive'): $Primitive;
-//     $as(kind: 'function'): $Function;
-//     $as(kind: 'prototype'): $Prototype;
-//     $prototype: $Prototype;
-//     $type: $Type;
-//     $members(own?: boolean): $Member[];
-//     $fields(own?: boolean): $Field[];
-//     $properties(own?: boolean): $Property[];
-//     $methods(own?: boolean): $Method[];
-//     $getField(name: string, own?: boolean): $Field | undefined;
-//     $getProperty(name: string, own?: boolean): $Property | undefined;
-//     $getMethod(name: string, own?: boolean): $Method | undefined;
-// }
-
-// export interface $Primitive extends $Rep {
-//     literal: any;
-//     $as(kind: 'object'): $Object;
-// }
-
-// export interface $Prototype extends $Rep {
-//     literal: object;
-//     $as(kind: 'object'): $Object;
-//     $members(own?: boolean): $Member[];
-//     $fields(own?: boolean): $Field[];
-//     $properties(own?: boolean): $Property[];
-//     $methods(own?: boolean): $Method[];
-//     $getField(name: string, own?: boolean): $Field | undefined;
-//     $getProperty(name: string, own?: boolean): $Property | undefined;
-//     $getMethod(name: string, own?: boolean): $Method | undefined;
-// }
-
-// export interface $Function extends $Object {
-//     literal: (...args: any[]) => any;
-//     form: 'lambda' | 'function' | 'method' | 'getter' | 'setter' | 'class' | 'unknown';
-//     name: string;
-//     async: boolean;
-//     generator: boolean;
-//     native: boolean;
-//     isConstructor: boolean;
-//     isType: boolean;
-//     isMethod: boolean;
-//     isGeneric: boolean;
-//     $as(kind: 'primitive'): $Primitive;
-//     $as(kind: 'function'): $Function;
-//     $as(kind: 'prototype'): $Prototype;
-//     $as(kind: 'constructor'): $Constructor;
-//     $as(kind: 'generic'): $GenericFunction;
-//     $typeParameters: $TypeParameter[];
-//     $parameters: $FunctionParameter[];
-// }
-
-// export interface $Constructor extends $Rep {
-//     $as(kind: 'function'): $Function;
-// }
-
-// export interface $Type extends $Rep {
-//     literal: Type;
-//     isGeneric: boolean;
-//     $as(kind: 'class'): $Class;
-//     $as(kind: 'constructor'): $Constructor;
-//     $as(kind: 'generic'): $GenericType;
-//     $baseType: $Type;
-//     $prototype: $Prototype;
-//     $parameters: $TypeParameter[];
-//     asGenericType(...types: $GenericType[]): any;
-//     $members(own?: boolean): $Member[];
-//     $fields(own?: boolean): $Field[];
-//     $properties(own?: boolean): $Property[];
-//     $methods(own?: boolean): $Method[];
-//     $getMember(name: string, own?: boolean): $Member | undefined;
-//     $getField(name: string, own?: boolean): $Field | undefined;
-//     $getProperty(name: string, own?: boolean): $Property | undefined;
-//     $getMethod(name: string, own?: boolean): $Method | undefined;
-// }
-
-// export interface $Class extends $Rep {
-//     literal: Type;
-//     $members(): $Member[];
-//     $fields(): $Field[];
-//     $methods(): $Method[];
-//     $getField(name: string): $Field | undefined;
-//     $getMethod(name: string): $Method | undefined;
-// }
-
-// export interface $Member extends $Rep {
-//     name: string;
-//     isReadable: boolean;
-//     isWritable: boolean;
-//     isConfigurable: boolean;
-//     isEnumerable: boolean;
-//     $owner: $Object;
-//     $as(kind: 'field'): $Field;
-//     $as(kind: 'property'): $Property;
-//     $as(kind: 'method'): $Method;
-// }
-
-// export interface $Field extends $Rep {
-//     $value: $Object;
-//     isConfigurable: boolean;
-//     isEnumerable: boolean;
-// }
-
-// export interface $Property extends $Rep {
-//     $get?: $Function;
-//     $set?: $Function;
-//     isReadable: boolean;
-//     isWritable: boolean;
-//     isConfigurable: boolean;
-//     isEnumerable: boolean;
-// }
-
-// export interface $Method extends $Function {
-//     isConfigurable: boolean;
-//     isEnumerable: boolean;
-// }
-
-// export interface $FunctionParameter extends $Rep {
-//     name: string;
-//     isRest: boolean;
-//     $type?: $TypeParameter;
-// }
-
-// export interface $TypeParameter extends $Rep {
-//     name: string;
-//     $constraint?: $Type;
-//     $default?: $Type;
-// }
-
-// export interface $GenericFunction extends $Rep {
-//     $as(kind: 'function'): $Function;
-//     $as(kind: 'constructor'): $Constructor;
-//     $arguments: $Type;
-// }
-
-// export interface $GenericType extends $Rep {
-//     $as(kind: 'type'): $Type;
-//     $as(kind: 'constructor'): $Constructor;
-//     arguments: $Type;
-// }
-
-// // ========== OBJECT REPRESENTATION ==========
-
-// class $ObjectRep {
-//     static #nextRid = 1;
-
-//     #literal: any;
-//     #lib?: $Library;
-//     #rid: number;
-//     #kinds: Set<string>;
-//     #name?: string;
-//     #owner?: $ObjectRep;
-
-//     #ref?: string;
-//     #prototype?: $ObjectRep;
-//     #type?: $ObjectRep;
-//     #asObject?: $ObjectRep;
-//     #asPrimitive?: $ObjectRep;
-//     #value?: $ObjectRep;
-//     #get?: $ObjectRep;
-//     #set?: $ObjectRep;
-
-//     protected get kinds(): Set<string> { return this.#kinds; }
-//     protected get rid(): number { return this.#rid; }
-
-//     constructor(literal: object, kind: 'object');
-//     constructor(literal: object, kind: 'prototype');
-//     constructor(literal: any, kind: 'primitive');
-//     constructor(literal: PropertyDescriptor, name: string, kind: 'member', owner?: $ObjectRep, lib?: $Library);
-//     constructor(literal: any, kindOrName: any, libOrOwner?: any, owner?: $ObjectRep, lib?: $Library) {
-//         this.#kinds = $$object;
-//         this.#rid = $ObjectRep.#nextRid++;
-
-//         // Functions get special treatment
-//         if (typeof literal === 'function' && kindOrName !== 'member') {
-//             return new $FunctionRep(literal, kindOrName, libOrOwner) as any;
-//         }
-
-//         this.#literal = literal;
-//         if (kindOrName === 'prototype') {
-//             this.#kinds = $$prototype;
-//         } else if (kindOrName === 'primitive') {
-//             this.#kinds = $$primitive;
-//         } else if (libOrOwner === 'member') {
-//             const desc = literal as PropertyDescriptor;
-//             this.#kinds = (desc.value !== undefined && typeof desc.value === 'function') 
-//                 ? $$method 
-//                 : $$member;
-//             this.#name = kindOrName;
-//             this.#owner = owner;
-//             this[$canonical$].#lib = lib;
-//         }
-//     }
-
-//     static member(desc: PropertyDescriptor, name: string, owner: $ObjectRep, lib?: $Library): $ObjectRep {
-//         return new $ObjectRep(desc, name, 'member', owner, lib);
-//     }
-
-//     // Protected so subclasses can use it
-//     protected enumerateMembers(target: object, getParent: () => $ObjectRep | null, own: boolean): $ObjectRep[] {
-//         const cacheKey = this.#kinds.has('type') && this[$canonical$].#lib
-//             ? new $ObjectRep(`members:${this.ref}:${own}`, 'primitive')
-//             : null;
-
-//         if (cacheKey) {
-//             const cached = this[$canonical$].#lib!.$find<$ObjectRep[]>(cacheKey);
-//             if (cached !== undefined) return cached;
-//         }
-
-//         const result: $ObjectRep[] = [];
-//         const seen = new Set<string>();
-//         const descriptors = Object.getOwnPropertyDescriptors(target);
-
-//         for (const [name, desc] of Object.entries(descriptors)) {
-//             if (name === 'constructor' && this.#kinds.has('prototype')) continue;
-//             seen.add(name);
-//             result.push($ObjectRep.member(desc, name, this, this[$canonical$].#lib));
-//         }
-
-//         if (!own) {
-//             const parent = getParent();
-//             if (parent) {
-//                 for (const m of parent.$members(false)) {
-//                     if (!seen.has(m.name)) result.push(m);
-//                 }
-//             }
-//         }
-
-//         if (cacheKey) this[$canonical$].#lib!.$index(cacheKey, result, this[$canonical$].#lib!.$subject);
-//         return result;
-//     }
-
-//     get ref(): string {
-//         if (this.#ref !== undefined) return this.#ref;
-
-//         if (this.#kinds.has('object')) {
-//             this.#ref = `${this.$type?.ref || 'Object'}#${this.#rid}`;
-//         } else if (this.#kinds.has('prototype')) {
-//             this.#ref = `Prototype#${this.#rid}`;
-//         } else if (this.#kinds.has('primitive')) {
-//             const t = typeof this.#literal;
-//             if (this.#literal === null) this.#ref = 'null';
-//             else if (this.#literal === undefined) this.#ref = 'undefined';
-//             else if (t === 'symbol') this.#ref = `symbol:${this.#literal.toString()}`;
-//             else this.#ref = `${t}:${String(this.#literal)}`;
-//         } else if (this.#kinds.has('member')) {
-//             this.#ref = `${this.#owner?.ref || 'Member'}:${this.#name}`;
-//         }
-
-//         return this.#ref!;
-//     }
-
-//     get literal(): any { return this.#literal; }
-//     get name(): string { return this.#name || ''; }
-
-//     // Type predicates
-//     get isPrimitive(): boolean { return this.#kinds.has('primitive'); }
-//     get isPrototype(): boolean { return this.#kinds.has('prototype'); }
-//     get isFunction(): boolean { return false; }
-//     get isArray(): boolean { return this.#kinds.has('object') && Array.isArray(this.#literal); }
-
-//     get isField(): boolean {
-//         if (!this.#kinds.has('member')) return false;
-//         const desc = this.#literal as PropertyDescriptor;
-//         return desc.value !== undefined && typeof desc.value !== 'function';
-//     }
-
-//     get isProperty(): boolean {
-//         if (!this.#kinds.has('member')) return false;
-//         const desc = this.#literal as PropertyDescriptor;
-//         return desc.get !== undefined || desc.set !== undefined;
-//     }
-
-//     get isMethod(): boolean { return this.#kinds.has('method'); }
-
-//     get isReadable(): boolean {
-//         if (!this.#kinds.has('member')) return false;
-//         const desc = this.#literal as PropertyDescriptor;
-//         return desc.get !== undefined || desc.value !== undefined;
-//     }
-
-//     get isWritable(): boolean {
-//         if (!this.#kinds.has('member')) return false;
-//         const desc = this.#literal as PropertyDescriptor;
-//         return desc.set !== undefined || (desc.writable === true);
-//     }
-
-//     get isConfigurable(): boolean { 
-//         if (!this.#kinds.has('member')) return false;
-//         const desc = this.#literal as PropertyDescriptor;
-//         return desc.configurable === true;
-//     }
-
-//     get isEnumerable(): boolean { 
-//         if (!this.#kinds.has('member')) return false;
-//         const desc = this.#literal as PropertyDescriptor;
-//         return desc.enumerable === true;
-//     }
-
-//     // Type navigation
-//     get $type(): $ObjectRep {
-//         if (!this.#kinds.has('object')) return undefined as any;
-//         if (this.#type === undefined) {
-//             const ctor = this.#literal.constructor;
-//             this.#type = (ctor && typeof ctor === 'function') 
-//                 ? new $FunctionRep(ctor, 'type') 
-//                 : undefined;
-//         }
-//         return this.#type!;
-//     }
-
-//     get $prototype(): $ObjectRep {
-//         if (!this.#kinds.has('object')) return undefined as any;
-//         if (this.#prototype === undefined) {
-//             const proto = Object.getPrototypeOf(this.#literal);
-//             this.#prototype = proto === null 
-//                 ? undefined 
-//                 : new $ObjectRep(proto, 'prototype');
-//         }
-//         return this.#prototype!;
-//     }
-
-//     get $owner(): $ObjectRep | undefined { return this.#owner; }
-
-//     get $value(): $ObjectRep | undefined {
-//         if (!this.isField) return undefined;
-//         if (this.#value === undefined) {
-//             const desc = this.#literal as PropertyDescriptor;
-//             this.#value = new $ObjectRep(desc.value, 'object');
-//         }
-//         return this.#value;
-//     }
-
-//     get $get(): $ObjectRep | undefined {
-//         if (!this.isProperty) return undefined;
-//         const desc = this.#literal as PropertyDescriptor;
-//         if (!desc.get) return undefined;
-//         if (this.#get === undefined) {
-//             this.#get = new $FunctionRep(desc.get, 'function', this[$canonical$].#lib!);
-//         }
-//         return this.#get;
-//     }
-
-//     get $set(): $ObjectRep | undefined {
-//         if (!this.isProperty) return undefined;
-//         const desc = this.#literal as PropertyDescriptor;
-//         if (!desc.set) return undefined;
-//         if (this.#set === undefined) {
-//             this.#set = new $FunctionRep(desc.set, 'function', this[$canonical$].#lib!);
-//         }
-//         return this.#set;
-//     }
-
-//     // Shapeshifting
-//     $as(kind: string): $ObjectRep {
-//         switch (kind) {
-//             case 'object':
-//                 if (this.#kinds.has('prototype')) {
-//                     if (this.#asObject === undefined) {
-//                         this.#asObject = new $ObjectRep(this.#literal, 'object');
-//                     }
-//                     return this.#asObject;
-//                 }
-//                 if (this.#kinds.has('primitive')) {
-//                     if (this.#asPrimitive === undefined) {
-//                         if (this.#literal === null || this.#literal === undefined) return undefined as any;
-//                         this.#asObject = new $ObjectRep(Object(this.#literal), 'object');
-//                     }
-//                     return this.#asObject!;
-//                 }
-//                 return this;
-
-//             case 'primitive':
-//                 if (!this.#kinds.has('object')) return undefined as any;
-//                 if (this.#asPrimitive === undefined) {
-//                     this.#asPrimitive = new $ObjectRep(this.#literal.valueOf(), 'primitive');
-//                 }
-//                 return this.#asPrimitive;
-
-//             case 'prototype':
-//                 return this.$prototype;
-
-//             case 'field':
-//                 return this.isField ? this : undefined as any;
-
-//             case 'property':
-//                 return this.isProperty ? this : undefined as any;
-
-//             case 'method':
-//                 return this.isMethod ? this : undefined as any;
-
-//             default:
-//                 return undefined as any;
-//         }
-//     }
-
-//     // Member enumeration
-//     $members(own: boolean = true): $ObjectRep[] {
-//         if (this.#kinds.has('object')) {
-//             return this.enumerateMembers(this.#literal, () => this.$prototype, own);
-//         }
-//         if (this.#kinds.has('prototype')) {
-//             return this.enumerateMembers(this.#literal, () => {
-//                 const proto = Object.getPrototypeOf(this.#literal);
-//                 return proto ? new $ObjectRep(proto, 'prototype') : null;
-//             }, own);
-//         }
-//         return [];
-//     }
-
-//     $fields(own: boolean = true): $ObjectRep[] { 
-//         return this.$members(own).filter(m => m.isField);
-//     }
-
-//     $properties(own: boolean = true): $ObjectRep[] { 
-//         return this.$members(own).filter(m => m.isProperty);
-//     }
-
-//     $methods(own: boolean = true): $ObjectRep[] { 
-//         return this.$members(own).filter(m => m.isMethod);
-//     }
-
-//     $getField(name: string, own: boolean = true): $ObjectRep | undefined { 
-//         return this.$fields(own).find(f => f.name === name);
-//     }
-
-//     $getProperty(name: string, own: boolean = true): $ObjectRep | undefined { 
-//         return this.$properties(own).find(p => p.name === name);
-//     }
-
-//     $getMethod(name: string, own: boolean = true): $ObjectRep | undefined { 
-//         return this.$methods(own).find(m => m.name === name);
-//     }
-
-//     $getMember(name: string, own: boolean = false): $ObjectRep | undefined { 
-//         return this.$members(own).find(m => m.name === name);
-//     }
-// }
-
-// // ========== FUNCTION REPRESENTATION ==========
-
-// class $FunctionRep extends $ObjectRep {
-//     #lib?: $Library;
-//     #info?: $FunctionInfo;
-//     #parameters?: $ParameterRep[];
-//     #asConstructor?: $FunctionRep;
-//     #asFunction?: $FunctionRep;
-//     #asType?: $FunctionRep;
-//     #baseType?: $FunctionRep;
-//     #prototype?: $ObjectRep;
-
-//     constructor(literal: Function, kind: 'function', lib?: $Library);
-//     constructor(literal: Function, kind: 'constructor', lib?: $Library);
-//     constructor(literal: Constructor, kind: 'type', lib?: $Library);
-//     constructor(literal: any, kind: any, lib?: $Library) {
-//         super(literal, 'object');
-//         this[$canonical$].#lib = lib;
-
-//         // Set the appropriate kinds
-//         if (kind === 'function') {
-//             (this as any)['#kinds'] = $$function;
-//         } else if (kind === 'constructor') {
-//             (this as any)['#kinds'] = $$constructor;
-//         } else if (kind === 'type') {
-//             (this as any)['#kinds'] = $$type;
-//             if (this[$canonical$].#lib) {
-//                 const existing = this[$canonical$].#lib.$find<$FunctionRep>(this, this[$canonical$].#lib.$subject);
-//                 if (existing) return existing;
-//                 this[$canonical$].#lib.$index(this, this, this[$canonical$].#lib.$subject);
-//             }
-//         }
-//     }
-
-//     // Factory methods
-//     static function$(literal: Function, lib?: $Library): $FunctionRep {
-//         return new $FunctionRep(literal, 'function', lib);
-//     }
-
-//     static constructor$(literal: Function, lib?: $Library): $FunctionRep {
-//         return new $FunctionRep(literal, 'constructor', lib);
-//     }
-
-//     static type(literal: Constructor, lib?: $Library): $FunctionRep {
-//         return new $FunctionRep(literal, 'type', lib);
-//     }
-
-//     private getInfo(): $FunctionInfo {
-//         if (this.#info === undefined) {
-//             if (this[$canonical$].#lib) {
-//                 const cached = this[$canonical$].#lib.$find<$FunctionInfo>(this);
-//                 if (cached !== undefined) return cached;
-//             }
-//             this.#info = parseFunctionInfo(this.literal);
-//             if (this[$canonical$].#lib) {
-//                 this[$canonical$].#lib.$index(this, this.#info, this[$canonical$].#lib.$subject);
-//             }
-//         }
-//         return this.#info;
-//     }
-
-//     get ref(): string {
-//         let cachedRef = (this as any)['#ref'];
-//         if (cachedRef !== undefined) return cachedRef;
-
-//         if (this.kinds.has('function') && !this.kinds.has('constructor')) {
-//             cachedRef = `Function#${this.rid}`;
-//         } else if (this.kinds.has('constructor') && !this.kinds.has('type')) {
-//             cachedRef = this.literal.name || 'Constructor';
-//         } else if (this.kinds.has('type')) {
-//             const name = this.literal.name || 'Anonymous';
-//             const params = this.$parameters;
-//             const generic = params.length > 0 ? `<${params.map(p => p.ref).join(',')}>` : '';
-//             const ns = this[$canonical$].#lib ? `${this[$canonical$].#lib.$subject}.` : '';
-//             cachedRef = `${ns}${name}${generic}`;
-//         } else {
-//             return super.ref;
-//         }
-
-//         // Cache it directly on the private field
-//         (this as any)['#ref'] = cachedRef;
-//         return cachedRef;
-//     }
-
-//     // Override predicates
-//     get isFunction(): boolean { return true; }
-//     get isConstructor(): boolean { return this.kinds.has('constructor'); }
-//     get isType(): boolean { return this.kinds.has('type'); }
-//     get isMethod(): boolean { return this.kinds.has('method'); }
-//     get isGeneric(): boolean { return false; }
-
-//     // Function properties from info
-//     get form(): $FunctionInfo['form'] { return this.getInfo().form; }
-//     get name(): string { return this.literal.name || ''; }
-//     get async(): boolean { return this.getInfo().async || false; }
-//     get generator(): boolean { return this.getInfo().generator || false; }
-//     get native(): boolean { return this.getInfo().native || false; }
-
-//     // Override prototype for types
-//     get $prototype(): $ObjectRep {
-//         if (this.kinds.has('type')) {
-//             if (this.#prototype === undefined) {
-//                 this.#prototype = new $ObjectRep(this.literal.prototype, 'prototype');
-//             }
-//             return this.#prototype;
-//         }
-//         return super.$prototype;
-//     }
-
-//     get $baseType(): $FunctionRep {
-//         if (!this.isType) return undefined as any;
-//         if (this.#baseType === undefined) {
-//             const proto = Object.getPrototypeOf(this.literal.prototype);
-//             if (proto === null) return undefined as any;
-//             const baseCtor = proto.constructor;
-//             if (!baseCtor || baseCtor === Function || baseCtor === Object) return undefined as any;
-//             this.#baseType = $FunctionRep.type(baseCtor, this[$canonical$].#lib);
-//         }
-//         return this.#baseType!;
-//     }
-
-//     get $typeParameters(): $ParameterRep[] { return []; }
-
-//     get $parameters(): $ParameterRep[] {
-//         if (this.#parameters === undefined) {
-//             const info = this.getInfo();
-//             this.#parameters = info.params ? info.params.map((p, i) => new $ParameterRep(`param${i}`, i, p.spread)) : [];
-//         }
-//         return this.#parameters;
-//     }
-
-//     // Shapeshifting
-//     $as(kind: string): $FunctionRep {
-//         switch (kind) {
-//             case 'constructor':
-//                 if (!this.literal.prototype) return undefined as any;
-//                 if (this.#asConstructor === undefined) {
-//                     this.#asConstructor = $FunctionRep.constructor$(this.literal, this[$canonical$].#lib);
-//                 }
-//                 return this.#asConstructor!;
-
-//             case 'function':
-//                 if (!this.isConstructor) return this;
-//                 if (this.#asFunction === undefined) {
-//                     this.#asFunction = $FunctionRep.function$(this.literal, this[$canonical$].#lib);
-//                 }
-//                 return this.#asFunction;
-
-//             case 'type':
-//             case 'class':
-//                 if (!this.literal.prototype) return undefined as any;
-//                 if (this.#asType === undefined) {
-//                     this.#asType = $FunctionRep.type(this.literal, this[$canonical$].#lib);
-//                 }
-//                 return this.#asType;
-
-//             case 'generic':
-//                 return undefined as any;
-
-//             default:
-//                 return super.$as(kind) as any;
-//         }
-//     }
-
-//     asGenericType(...types: any[]): any { return undefined; }
-
-//     // Member enumeration for types
-//     $members(own: boolean = true): $ObjectRep[] {
-//         if (this.kinds.has('type')) {
-//             if (this.kinds.has('class')) {
-//                 return this.enumerateMembers(this.literal, () => null, true);
-//             }
-//             return this.enumerateMembers(this.literal.prototype, () => this.$baseType, own);
-//         }
-//         return super.$members(own);
-//     }
-// }
-
-// // ========== PARAMETER REPRESENTATION ==========
-
-// class $ParameterRep {
-//     #name: string;
-//     #position: number;
-//     #isRest: boolean;
-//     #ref?: string;
-
-//     constructor(name: string, position: number, isRest: boolean) {
-//         this.#name = name;
-//         this.#position = position;
-//         this.#isRest = isRest;
-//     }
-
-//     get ref(): string {
-//         if (this.#ref === undefined) {
-//             this.#ref = this.#isRest ? `...${this.#name}` : this.#name;
-//         }
-//         return this.#ref;
-//     }
-
-//     get name(): string { return this.#name; }
-//     get position(): number { return this.#position; }
-//     get isRest(): boolean { return this.#isRest; }
-// }
-
-// // ========== FACTORY FUNCTIONS ==========
-
-// export function $object(literal: any): $Object {
-//     const kind = literal === null || literal === undefined || typeof literal !== 'object' ? 'primitive' : 'object';
-//     return new $ObjectRep(literal, kind as any) as any;
-// }
-
-// export function $function(literal: Function, lib?: $Library): $Function {
-//     return $FunctionRep.function$(literal, lib) as any;
-// }
-
-// export function $type(literal: Constructor, lib?: $Library): $Type {
-//     return $FunctionRep.type(literal, lib) as any;
-// }

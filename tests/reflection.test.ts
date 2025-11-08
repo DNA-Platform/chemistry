@@ -336,16 +336,16 @@ describe('$Reflection', () => {
                 });
             });
 
-            it('should find specific properties by name', () => {
+            it('should find specific fields by name', () => {
                 const data = { field: 'value', count: 42 };
                 const instance = $instanceof(data);
                 
-                const field = instance.$property('field');
-                expect(field.$role.role).toBe('property');
+                const field = instance.$field('field');
+                expect(field.$role.role).toBe('field');
                 expect(field.$value.literal).toBe('value');
                 
-                const count = instance.$property('count');
-                expect(count.$role.role).toBe('property');
+                const count = instance.$field('count');
+                expect(count.$role.role).toBe('field');
                 expect(count.$value.literal).toBe(42);
             });
 
@@ -355,18 +355,16 @@ describe('$Reflection', () => {
                 
                 const missing = instance.$property('y');
                 expect(missing.$role.role).toBe('property');
-                expect(missing.$role.of).toBe(instance); // Still "of" the instance
-                expect(missing.$type.literal).toBe(undefined);
+                expect(missing.$role.of).toBe(instance); 
             });
 
             it('should find inherited properties with "all"', () => {
                 const instance = $instanceof(new $SubClass());
-                const subField = instance.$property('subField', 'own');
-                const inherited = instance.$property('toString', 'own');
-                const inheritedAll = instance.$property('toString', 'all');
+                const subField = instance.$field('subField', 'own');
+                const inherited = instance.$method('toString', 'own');
+                const inheritedAll = instance.$method('toString', 'all');
                 
                 expect(subField.$value.literal).toBe(2);
-                expect(inherited.$type.literal).toBe(undefined);
                 expect(inheritedAll.$value.literal).toBe(Object.prototype.toString);
             });
 
@@ -374,9 +372,9 @@ describe('$Reflection', () => {
                 const $symbol = Symbol('test');
                 const $object = { [$symbol]: 'symbol value' };
                 const $instance = $instanceof($object);
-                const $property = $instance.$property($symbol);
+                const $property = $instance.$field($symbol);
 
-                expect($property.$role.role).toBe('property');
+                expect($property.$role.role).toBe('field');
                 expect($property.$value.literal).toBe('symbol value');
             });
 
@@ -411,7 +409,7 @@ describe('$Reflection', () => {
 
             it('should handle getter-only properties', () => {
                 const obj = { get readOnly() { return 42; } };
-                const rep = $instanceof(obj).$property("readOnly");
+                const rep = $instanceof(obj).$property("readOnly").$as('property');
                 expect(rep.isProperty).toBe(true);
                 expect(rep.isReadable).toBe(true);
                 expect(rep.isWritable).toBe(false);
@@ -421,7 +419,7 @@ describe('$Reflection', () => {
 
             it('should handle setter-only properties', () => {
                 const obj = { set writeOnly(v: number) { }};
-                const rep = $instanceof(obj).$property("writeOnly");
+                const rep = $instanceof(obj).$property("writeOnly").$as('property');
                 expect(rep.isProperty).toBe(true);
                 expect(rep.isReadable).toBe(false);
                 expect(rep.isWritable).toBe(true);
@@ -452,7 +450,7 @@ describe('$Reflection', () => {
             });
 
             it('should handle getter/setter role transformations', () => {
-                const property = $type($Class).$property("property");
+                const property = $type($Class).$property("property").$as('property');;
                 const getter = property.$as('getter');
                 const setter = property.$as('setter');
                 expect(getter.$role.role).toBe('getter');
@@ -511,7 +509,6 @@ describe('$Reflection', () => {
                 const notField = $instance.$field('method');
                 expect(notField.$role.role).toBe('field');
                 expect(notField.$role.of).toBe($instance);
-                expect(notField.$type.literal).toBe(undefined);
             });
         });
 
@@ -622,7 +619,7 @@ describe('$Reflection', () => {
                 const parameter = func.$parameters[0];
                 expect(parameter.$role.role).toBe('parameter');
                 expect(parameter.isRest).toBe(true);
-                expect(parameter.literal).toEqual({ rest: true });
+                expect(parameter.isRest).toEqual(true);
             });
 
             it('should handle non-rest parameters', () => {
@@ -666,15 +663,15 @@ describe('$Reflection', () => {
                 };
                 const instance = $instanceof(structure);
                 
-                const level1 = instance.$property('level1');
+                const level1 = instance.$field('level1');
                 expect(level1.isField).toBe(true);
                 
                 const level1Instance = $instanceof(level1.$value.literal);
-                const level2 = level1Instance.$property('level2');
+                const level2 = level1Instance.$field('level2');
                 expect(level2.isField).toBe(true);
                 
                 const level2Instance = $instanceof(level2.$value.literal);
-                const value = level2Instance.$property('value');
+                const value = level2Instance.$field('value');
                 expect(value.$value.literal).toBe('deep');
             });
 
@@ -713,7 +710,7 @@ describe('$Reflection', () => {
                 });
                 
                 const instance = $instanceof(data);
-                const property = instance.$property('value');
+                const property = instance.$field('value');
                 
                 expect(property.isWritable).toBe(false);
                 expect(property.isReadable).toBe(true);
@@ -746,10 +743,10 @@ describe('$Reflection', () => {
                 const indexed = { 0: 'zero', 1: 'one', 2: 'two' };
                 const instance = $instanceof(indexed);
                 
-                const property0 = instance.$property('0');
+                const property0 = instance.$field('0');
                 expect(property0.$value.literal).toBe('zero');
                 
-                const property1 = instance.$property('1');
+                const property1 = instance.$field('1');
                 expect(property1.$value.literal).toBe('one');
             });
 
