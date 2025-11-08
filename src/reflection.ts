@@ -1,13 +1,17 @@
-import { $Rep, PrimitiveType, Type, Typeof, Constructor, primitives, primitiveTypes, TypeofType, typeofTypes } from "./types";
+import { $Rep, PrimitiveType, Type, Typeof, Constructor, primitives, TypeofType, typeofTypes } from "./types";
 import { $lib, $Library } from './catalogue';
 import {// $ObjectiveRep
-    $lib$, $ref$, $rolesmap$, $roles$, $role$, $of$, $literal$, $typeof$, $type$, $prototype$, $canonical$, $properties$, $propertiesOwn$, $propertiesMap$, $propertiesOwnMap$
+    $lib$, $ref$, $roles$, $role$, $of$, $literal$, $typeof$, $type$$, $prototype$$, $canonical$, $key$, $value$, $name$, $properties$, $propertiesOwn$, $propertiesMap$, $method$, $getter$, $setter$, $functionInfo$, $parameters$, $constructor$
 } from './symbols'
 
-export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'JavaScript';
+export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'identifier' | 'value' | 'JavaScript';
 
 export function $instanceof(literal: any): $ObjectiveRep {
-    return new $ObjectiveRep('instance', $typeof(literal), literal);
+    if (literal === null || literal === undefined)
+        return $type(literal).$as('primitive');
+    const type = $typeof(literal);
+    const of = type[$of$];
+    return of as $ObjectiveRep;
 }
 
 export function $typeof(literal: any): $ObjectiveRep {
@@ -19,7 +23,7 @@ export function $typeof(literal: any): $ObjectiveRep {
     }
     const $$type = primitives.has(typeof literal) ?
         $type(primitives.get(typeof literal)!) :
-        $type(Object.getPrototypeOf(literal).constructor);
+        $type(Object.getPrototypeOf(literal)?.constructor);
 
     const $$instance = new $ObjectiveRep('instance', $$type, literal);
     return $$type.$of($$instance);
@@ -30,37 +34,60 @@ export function $type(type: Type | TypeofType): $ObjectiveRep {
 }
 
 export class $ObjectiveRep {
-    [$lib$]?: $Library;
+    #lib?: $Library;
+    [$lib$]?: PropertyDescriptor;
     [$ref$]?: string;
-    [$roles$] = new Map<string, $ObjectiveRep>;
     [$role$]: $ObjectiveRole;
+    [$roles$] = new Map<string, $ObjectiveRep>;
     [$of$]: $ObjectiveRep | $ObjectiveRole
     [$literal$]: any;
-    [$type$]?: $ObjectiveRep;
+    [$type$$]?: $ObjectiveRep;
     [$typeof$]: Typeof;
-    [$prototype$]?: $ObjectiveRep;
+    [$prototype$$]?: $ObjectiveRep;
     [$canonical$]!: $ObjectiveRep;
+    [$name$]?: string;
+    [$key$]?: $ObjectiveRep;
+    [$value$]?: $ObjectiveRep;
     [$properties$]?: $ObjectiveRep[];
     [$propertiesOwn$]?: $ObjectiveRep[];
-    [$propertiesMap$]?: Map<string, $ObjectiveRep>;
-    [$propertiesOwnMap$]?: Map<string, $ObjectiveRep>;
+    [$propertiesMap$]?: Map<string | symbol, $ObjectiveRep>;
+    [$method$]?: $ObjectiveRep;
+    [$getter$]?: $ObjectiveRep;
+    [$setter$]?: $ObjectiveRep;
+    [$functionInfo$]?: $FunctionInfo;
+    [$parameters$]?: $ObjectiveRep[];
+    [$constructor$]?: $ObjectiveRep;
 
     get literal() { return this[$literal$]; }
 
     get $name(): string {
-        if (this.isNullOfUndefined()) return `${this[$literal$]}`;
-        const name: string = (this[$literal$] as Function)?.name || '';
-        return typeofTypes.has(this[$literal$]) ? name.toLowerCase() : name;
+        if (!this[$name$])
+            this[$name$] = this.getName();
+        return this[$name$]!;
     }
 
-    get $role(): string {
-        let $rep =
-            this[$of$] === 'JavaScript' ? this.$name :
-                typeof this[$of$] === 'string' ? this[$of$] :
-                    this[$of$].describe();
-        if (this.$name && $rep !== this.$name)
-            $rep = `${$rep}:${this.$name}`;
-        return `${this[$role$]}of(${$rep})`;
+    get $key(): $ObjectiveRep | undefined {
+        if (this[$key$]) return this[$key$];
+        this[$key$] = new $ObjectiveRep('identifier', this, this[$literal$].property, this[$canonical$].#lib);
+        return this[$key$];
+    }
+
+    get $role(): { role: string, of: $ObjectiveRep | string, $ref: string } {
+        const $this = this;
+        const $role = { 
+            role: this[$role$], 
+            of: this[$of$], 
+            get $ref() {
+                let $rep = $this[$of$] === 'JavaScript' ? $this.$name :
+                    typeof $this[$of$] === 'string' ? $this[$of$] :
+                    $this[$of$].getDescription();
+                // if ($this.$name && $rep !== $this.$name)
+                //     $rep = `${$rep}:${$this.$name}`;
+                return `${$this[$role$]}of(${$rep})`;
+            },
+            toString: () => $role.$ref
+        } as any;
+        return $role;
     }
 
     get $ref(): string {
@@ -77,109 +104,330 @@ export class $ObjectiveRep {
         return this.getType();
     }
 
-    get $properties() {
-        return this.getProperties();
+    get $constructor(): $ObjectiveRep {
+        if (!this[$constructor$]) {
+            this[$constructor$] = 
+                this[$literal$] === Object.prototype || this[$literal$] === null ? $typeof(undefined).$as('constructor').$of(this) :
+                this[$roles$].has('type') ? this.$as('constructor') : 
+                this.$type.$as('constructor');
+        }
+        return this[$constructor$];
+    }
+
+    get $value(): $ObjectiveRep {
+        if (!this[$value$]) {
+            const descriptor = this[$literal$] as PropertyDescriptor;
+            this[$value$] = new $ObjectiveRep('value', this, descriptor?.value, this[$canonical$].#lib);
+        }
+        return this[$value$];
+    }
+
+    get $getter(): $ObjectiveRep {
+        if (!this[$getter$]) {
+            const descriptor = this[$literal$] as PropertyDescriptor;
+            this[$getter$] = new $ObjectiveRep('getter', this, descriptor?.get, this[$canonical$].#lib);
+        }
+        return this[$getter$];
+    }
+
+    get $setter(): $ObjectiveRep {
+        if (!this[$setter$]) {
+            const descriptor = this[$literal$] as PropertyDescriptor;
+            this[$setter$] = new $ObjectiveRep('setter', this, descriptor?.set, this[$canonical$].#lib);
+        }
+        return this[$setter$];
+    }
+
+    get $parameters(): $ObjectiveRep[] {
+        if (!this[$parameters$]) {
+            const info = this.getFunctionInfo();
+            if (!info.params) {
+                this[$parameters$] = [];
+            } else {
+                this[$parameters$] = info.params.map(param => 
+                    new $ObjectiveRep('parameter', this, param, this[$canonical$].#lib)
+                );
+            }
+        }
+        return this[$parameters$];
+    }
+
+    get isConfigurable(): boolean {
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        return descriptor.configurable!;
+    }
+
+    get isEnumerable(): boolean {
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        return descriptor.enumerable!;
+    }
+
+    get isReadable(): boolean {
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        return 'value' in descriptor || !!descriptor.get;
+    }
+
+    get isWritable(): boolean {
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        return !!descriptor.writable || !!descriptor.set;
+    }
+
+    get isField(): boolean {
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        return 'value' in descriptor && !this.isMethod;
+    }
+
+    get isMethod(): boolean {
+        return this.$value.$type.$is('function') && (this.$value.form === 'method' || this.$value.form === 'function');
+    }
+
+    get isProperty(): boolean {
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        return !!(descriptor.get || descriptor.set);
+    }
+
+    get form(): 'lambda' | 'function' | 'method' | 'getter' | 'setter' | 'class' | 'unknown' {
+        return this.getFunctionInfo().form;
+    }
+
+    get isAsync(): boolean | undefined {
+        return this.getFunctionInfo().async;
+    }
+
+    get isGenerator(): boolean | undefined {
+        return this.getFunctionInfo().generator;
+    }
+
+    get isNative(): boolean | undefined {
+        return this.getFunctionInfo().native;
+    }
+
+    get isRest(): boolean {
+        const literal = this[$literal$] as { rest: boolean };
+        return literal.rest;
+    }
+
+    get hasRest(): boolean {
+        const params = this.$parameters;
+        return params?.length > 0 && params[params.length-1].isRest;
+    }
+
+    $property(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
+        this.getProperties(whos);
+        const $undefined = $instanceof(undefined).$as('property').$of(this);
+        const $property = this[$propertiesMap$]!.get(name);
+        if ($property) return $property;
+        if (whos === 'own') return $property || $undefined;
+        if (this.$equals(this.$type)) return $undefined;
+        return this.$type.literal ? this.$type.$property(name, whos).$of(this) : $undefined;
+    }
+
+    $properties(whos: 'own' | 'all' = 'own') {
+        return this.getProperties(whos);
+    }
+
+    $field(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
+        this.getProperties(whos);
+        const $undefined = $instanceof(undefined).$as('field').$of(this);
+        const $property = this.$property(name, whos);
+        return $property.isField ? $property.$as('field') : $undefined;
+    }
+
+    $fields(whos: 'own' | 'all' = 'own'): $ObjectiveRep[] {
+        return this.$properties(whos).filter(p => p.isField).map(p => p.$as('field'));
+    }
+
+    $method(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
+        this.getProperties(whos);
+        const $undefined = $instanceof(undefined).$as('method').$of(this);
+        const $property = this.$property(name, whos);
+        return $property.isMethod ? $property.$as('method') : $undefined;
+    }
+
+    $methods(whos: 'own' | 'all' = 'own'): $ObjectiveRep[] {
+        return this.$properties(whos).filter(p => p.isMethod).map(p => p.$as('method'));
     }
 
     constructor(role: $ObjectiveRole, of: $ObjectiveRep | $ObjectiveRole, literal: any, lib?: $Library) {
-        this[$lib$] = lib;
+        this.#lib = lib;
         this[$role$] = role;
         this[$literal$] = literal;
-        this[$typeof$] = typeof this;
+        this[$typeof$] = typeof literal;
         this[$of$] = of;
         if (this[$of$] === 'JavaScript')
             this[$canonical$] = this;
         if (lib && this[$canonical$]) {
             let $this = $lib.$find(this[$canonical$]) as $ObjectiveRep;
             if ($this) return $this.$as(role).$of(of as any);
-            lib.$index(this);
-            this[$roles$].set(role, this);
-            if (typeof of === 'string')
-                this[$roles$].set(this.$role, this);
+            lib.$index(this[$canonical$]);
         } else {
             this[$canonical$] = this;
         }
+        this[$roles$].set(role, this);
+        if (typeof of === 'string')
+            this[$roles$].set(this.$role.$ref, this);
     }
 
-    protected is(type: Typeof): boolean { return typeof this[$typeof$] === type; }
-    $is(role: $ObjectiveRole) {
-        return this[$roles$].has(role);
+    $is(type: Type): boolean;
+    $is(type: TypeofType): boolean;
+    $is(role: $ObjectiveRole): boolean;
+    $is(role: $ObjectiveRole | Type | TypeofType): boolean {
+        if (role === undefined)
+            return this[$literal$] === undefined;
+        if (typeof role === 'string')
+            return this[$typeof$] === role || this[$roles$].has(role);
+        return this.$equals($type(role));
     }
 
     $as(role: $ObjectiveRole): $ObjectiveRep {
         if (this[$role$] == role) return this;
         if (this[$roles$].has(role))
             return this[$roles$].get(role)!;
-        const $this = Object.create(this[$canonical$]) as $ObjectiveRep;
+        const $this = this.$new(this[$canonical$]);
         $this[$role$] = role;
         $this[$roles$].set(role, $this);
         if (typeof this[$of$] === 'string')
-            this[$roles$].set($this.$role, $this);
+            this[$roles$].set($this.$role.$ref, $this);
         return $this;
     }
 
     $of(of: $ObjectiveRep | $ObjectiveRole): $ObjectiveRep {
         if (this[$of$] == of) return this;
-        const $this = Object.create(this) as $ObjectiveRep;
+        const $this = this.$new();
         $this[$of$] = of;
-        const $$this = this[$roles$].get($this.$role);
+        const $$this = this[$roles$].get($this.$role.$ref);
         return $$this ? $$this : $this;
     }
 
     $equals(other: $ObjectiveRep): boolean {
-        if (this.$ref !== other.$ref)
-            throw `${this.$ref} ${other.$ref}`;
         return this.$ref === other.$ref;
     }
 
+    toString() {
+        return `$${this.$role.toString()}`;
+    }
+
+    protected getName(): string {
+        const literal = this[$literal$];
+        if (literal === null) return 'null';
+        if (literal === undefined) return typeof literal;
+        if (literal === Object.prototype) return 'Object.prototype';
+        if (this[$roles$].has('type')) return literal.name;
+        if (this[$roles$].has('property')) return this.$key!.getName();
+        if (this[$roles$].has('identifier')) return this.getSymbol(literal);
+        if (typeof literal === "string") return this.getSymbol(literal);
+        if (typeof literal === "symbol") return this.getSymbol(literal);
+        if (typeofTypes.has(literal)) return literal.name.toLowerCase();
+        if (typeof literal === 'function') return literal.name || 'function';
+        return this[$role$];
+    }
+
+    protected getDescription(): string {
+        const literal = this[$literal$];
+        if (literal === null) return this.getName();
+        if (literal === undefined) return this.getName();
+        if (literal === Object.prototype) return '{}.prototype';
+        if (this[$roles$].has('type')) return this.getName();
+        if (this[$roles$].has('property')) return this.getName();
+        if (typeof literal === "string") return `"${literal}"`;
+        if (typeof literal === "symbol") return `${'${'}${literal.description}}`;
+        if (typeofTypes.has(literal)) return literal.name.toLowerCase();
+        if (typeof literal === 'function') return literal.name ? `${literal.name}()` : `()`;
+        if (typeof literal === 'object') return `{}`;
+        return literal.toString();
+    }
+
+    protected getSymbol(literal: string | symbol) {
+        if (typeof literal === "string") return literal;
+        if (typeof literal === "symbol") return `${'${'}${literal.description}}`;
+        return '';
+    }
+
     protected getPrototype(): $ObjectiveRep {
-        if (!this[$prototype$]) {
+        if (!this[$prototype$$]) {
             if (this.isNullOfUndefined())
-                this[$prototype$] = $type(undefined).$as('prototype').$of(this);
+                this[$prototype$$] = $type(undefined).$as('prototype').$of(this);
             else if (this.isPrimitive())
-                this[$prototype$] = this.$type.$prototype.$of(this);
+                this[$prototype$$] = this.$type.$as('prototype').$of(this);
             else if (this.isType())
-                this[$prototype$] = new $ObjectiveRep('prototype', this, this[$literal$].prototype, this[$lib$]);
+                this[$prototype$$] = new $ObjectiveRep('prototype', this, this[$literal$].prototype, this[$canonical$].#lib);
             else
-                this[$prototype$] = new $ObjectiveRep('prototype', this, Object.getPrototypeOf(this[$literal$]), this[$lib$]);
+                this[$prototype$$] = new $ObjectiveRep('prototype', this, Object.getPrototypeOf(this[$literal$]), this[$canonical$].#lib);
         }
-        return this[$prototype$];
+        return this[$prototype$$];
     }
 
     protected getType(of?: $ObjectiveRep): $ObjectiveRep {
-        if (!this[$type$]) {
+        if (!this[$type$$]) {
             if (this.isNullOfUndefined()) {
-                this[$type$] = $type(undefined).$of(this);
-                return this[$type$];
+                this[$type$$] = $type(undefined).$of(this);
+                return this[$type$$];
             }
-            if (this.isPrimitive() || this.isType()) {
-                this[$type$] = this.$prototype.$type.$of(this);
+            if (this.isPrimitive()) { 
+                this[$type$$] = $type(primitives.get(this[$typeof$])).$of(this)
+            } else if (this.isType()) {
+                this[$type$$] = this.$prototype.$type.$of(this);
             } else {
-                this[$type$] = $typeof(this[$literal$]).$of(this);
+                this[$type$$] = $typeof(this[$literal$]).$of(this);
             }
         }
-        return of ? this[$type$].$of(of) : this[$type$];
+        return of ? this[$type$$].$of(of) : this[$type$$];
     }
 
-    protected getProperties(of?: $ObjectiveRep): $ObjectiveRep[] {
-        if (!this[$properties$]) {
+    protected getProperties(whos: 'own' | 'all' = 'own', of?: $ObjectiveRep): $ObjectiveRep[] {
+        if (!this[$propertiesOwn$]) {
+            if (this.isNullOfUndefined()) {
+                this[$propertiesOwn$] = [];
+                return this[$propertiesOwn$];
+            }
+            let $this = this as $ObjectiveRep;
+            if (this.isPrimitive()) {
+                this[$propertiesOwn$] = this.$type.getProperties('own', this);
+                this[$propertiesMap$] =  new Map();
+                this[$propertiesOwn$].forEach($descriptor => 
+                    this[$propertiesMap$]!.set($descriptor.$key!.literal, $descriptor));
+            } else if (this.isType()) {
+                this[$propertiesOwn$] = this.$prototype.getProperties('own', this);
+                this[$propertiesMap$] =  new Map();
+                this[$propertiesOwn$].forEach($descriptor => 
+                    this[$propertiesMap$]!.set($descriptor.$key!.literal, $descriptor));
+            } else {
+                this[$propertiesOwn$] = [];
+                this[$propertiesMap$] = new Map();
+                const descriptors = Object.getOwnPropertyDescriptors(this[$literal$]);
+                const keys = Reflect.ownKeys(descriptors);  // Gets both strings AND symbols
+                for (const property of keys) {
+                    const descriptor = descriptors[property as any] as any;
+                    descriptor.property = property;
+                    const $property = new $ObjectiveRep('property', $this, descriptor, this[$canonical$].#lib);
+                    this[$propertiesOwn$].push($property);
+                    this[$propertiesMap$].set(property, $property);
+                }
+            }
+        }
+        if (whos === 'all' && !this[$properties$]) {
             if (this.isNullOfUndefined()) {
                 this[$properties$] = [];
                 return this[$properties$];
             }
             let $this = this as $ObjectiveRep;
-            if (this.isPrimitive()) {
-                this[$properties$] = this.$type.getProperties(this);
-            } else if (this.isType()) {
-                this[$properties$] = this.$prototype.getProperties(this);
+            if (this.$equals(this.$type) || this.$type.isNullOfUndefined()) {
+                this[$properties$] = this[$propertiesOwn$];
+            } else if (this.isPrimitive()) {
+                this[$properties$] = this.$type.getProperties('all', this);
             } else {
-                this[$properties$] = [];
-                const descriptors = Object.getOwnPropertyDescriptors(this[$literal$]);
-                for (const property in descriptors)
-                    this[$properties$].push(new $ObjectiveRep('property', $this, descriptors[property], this[$lib$]));
+                this[$properties$] = this.$type.getProperties('all', this).concat(this.getProperties('own', this));
             }
         }
-        return !of ? this[$properties$] : this[$properties$].map(p => p.$of(of));
+        const $properties = whos === 'own' ? this[$propertiesOwn$]! : this[$properties$]!;
+        return !of ? $properties : $properties.map(p => p.$of(of));
+    }
+
+    protected getFunctionInfo(): $FunctionInfo {
+        if (!this[$functionInfo$]) {
+            this[$functionInfo$] = parseFunctionInfo(this[$literal$] as Function);
+        }
+        return this[$functionInfo$];
     }
 
     protected isNullOfUndefined() {
@@ -202,37 +450,170 @@ export class $ObjectiveRep {
         return this[$of$] instanceof $ObjectiveRep ? this[$of$].isPrimitive() : false;
     }
 
-    protected roleref(role: $ObjectiveRole, of?: string) {
-        return of ? `${role}(${of})` : role;
-    }
-
-    protected describe() {
-        let literal = this[$literal$];
-        if (literal === null || literal === undefined) return typeof literal;
-        if (typeof literal === "string") return `"${literal}"`;
-        if (typeof literal === "symbol") return `${'${'}${literal.description}}`;
-        if (typeof literal === 'function') return literal.name ? `${literal.name}()` : `()`;
-        if (typeof literal === 'object') return `{properties:${this.$properties.length}}`;
-        return literal.toString();
+    protected $new(version?: $ObjectiveRep): $ObjectiveRep {
+        version = version || this;
+        const $this = Object.create(version) as $ObjectiveRep;
+        return $this;
     }
 }
 
-export const $undefined = $type(undefined).$of('primitive');
-export const $null = $type(null).$of('primitive');
-export const $string = $type(String).$of('primitive');
-export const $number = $type(Number).$of('primitive');
-export const $boolean = $type(Boolean).$of('primitive');
-export const $bigint = $type(BigInt).$of('primitive');
-export const $symbol = $type(Symbol).$of('primitive');
+export const $undefined = $type(undefined);
+export const $null = $type(null);
+export const $string = $type(String);
+export const $number = $type(Number);
+export const $boolean = $type(Boolean);
+export const $bigint = $type(BigInt);
+export const $symbol = $type(Symbol);
 export const $object = $type(Object);
 export const $function = $type(Function);
 export const $prototype = $object.$prototype;
+
+export interface $FunctionInfo {
+    form: 'lambda' | 'function' | 'method' | 'getter' | 'setter' | 'class' | 'unknown';
+    name?: string;
+    async?: boolean;
+    generator?: boolean;
+    native?: boolean;
+    params?: { rest: boolean }[];
+}
+
+export function parseFunctionInfo(func: Function): $FunctionInfo {
+    const str = func.toString();
+    let name = func.name || '';
+
+    // Check for native code (but don't early return!)
+    const hasNativeCode = str.includes('[native code]');
+
+    // Single main pattern match
+    const pattern = getFunctionPattern();
+    const match = pattern.exec(str);
+
+    if (!match?.groups) {
+        // Can't parse - return unknown with undefined properties
+        return {
+            form: 'unknown',
+            name,
+            async: undefined,
+            generator: undefined,
+            native: hasNativeCode ? true : undefined,  // Only set true if we found [native code], otherwise undefined
+            params: undefined
+        };
+    }
+
+    const g = match.groups;
+
+    // Check ALL async groups
+    const async = !!g.async || !!g.asyncArrow || !!g.async2;
+    const generator = !!g.funcStar || !!g.methodStar;
+
+    let form: $FunctionInfo['form'];
+    if (g.arrow) {
+        form = 'lambda';
+        // Clear computed names for anonymous arrows (like '0' from array wrapping)
+        if (name && /^\d+$/.test(name)) name = '';
+    }
+    else if (g.class) form = 'class';
+    else if (g.get) {
+        form = 'getter';
+        name = name.replace(/^get /, '');
+    }
+    else if (g.set) {
+        form = 'setter';
+        name = name.replace(/^set /, '');
+    }
+    else if (g.function) form = 'function';
+    else if (g.methodName) form = 'method';
+    else form = 'unknown';
+
+    // Extract ALL parameter groups
+    const paramStr = g.arrowParams || g.arrowSingle || g.params || g.params2 || '';
+
+    if (!paramStr && form !== 'lambda') {
+        return { form, name, async, generator, native: hasNativeCode, params: [] };
+    }
+
+    // For single arrow param without parens
+    if (g.arrowSingle) {
+        return { form, name, async, generator, native: hasNativeCode, params: createParams(1, false) };
+    }
+
+    // Parse parameter list
+    const trimmed = paramStr.trim();
+    if (!trimmed) {
+        return { form, name, async, generator, native: hasNativeCode, params: [] };
+    }
+
+    // Simple comma split (fast, handles 99% of cases correctly)
+    const parts = trimmed.split(',').map(p => p.trim());
+    const last = parts[parts.length - 1];
+    const rest = last.startsWith('...');
+    const count = parts.length;
+
+    return { form, name, async, generator, native: hasNativeCode, params: createParams(count, rest) };
+}
+
+let $pattern: RegExp | undefined;
+function getFunctionPattern(): RegExp {
+    if ($pattern) return $pattern;
+
+    const ws = '\\s+';
+    const ws0 = '\\s*';
+    const id = '[a-zA-Z_$][a-zA-Z0-9_$]*';
+    const paramContent = '[^)]*';
+
+    // Build pattern with arrow functions FIRST in the alternation
+
+    // Arrow function patterns (must come before method pattern!)
+    const arrowBranch =
+        `(?:` +
+        `(?<asyncArrow>async${ws})?` +
+        `(?:` +
+        `\\((?<arrowParams>${paramContent})\\)${ws0}(?<arrow>=>)|` +  // Parens arrow
+        `(?<arrowSingle>${id})${ws0}=>` +  // Single param arrow
+        `)` +
+        `)`;
+
+    // Traditional patterns
+    const traditionalBranch =
+        `(?:` +
+        `(?<async>async${ws})?` +
+        `(?:` +
+        `(?<class>class)|` +
+        `(?<get>get)|` +
+        `(?<set>set)|` +
+        `(?<function>function)${ws0}(?<funcStar>\\*)?` +
+        `)${ws0}(?:${id}${ws0})?` +
+        `(?:\\((?<params>${paramContent})\\))?` +  // Optional params for class
+        `)`;
+
+    // Method pattern (must come AFTER arrow check!)
+    const methodBranch =
+        `(?:` +
+        `(?<async2>async${ws})?` +
+        `(?<methodStar>\\*)?` +
+        `(?<methodName>${id})${ws0}` +
+        `\\((?<params2>${paramContent})\\)` +
+        `)`;
+
+    // Combine all branches - arrows first!
+    $pattern = new RegExp(
+        `^(?:${arrowBranch}|${traditionalBranch}|${methodBranch})`
+    );
+
+    return $pattern;
+}
+
+function createParams(count: number, rest: boolean): { rest: boolean }[] {
+    const result = Array.from({ length: count }, () => ({ rest: false }));
+    if (rest) result[result.length - 1].rest = true;
+    return result;
+}
 
 // ========== KIND SETS ==========
 // const $$object = new Set(['object']);
 // const $$primitive = new Set(['primitive']);
 // const $$prototype = new Set(['prototype']);
-// const $$function = new Set([...$$object, 'function']);
+// const $$function = new Set([...$$object, 'function']);q
 // const $$constructor = new Set([...$$function, 'constructor']);
 // const $$type = new Set([...$$constructor, 'type', 'class']);
 // const $$member = new Set(['member']);
@@ -436,7 +817,7 @@ export const $prototype = $object.$prototype;
 //                 : $$member;
 //             this.#name = kindOrName;
 //             this.#owner = owner;
-//             this.#lib = lib;
+//             this[$canonical$].#lib = lib;
 //         }
 //     }
 
@@ -446,12 +827,12 @@ export const $prototype = $object.$prototype;
 
 //     // Protected so subclasses can use it
 //     protected enumerateMembers(target: object, getParent: () => $ObjectRep | null, own: boolean): $ObjectRep[] {
-//         const cacheKey = this.#kinds.has('type') && this.#lib
+//         const cacheKey = this.#kinds.has('type') && this[$canonical$].#lib
 //             ? new $ObjectRep(`members:${this.ref}:${own}`, 'primitive')
 //             : null;
 
 //         if (cacheKey) {
-//             const cached = this.#lib!.$find<$ObjectRep[]>(cacheKey);
+//             const cached = this[$canonical$].#lib!.$find<$ObjectRep[]>(cacheKey);
 //             if (cached !== undefined) return cached;
 //         }
 
@@ -462,7 +843,7 @@ export const $prototype = $object.$prototype;
 //         for (const [name, desc] of Object.entries(descriptors)) {
 //             if (name === 'constructor' && this.#kinds.has('prototype')) continue;
 //             seen.add(name);
-//             result.push($ObjectRep.member(desc, name, this, this.#lib));
+//             result.push($ObjectRep.member(desc, name, this, this[$canonical$].#lib));
 //         }
 
 //         if (!own) {
@@ -474,7 +855,7 @@ export const $prototype = $object.$prototype;
 //             }
 //         }
 
-//         if (cacheKey) this.#lib!.$index(cacheKey, result, this.#lib!.$subject);
+//         if (cacheKey) this[$canonical$].#lib!.$index(cacheKey, result, this[$canonical$].#lib!.$subject);
 //         return result;
 //     }
 
@@ -584,7 +965,7 @@ export const $prototype = $object.$prototype;
 //         const desc = this.#literal as PropertyDescriptor;
 //         if (!desc.get) return undefined;
 //         if (this.#get === undefined) {
-//             this.#get = new $FunctionRep(desc.get, 'function', this.#lib!);
+//             this.#get = new $FunctionRep(desc.get, 'function', this[$canonical$].#lib!);
 //         }
 //         return this.#get;
 //     }
@@ -594,7 +975,7 @@ export const $prototype = $object.$prototype;
 //         const desc = this.#literal as PropertyDescriptor;
 //         if (!desc.set) return undefined;
 //         if (this.#set === undefined) {
-//             this.#set = new $FunctionRep(desc.set, 'function', this.#lib!);
+//             this.#set = new $FunctionRep(desc.set, 'function', this[$canonical$].#lib!);
 //         }
 //         return this.#set;
 //     }
@@ -702,7 +1083,7 @@ export const $prototype = $object.$prototype;
 //     constructor(literal: Constructor, kind: 'type', lib?: $Library);
 //     constructor(literal: any, kind: any, lib?: $Library) {
 //         super(literal, 'object');
-//         this.#lib = lib;
+//         this[$canonical$].#lib = lib;
 
 //         // Set the appropriate kinds
 //         if (kind === 'function') {
@@ -711,10 +1092,10 @@ export const $prototype = $object.$prototype;
 //             (this as any)['#kinds'] = $$constructor;
 //         } else if (kind === 'type') {
 //             (this as any)['#kinds'] = $$type;
-//             if (this.#lib) {
-//                 const existing = this.#lib.$find<$FunctionRep>(this, this.#lib.$subject);
+//             if (this[$canonical$].#lib) {
+//                 const existing = this[$canonical$].#lib.$find<$FunctionRep>(this, this[$canonical$].#lib.$subject);
 //                 if (existing) return existing;
-//                 this.#lib.$index(this, this, this.#lib.$subject);
+//                 this[$canonical$].#lib.$index(this, this, this[$canonical$].#lib.$subject);
 //             }
 //         }
 //     }
@@ -734,13 +1115,13 @@ export const $prototype = $object.$prototype;
 
 //     private getInfo(): $FunctionInfo {
 //         if (this.#info === undefined) {
-//             if (this.#lib) {
-//                 const cached = this.#lib.$find<$FunctionInfo>(this);
+//             if (this[$canonical$].#lib) {
+//                 const cached = this[$canonical$].#lib.$find<$FunctionInfo>(this);
 //                 if (cached !== undefined) return cached;
 //             }
 //             this.#info = parseFunctionInfo(this.literal);
-//             if (this.#lib) {
-//                 this.#lib.$index(this, this.#info, this.#lib.$subject);
+//             if (this[$canonical$].#lib) {
+//                 this[$canonical$].#lib.$index(this, this.#info, this[$canonical$].#lib.$subject);
 //             }
 //         }
 //         return this.#info;
@@ -758,7 +1139,7 @@ export const $prototype = $object.$prototype;
 //             const name = this.literal.name || 'Anonymous';
 //             const params = this.$parameters;
 //             const generic = params.length > 0 ? `<${params.map(p => p.ref).join(',')}>` : '';
-//             const ns = this.#lib ? `${this.#lib.$subject}.` : '';
+//             const ns = this[$canonical$].#lib ? `${this[$canonical$].#lib.$subject}.` : '';
 //             cachedRef = `${ns}${name}${generic}`;
 //         } else {
 //             return super.ref;
@@ -801,7 +1182,7 @@ export const $prototype = $object.$prototype;
 //             if (proto === null) return undefined as any;
 //             const baseCtor = proto.constructor;
 //             if (!baseCtor || baseCtor === Function || baseCtor === Object) return undefined as any;
-//             this.#baseType = $FunctionRep.type(baseCtor, this.#lib);
+//             this.#baseType = $FunctionRep.type(baseCtor, this[$canonical$].#lib);
 //         }
 //         return this.#baseType!;
 //     }
@@ -822,14 +1203,14 @@ export const $prototype = $object.$prototype;
 //             case 'constructor':
 //                 if (!this.literal.prototype) return undefined as any;
 //                 if (this.#asConstructor === undefined) {
-//                     this.#asConstructor = $FunctionRep.constructor$(this.literal, this.#lib);
+//                     this.#asConstructor = $FunctionRep.constructor$(this.literal, this[$canonical$].#lib);
 //                 }
 //                 return this.#asConstructor!;
 
 //             case 'function':
 //                 if (!this.isConstructor) return this;
 //                 if (this.#asFunction === undefined) {
-//                     this.#asFunction = $FunctionRep.function$(this.literal, this.#lib);
+//                     this.#asFunction = $FunctionRep.function$(this.literal, this[$canonical$].#lib);
 //                 }
 //                 return this.#asFunction;
 
@@ -837,7 +1218,7 @@ export const $prototype = $object.$prototype;
 //             case 'class':
 //                 if (!this.literal.prototype) return undefined as any;
 //                 if (this.#asType === undefined) {
-//                     this.#asType = $FunctionRep.type(this.literal, this.#lib);
+//                     this.#asType = $FunctionRep.type(this.literal, this[$canonical$].#lib);
 //                 }
 //                 return this.#asType;
 
@@ -903,160 +1284,3 @@ export const $prototype = $object.$prototype;
 // export function $type(literal: Constructor, lib?: $Library): $Type {
 //     return $FunctionRep.type(literal, lib) as any;
 // }
-
-// ========== UTILITY FUNCTIONS ==========
-
-function createPrototypeChain<T>(object: object, constructor?: Constructor<T>): object[] {
-    if (constructor && !(object instanceof constructor))
-        throw new Error(`[${object}] is not instanceof [${constructor?.name}]`);
-
-    let prototype = object;
-    const prototypes: object[] = [];
-    while (prototype && prototype !== constructor?.prototype) {
-        prototypes.unshift(prototype);
-        prototype = Object.getPrototypeOf(prototype);
-    }
-
-    return prototypes
-}
-
-export interface $FunctionInfo {
-    form: 'lambda' | 'function' | 'method' | 'getter' | 'setter' | 'class' | 'unknown';
-    name?: string;
-    async?: boolean;
-    generator?: boolean;
-    native?: boolean;
-    params?: { spread: boolean }[];
-}
-
-export function parseFunctionInfo(func: Function): $FunctionInfo {
-    const str = func.toString();
-    let name = func.name || '';
-
-    // Check for native code (but don't early return!)
-    const hasNativeCode = str.includes('[native code]');
-
-    // Single main pattern match
-    const pattern = getFunctionPattern();
-    const match = pattern.exec(str);
-
-    if (!match?.groups) {
-        // Can't parse - return unknown with undefined properties
-        return {
-            form: 'unknown',
-            name,
-            async: undefined,
-            generator: undefined,
-            native: hasNativeCode ? true : undefined,  // Only set true if we found [native code], otherwise undefined
-            params: undefined
-        };
-    }
-
-    const g = match.groups;
-
-    // Check ALL async groups
-    const async = !!g.async || !!g.asyncArrow || !!g.async2;
-    const generator = !!g.funcStar || !!g.methodStar;
-
-    let form: $FunctionInfo['form'];
-    if (g.arrow) {
-        form = 'lambda';
-        // Clear computed names for anonymous arrows (like '0' from array wrapping)
-        if (name && /^\d+$/.test(name)) name = '';
-    }
-    else if (g.class) form = 'class';
-    else if (g.get) {
-        form = 'getter';
-        name = name.replace(/^get /, '');
-    }
-    else if (g.set) {
-        form = 'setter';
-        name = name.replace(/^set /, '');
-    }
-    else if (g.function) form = 'function';
-    else if (g.methodName) form = 'method';
-    else form = 'unknown';
-
-    // Extract ALL parameter groups
-    const paramStr = g.arrowParams || g.arrowSingle || g.params || g.params2 || '';
-
-    if (!paramStr && form !== 'lambda') {
-        return { form, name, async, generator, native: hasNativeCode, params: [] };
-    }
-
-    // For single arrow param without parens
-    if (g.arrowSingle) {
-        return { form, name, async, generator, native: hasNativeCode, params: createParams(1, false) };
-    }
-
-    // Parse parameter list
-    const trimmed = paramStr.trim();
-    if (!trimmed) {
-        return { form, name, async, generator, native: hasNativeCode, params: [] };
-    }
-
-    // Simple comma split (fast, handles 99% of cases correctly)
-    const parts = trimmed.split(',').map(p => p.trim());
-    const last = parts[parts.length - 1];
-    const spread = last.startsWith('...');
-    const count = parts.length;
-
-    return { form, name, async, generator, native: hasNativeCode, params: createParams(count, spread) };
-}
-
-let $pattern: RegExp | undefined;
-function getFunctionPattern(): RegExp {
-    if ($pattern) return $pattern;
-
-    const ws = '\\s+';
-    const ws0 = '\\s*';
-    const id = '[a-zA-Z_$][a-zA-Z0-9_$]*';
-    const paramContent = '[^)]*';
-
-    // Build pattern with arrow functions FIRST in the alternation
-
-    // Arrow function patterns (must come before method pattern!)
-    const arrowBranch =
-        `(?:` +
-        `(?<asyncArrow>async${ws})?` +
-        `(?:` +
-        `\\((?<arrowParams>${paramContent})\\)${ws0}(?<arrow>=>)|` +  // Parens arrow
-        `(?<arrowSingle>${id})${ws0}=>` +  // Single param arrow
-        `)` +
-        `)`;
-
-    // Traditional patterns
-    const traditionalBranch =
-        `(?:` +
-        `(?<async>async${ws})?` +
-        `(?:` +
-        `(?<class>class)|` +
-        `(?<get>get)|` +
-        `(?<set>set)|` +
-        `(?<function>function)${ws0}(?<funcStar>\\*)?` +
-        `)${ws0}(?:${id}${ws0})?` +
-        `(?:\\((?<params>${paramContent})\\))?` +  // Optional params for class
-        `)`;
-
-    // Method pattern (must come AFTER arrow check!)
-    const methodBranch =
-        `(?:` +
-        `(?<async2>async${ws})?` +
-        `(?<methodStar>\\*)?` +
-        `(?<methodName>${id})${ws0}` +
-        `\\((?<params2>${paramContent})\\)` +
-        `)`;
-
-    // Combine all branches - arrows first!
-    $pattern = new RegExp(
-        `^(?:${arrowBranch}|${traditionalBranch}|${methodBranch})`
-    );
-
-    return $pattern;
-}
-
-function createParams(count: number, spread: boolean): { spread: boolean }[] {
-    const result = Array.from({ length: count }, () => ({ spread: false }));
-    if (spread) result[result.length - 1].spread = true;
-    return result;
-}
