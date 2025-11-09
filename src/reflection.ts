@@ -1,7 +1,7 @@
 import { $Rep, PrimitiveType, Type, Typeof, Constructor, primitives, TypeofType, typeofTypes } from "./types";
 import { $lib, $Library } from './catalogue';
 import {// $ObjectiveRep
-    $lib$, $ref$, $roles$, $role$, $of$, $literal$, $typeof$, $type$$, $prototype$$, $canonical$, $key$, $value$, $name$, $properties$, $propertiesOwn$, $propertiesMap$, $method$, $getter$, $setter$, $functionInfo$, $parameters$, $constructor$
+    $lib$, $ref$, $roles$, $role$, $of$, $literal$, $typeof$, $type$$, $prototype$$, $canonical$, $key$, $value$, $name$, $members$, $membersOwn$, $membersMap$, $method$, $getter$, $setter$, $functionInfo$, $parameters$, $constructor$
 } from './symbols'
 
 export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'identifier' | 'value' | 'JavaScript';
@@ -75,10 +75,12 @@ export interface $Object<T = any> extends $Rep {
     $type: $Type;
     $prototype: $Object;
     $constructor: $Constructor;
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
     $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
     $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
@@ -124,8 +126,13 @@ export interface $Primitive<T extends string | number | boolean | symbol | bigin
     $type: $Type;
     $prototype: $Object;
     $constructor: $Constructor;
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'object'): this is $Object<T>;
@@ -155,10 +162,12 @@ export interface $Function<T extends Function = Function> extends $Rep {
     isGenerator: boolean | undefined;
     isNative: boolean | undefined;
     hasRest: boolean;
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
     $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
     $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
@@ -185,8 +194,12 @@ export interface $PrimitiveType extends $Rep {
     $constructor: $Constructor;
     $type: $Type;
     $parameters: $Parameter[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
@@ -211,10 +224,12 @@ export interface $Type<T extends Constructor | Function = Constructor> extends $
     $type: $Type;
     $parameters: $Parameter[];
 
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
     $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
     $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
@@ -242,8 +257,10 @@ export interface $Constructor<T extends Constructor | Function = Constructor> ex
     $constructor: $Constructor<T>;
     $parameters: $Parameter[];
 
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
     $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
     $fields(whos?: 'own' | 'all'): $Field[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
@@ -269,10 +286,12 @@ export interface $Array<T = any> extends $Rep {
     $type: $Type;
     $prototype: $Object;
     $constructor: $Constructor;
-    $property(name: string | symbol | number, whos?: 'own' | 'all'): $Member;
-    $properties(whos?: 'own' | 'all'): $Member[];
-    $field(name: string | symbol | number, whos?: 'own' | 'all'): $Field;
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
     $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
@@ -290,6 +309,7 @@ export interface $Member extends $Rep {
     $ref: string;
     $role: { role: string, of: any, $ref: string };
     $key: $Object<string | symbol>;
+    $value: any;
     isReadable: boolean;
     isWritable: boolean;
     isConfigurable: boolean;
@@ -405,9 +425,9 @@ export class $ObjectiveRep {
     [$name$]?: string;
     [$key$]?: $ObjectiveRep;
     [$value$]?: $ObjectiveRep;
-    [$properties$]?: $ObjectiveRep[];
-    [$propertiesOwn$]?: $ObjectiveRep[];
-    [$propertiesMap$]?: Map<string | symbol, $ObjectiveRep>;
+    [$members$]?: $ObjectiveRep[];
+    [$membersOwn$]?: $ObjectiveRep[];
+    [$membersMap$]?: Map<string | symbol, $ObjectiveRep>;
     [$method$]?: $ObjectiveRep;
     [$getter$]?: $ObjectiveRep;
     [$setter$]?: $ObjectiveRep;
@@ -471,12 +491,13 @@ export class $ObjectiveRep {
         return this[$constructor$];
     }
 
-    get $value(): $ObjectiveRep {
-        if (!this[$value$]) {
-            const descriptor = this[$literal$] as PropertyDescriptor;
-            this[$value$] = new $ObjectiveRep('value', this, descriptor?.value, this[$canonical$].#lib);
-        }
-        return this[$value$];
+    get $value(): $ObjectiveRep { 
+        const descriptor = this[$literal$] as PropertyDescriptor;
+        const $of = this[$of$] as $ObjectiveRep;
+        if (!descriptor || !this.isReadable) return $$typeof(undefined).$as('value').$of(this);
+        return 'value' in descriptor ? 
+            new $ObjectiveRep('value', this, descriptor!.value, this[$canonical$].#lib) :
+            new $ObjectiveRep('value', this, descriptor!.get!.bind($of[$literal$])(), this[$canonical$].#lib);
     }
 
     get $getter(): $ObjectiveRep {
@@ -569,40 +590,51 @@ export class $ObjectiveRep {
         return params?.length > 0 && params[params.length - 1].isRest;
     }
 
-    $property(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
-        this.getProperties(whos);
+    $member(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
+        this.getMembers(whos);
         const $undefined = $$instanceof(undefined).$as('property').$of(this);
-        const $property = this[$propertiesMap$]!.get(name);
-        if ($property) return $property;
-        if (whos === 'own') return $property || $undefined;
+        const member = this[$membersMap$]!.get(name);
+        if (member) return member;
+        if (whos === 'own') return member || $undefined;
         if (this.$equals(this.$type)) return $undefined;
-        return this.$type.literal ? this.$type.$property(name, whos).$of(this) : $undefined;
+        return this.$type.literal ? this.$type.$member(name, whos).$of(this) : $undefined;
     }
 
-    $properties(whos: 'own' | 'all' = 'own') {
-        return this.getProperties(whos);
+    $members(whos: 'own' | 'all' = 'own') {
+        return this.getMembers(whos);
+    }
+
+    $property(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
+        this.getMembers(whos);
+        const $undefined = $$instanceof(undefined).$as('property').$of(this);
+        const member = this.$member(name, whos);
+        return member.isField ? member.$as('property') : $undefined;
+    }
+
+    $properties(whos: 'own' | 'all' = 'own'): $ObjectiveRep[] {
+        return this.$members(whos).filter(p => p.isField).map(p => p.$as('field'));
     }
 
     $field(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
-        this.getProperties(whos);
+        this.getMembers(whos);
         const $undefined = $$instanceof(undefined).$as('field').$of(this);
-        const $property = this.$property(name, whos);
-        return $property.isField ? $property.$as('field') : $undefined;
+        const member = this.$member(name, whos);
+        return member.isField ? member.$as('field') : $undefined;
     }
 
     $fields(whos: 'own' | 'all' = 'own'): $ObjectiveRep[] {
-        return this.$properties(whos).filter(p => p.isField).map(p => p.$as('field'));
+        return this.$members(whos).filter(p => p.isField).map(p => p.$as('field'));
     }
 
     $method(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
-        this.getProperties(whos);
+        this.getMembers(whos);
         const $undefined = $$instanceof(undefined).$as('method').$of(this);
-        const $property = this.$property(name, whos);
-        return $property.isMethod ? $property.$as('method') : $undefined;
+        const $member = this.$member(name, whos);
+        return $member.isMethod ? $member.$as('method') : $undefined;
     }
 
     $methods(whos: 'own' | 'all' = 'own'): $ObjectiveRep[] {
-        return this.$properties(whos).filter(p => p.isMethod).map(p => p.$as('method'));
+        return this.$members(whos).filter(p => p.isMethod).map(p => p.$as('method'));
     }
 
     constructor(role: $ObjectiveRole, of: $ObjectiveRep | $ObjectiveRole, literal: any, lib?: $Library) {
@@ -731,52 +763,52 @@ export class $ObjectiveRep {
         return of ? this[$type$$].$of(of) : this[$type$$];
     }
 
-    protected getProperties(whos: 'own' | 'all' = 'own', of?: $ObjectiveRep): $ObjectiveRep[] {
-        if (!this[$propertiesOwn$]) {
+    protected getMembers(whos: 'own' | 'all' = 'own', of?: $ObjectiveRep): $ObjectiveRep[] {
+        if (!this[$membersOwn$]) {
             if (this.isNullOfUndefined()) {
-                this[$propertiesOwn$] = [];
-                return this[$propertiesOwn$];
+                this[$membersOwn$] = [];
+                return this[$membersOwn$];
             }
             let $this = this as $ObjectiveRep;
             if (this.isPrimitive()) {
-                this[$propertiesOwn$] = this.$type.getProperties('own', this);
-                this[$propertiesMap$] = new Map();
-                this[$propertiesOwn$].forEach($descriptor =>
-                    this[$propertiesMap$]!.set($descriptor.$key!.literal, $descriptor));
+                this[$membersOwn$] = this.$type.getMembers('own', this);
+                this[$membersMap$] = new Map();
+                this[$membersOwn$].forEach($descriptor =>
+                    this[$membersMap$]!.set($descriptor.$key!.literal, $descriptor));
             } else if (this.isType()) {
-                this[$propertiesOwn$] = this.$prototype.getProperties('own', this);
-                this[$propertiesMap$] = new Map();
-                this[$propertiesOwn$].forEach($descriptor =>
-                    this[$propertiesMap$]!.set($descriptor.$key!.literal, $descriptor));
+                this[$membersOwn$] = this.$prototype.getMembers('own', this);
+                this[$membersMap$] = new Map();
+                this[$membersOwn$].forEach($descriptor =>
+                    this[$membersMap$]!.set($descriptor.$key!.literal, $descriptor));
             } else {
-                this[$propertiesOwn$] = [];
-                this[$propertiesMap$] = new Map();
+                this[$membersOwn$] = [];
+                this[$membersMap$] = new Map();
                 const descriptors = Object.getOwnPropertyDescriptors(this[$literal$]);
                 const keys = Reflect.ownKeys(descriptors);  // Gets both strings AND symbols
                 for (const property of keys) {
                     const descriptor = descriptors[property as any] as any;
                     descriptor.property = property;
-                    const $property = new $ObjectiveRep('property', $this, descriptor, this[$canonical$].#lib);
-                    this[$propertiesOwn$].push($property);
-                    this[$propertiesMap$].set(property, $property);
+                    const $property = new $ObjectiveRep('member', $this, descriptor, this[$canonical$].#lib);
+                    this[$membersOwn$].push($property);
+                    this[$membersMap$].set(property, $property);
                 }
             }
         }
-        if (whos === 'all' && !this[$properties$]) {
+        if (whos === 'all' && !this[$members$]) {
             if (this.isNullOfUndefined()) {
-                this[$properties$] = [];
-                return this[$properties$];
+                this[$members$] = [];
+                return this[$members$];
             }
             let $this = this as $ObjectiveRep;
             if (this.$equals(this.$type) || this.$type.isNullOfUndefined()) {
-                this[$properties$] = this[$propertiesOwn$];
+                this[$members$] = this[$membersOwn$];
             } else if (this.isPrimitive()) {
-                this[$properties$] = this.$type.getProperties('all', this);
+                this[$members$] = this.$type.getMembers('all', this);
             } else {
-                this[$properties$] = this.$type.getProperties('all', this).concat(this.getProperties('own', this));
+                this[$members$] = this.$type.getMembers('all', this).concat(this.getMembers('own', this));
             }
         }
-        const $properties = whos === 'own' ? this[$propertiesOwn$]! : this[$properties$]!;
+        const $properties = whos === 'own' ? this[$membersOwn$]! : this[$members$]!;
         return !of ? $properties : $properties.map(p => p.$of(of));
     }
 

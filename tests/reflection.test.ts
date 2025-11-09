@@ -44,7 +44,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(undefined)');
                 expect(type.$role.$ref).toBe('typeof(undefined)');
                 expect(type.$type.$equals($type(undefined))).toBe(true);
-                expect(type.$properties().length).toBe(0);
+                expect(type.$members().length).toBe(0);
             });
 
             it('should have the right metadata for null', () => {
@@ -54,7 +54,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(null)');
                 expect(type.$role.$ref).toBe('typeof(null)');
                 expect(type.$type.$equals($type(undefined))).toBe(true);
-                expect(type.$properties().length).toBe(0);
+                expect(type.$members().length).toBe(0);
             });
 
             it('should have the right metadata for string', () => {
@@ -64,7 +64,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(string)');
                 expect(type.$role.$ref).toBe('typeof(string)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for number', () => {
@@ -74,7 +74,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(number)');
                 expect(type.$role.$ref).toBe('typeof(number)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for bigint', () => {
@@ -84,7 +84,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(bigint)');
                 expect(type.$role.$ref).toBe('typeof(bigint)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for boolean', () => {
@@ -94,7 +94,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(boolean)');
                 expect(type.$role.$ref).toBe('typeof(boolean)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for symbol', () => {
@@ -104,7 +104,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(symbol)');
                 expect(type.$role.$ref).toBe('typeof(symbol)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for function', () => {
@@ -114,7 +114,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(function)');
                 expect(type.$role.$ref).toBe('typeof(function)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for object', () => {
@@ -124,7 +124,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(object)');
                 expect(type.$role.$ref).toBe('typeof(object)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
         });
 
@@ -150,7 +150,7 @@ describe('$Reflection', () => {
                 expect(type.$prototype.$ref).toBe('type(undefined)');
                 expect(type.$prototype.$role.$ref).toBe('prototypeof(undefined)');
                 expect(type.$type.$equals($type(undefined))).toBe(true);
-                expect(type.$properties().length).toBe(0);
+                expect(type.$members().length).toBe(0);
             });
 
             it('should have the right metadata for null', () => {
@@ -161,7 +161,7 @@ describe('$Reflection', () => {
                 expect(type.$role.$ref).toBe('typeof(undefined)');
                 expect(type.$prototype.$role.$ref).toBe('prototypeof(undefined)');
                 expect(type.$type.$equals($type(undefined))).toBe(true);
-                expect(type.$properties().length).toBe(0);
+                expect(type.$members().length).toBe(0);
             });
 
             it('should have the right metadata for a string', () => {
@@ -171,7 +171,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(string)');
                 expect(type.$role.$ref).toBe('typeof("test")');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for number', () => {
@@ -181,7 +181,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(number)');
                 expect(type.$role.$ref).toBe('typeof(0)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for bigint', () => {
@@ -191,7 +191,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(bigint)');
                 expect(type.$role.$ref).toBe('typeof(1000)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for boolean', () => {
@@ -201,7 +201,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(boolean)');
                 expect(type.$role.$ref).toBe('typeof(true)');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
             
             it('should have the right metadata for symbol', () => {
@@ -211,7 +211,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(symbol)');
                 expect(type.$role.$ref).toBe('typeof(${test})');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for function', () => {
@@ -221,7 +221,7 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(function)');
                 expect(type.$role.$ref).toBe('typeof(())');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
 
             it('should have the right metadata for object', () => {
@@ -231,26 +231,26 @@ describe('$Reflection', () => {
                 expect(type.$ref).toBe('type(object)');
                 expect(type.$role.$ref).toBe('typeof({})');
                 expect(type.$type.$equals($type(Object))).toBe(true);
-                expect(type.$properties().length).toBeGreaterThan(0);
+                expect(type.$members().length).toBeGreaterThan(0);
             });
         }); 
 
         describe('$properties', () => {
             describe('on instances', () => {
                 it('should list own properties of plain objects', () => {
-                    const point = { x: 1, y: 2, z: 3 };
-                    const instance = $instanceof(point);
-                    const properties = instance.$properties('own');
+                    const $object = { x: 1, y: 2, z: 3 };
+                    const $instance = $instanceof($object);
+                    const $members = $instance.$members('own');
                     
-                    expect(properties.length).toBe(3);
-                    expect(properties.every(p => p.$role.role === 'property')).toBe(true);
-                    expect(properties.map(p => p.$key?.$name).sort()).toEqual(['x', 'y', 'z']);
+                    expect($members.length).toBe(3);
+                    expect($members.every(p => p.$role.role === 'member')).toBe(true);
+                    expect($members.map(p => p.$key?.$name).sort()).toEqual(['x', 'y', 'z']);
                 });
 
                 it('should list all properties including inherited', () => {
                     const instance = $instanceof(new $SubClass());
-                    const ownProps = instance.$properties('own');
-                    const allProps = instance.$properties('all');
+                    const ownProps = instance.$members('own');
+                    const allProps = instance.$members('all');
                     
                     expect(ownProps.length).toBeGreaterThan(0);
                     expect(allProps.length).toBeGreaterThan(ownProps.length);
@@ -270,7 +270,7 @@ describe('$Reflection', () => {
                 it('should handle arrays correctly', () => {
                     const values = [1, 2, 3];
                     const instance = $instanceof(values);
-                    const properties = instance.$properties('own');
+                    const properties = instance.$members('own');
                     
                     // Arrays have numeric indices as properties
                     const names = properties.map(p => p.$key?.$name);
@@ -285,7 +285,7 @@ describe('$Reflection', () => {
                     compute.version = '1.0';
                     
                     const instance = $instanceof(compute);
-                    const properties = instance.$properties('own');
+                    const properties = instance.$members('own');
                     
                     const names = properties.map(p => p.$key?.$name);
                     expect(names).toContain('version');
@@ -297,7 +297,7 @@ describe('$Reflection', () => {
             describe('on types', () => {
                 it('should list prototype properties of built-in types', () => {
                     const stringType = $type(String);
-                    const props = stringType.$properties('own');
+                    const props = stringType.$members('own');
                     
                     const propNames = props.map(p => p.$key?.$name);
                     expect(propNames).toContain('charAt');
@@ -307,7 +307,7 @@ describe('$Reflection', () => {
 
                 it('should list class prototype properties', () => {
                     const classType = $type($Class);
-                    const props = classType.$properties('own');
+                    const props = classType.$members('own');
                     
                     const propNames = props.map(p => p.$key?.$name);
                     expect(propNames).toContain('property'); // getter/setter
@@ -319,7 +319,7 @@ describe('$Reflection', () => {
             describe('on primitives', () => {
                 it('should delegate to type for primitive strings', () => {
                     const $string = $instanceof('hello');
-                    const $properties = $string.$properties('all');
+                    const $properties = $string.$members('all');
                     const properties = $properties.map(p => p.$key?.$name);
                     expect(properties).toContain('charAt');
                     expect(properties).toContain('toUpperCase');
@@ -329,10 +329,10 @@ describe('$Reflection', () => {
                     const nullRep = $instanceof(null);
                     const undefinedRep = $instanceof(undefined);
                     
-                    expect(nullRep.$properties('own')).toEqual([]);
-                    expect(nullRep.$properties('all')).toEqual([]);
-                    expect(undefinedRep.$properties('own')).toEqual([]);
-                    expect(undefinedRep.$properties('all')).toEqual([]);
+                    expect(nullRep.$members('own')).toEqual([]);
+                    expect(nullRep.$members('all')).toEqual([]);
+                    expect(undefinedRep.$members('own')).toEqual([]);
+                    expect(undefinedRep.$members('all')).toEqual([]);
                 });
             });
 
@@ -353,7 +353,7 @@ describe('$Reflection', () => {
                 const point = { x: 1 };
                 const instance = $instanceof(point);
                 
-                const missing = instance.$property('y');
+                const missing = instance.$member('y');
                 expect(missing.$role.role).toBe('property');
                 expect(missing.$role.of).toBe(instance); 
             });
@@ -379,7 +379,7 @@ describe('$Reflection', () => {
             });
 
             it('should work with properties', () => {
-                const rep = $type($Class).$property("property");
+                const rep = $type($Class).$member("property");
                 expect(rep.isProperty).toBe(true);
                 expect(rep.isField).toBe(false);
                 expect(rep.isMethod).toBe(false); 
@@ -409,7 +409,7 @@ describe('$Reflection', () => {
 
             it('should handle getter-only properties', () => {
                 const obj = { get readOnly() { return 42; } };
-                const rep = $instanceof(obj).$property("readOnly").$as('property');
+                const rep = $instanceof(obj).$member("readOnly").$as('property');
                 expect(rep.isProperty).toBe(true);
                 expect(rep.isReadable).toBe(true);
                 expect(rep.isWritable).toBe(false);
@@ -419,7 +419,7 @@ describe('$Reflection', () => {
 
             it('should handle setter-only properties', () => {
                 const obj = { set writeOnly(v: number) { }};
-                const rep = $instanceof(obj).$property("writeOnly").$as('property');
+                const rep = $instanceof(obj).$member("writeOnly").$as('property');
                 expect(rep.isProperty).toBe(true);
                 expect(rep.isReadable).toBe(false);
                 expect(rep.isWritable).toBe(true);
@@ -428,29 +428,29 @@ describe('$Reflection', () => {
             });
 
             it('should transform property to field when appropriate', () => {
-                const model = { data: [1, 2, 3] };
-                const instance = $instanceof(model);
-                const property = instance.$property('data');
+                const $object = { data: [1, 2, 3] };
+                const $instance = $instanceof($object);
+                const $field = $instance.$field('data');
                 
-                const field = property.$as('field');
+                const field = $field.$as('field');
                 expect(field.$role.role).toBe('field');
                 expect(field.$value.literal).toEqual([1, 2, 3]);
                 expect(field.isField).toBe(true);
             });
 
             it('should transform property to method when appropriate', () => {
-                const service = { compute: function (x: number) { return x * 2 } };
-                const instance = $instanceof(service);
-                const property = instance.$property('compute');
+                const $object = { compute: function (x: number) { return x * 2 } };
+                const $instance = $instanceof($object);
+                const $method = $instance.$method('compute');
                 
-                const method = property.$as('method');
+                const method = $method.$as('method');
                 expect(method.$role.role).toBe('method');
                 expect(method.isMethod).toBe(true);
                 expect(typeof method.$value.literal).toBe('function');
             });
 
             it('should handle getter/setter role transformations', () => {
-                const property = $type($Class).$property("property").$as('property');;
+                const property = $type($Class).$member("property").$as('property');;
                 const getter = property.$as('getter');
                 const setter = property.$as('setter');
                 expect(getter.$role.role).toBe('getter');
@@ -459,7 +459,7 @@ describe('$Reflection', () => {
 
             it('should maintain of relationship through transformations', () => {
                 const instance = $instanceof({ x: 1 });
-                const prop = instance.$property('x');
+                const prop = instance.$member('x');
                 const field = prop.$as('field');
                 
                 expect(field.$role.of).toBe(instance);
@@ -689,7 +689,7 @@ describe('$Reflection', () => {
                 const instance = $instanceof(new Derived());
                 
                 // Own properties include instance fields
-                const ownProps = instance.$properties('own');
+                const ownProps = instance.$members('own');
                 const ownNames = ownProps.map(p => p.$key?.$name);
                 expect(ownNames).toContain('baseField');
                 expect(ownNames).toContain('derivedField');
@@ -722,7 +722,7 @@ describe('$Reflection', () => {
                 bare.x = 1;
                 
                 const instance = $instanceof(bare);
-                const properties = instance.$properties('own');
+                const properties = instance.$members('own');
                 
                 expect(properties.length).toBe(1);
                 expect(properties[0].$key?.$name).toBe('x');
@@ -732,7 +732,7 @@ describe('$Reflection', () => {
                 const immutable = Object.freeze({ x: 1, y: 2 });
                 const instance = $instanceof(immutable);
                 
-                const properties = instance.$properties();
+                const properties = instance.$members();
                 properties.forEach(property => {
                     expect(property.isConfigurable).toBe(false);
                     expect(property.isWritable).toBe(false);
@@ -754,12 +754,12 @@ describe('$Reflection', () => {
                 const empty = {};
                 const instance = $instanceof(empty);
                 
-                expect(instance.$properties('own').length).toBe(0);
+                expect(instance.$members('own').length).toBe(0);
                 expect(instance.$fields('own').length).toBe(0);
                 expect(instance.$methods('own').length).toBe(0);
                 
                 // But should have inherited properties
-                expect(instance.$properties('all').length).toBeGreaterThan(0);
+                expect(instance.$members('all').length).toBeGreaterThan(0);
             });
         });
     });
