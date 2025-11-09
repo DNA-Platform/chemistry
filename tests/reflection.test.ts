@@ -284,13 +284,12 @@ describe('$Reflection', () => {
                     const compute = function named(x: number) { return x * 2; };
                     compute.version = '1.0';
                     
-                    const instance = $instanceof(compute);
-                    const properties = instance.$members('own');
-                    
-                    const names = properties.map(p => p.$key?.$name);
-                    expect(names).toContain('version');
-                    expect(names).toContain('length'); // function length
-                    expect(names).toContain('name');   // function name
+                    const $instance = $instanceof(compute);
+                    const $members = $instance.$as('object').$members('own');
+                    const $names = $members.map(m => m.$name);
+                    expect($names).toContain('version');
+                    expect($names).toContain('length'); // function length
+                    expect($names).toContain('name');   // function name
                 });
             });
 

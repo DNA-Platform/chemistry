@@ -13,8 +13,8 @@ export function $instanceof(literal: number): $Primitive<number>;
 export function $instanceof(literal: boolean): $Primitive<boolean>;
 export function $instanceof(literal: symbol): $Primitive<symbol>;
 export function $instanceof(literal: bigint): $Primitive<bigint>;
+export function $instanceof(literal: Function): $Function;
 export function $instanceof<T>(literal: T[]): $Array<T>;
-export function $instanceof<T extends Function>(literal: T): $Function<T>;
 export function $instanceof<T>(literal: T): $Object<T>;
 export function $instanceof(literal: any): any {
     if (literal === null || literal === undefined)
@@ -75,14 +75,6 @@ export interface $Object<T = any> extends $Rep {
     $type: $Type;
     $prototype: $Object;
     $constructor: $Constructor;
-    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $members(whos?: 'own' | 'all'): $Member[];
-    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
-    $fields(whos?: 'own' | 'all'): $Field[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
-    $properties(whos?: 'own' | 'all'): $Property[];
-    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
-    $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'primitive'): this is $Primitive;
     $is(role: 'function'): this is $Function;
@@ -115,6 +107,14 @@ export interface $Object<T = any> extends $Rep {
     $as(role: 'object'): $Object<T>;
     $as(role: 'instance'): $Object<T>;
     $as(role: 'prototype'): $Object;
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
     $equals(other: $Rep): boolean;
 }
 
@@ -126,14 +126,6 @@ export interface $Primitive<T extends string | number | boolean | symbol | bigin
     $type: $Type;
     $prototype: $Object;
     $constructor: $Constructor;
-    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $members(whos?: 'own' | 'all'): $Member[];
-    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
-    $fields(whos?: 'own' | 'all'): $Field[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
-    $properties(whos?: 'own' | 'all'): $Property[];
-    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
-    $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'object'): this is $Object<T>;
     $is(role: 'primitive'): this is $Primitive<T>;
@@ -145,6 +137,14 @@ export interface $Primitive<T extends string | number | boolean | symbol | bigin
     $is(type: Type | TypeofType): boolean;
     $as(role: 'object'): $Object<T>;
     $as(role: 'primitive'): $Primitive<T>;
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
     $equals(other: $Rep): boolean;
 }
 
@@ -162,14 +162,6 @@ export interface $Function<T extends Function = Function> extends $Rep {
     isGenerator: boolean | undefined;
     isNative: boolean | undefined;
     hasRest: boolean;
-    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $members(whos?: 'own' | 'all'): $Member[];
-    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
-    $fields(whos?: 'own' | 'all'): $Field[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
-    $properties(whos?: 'own' | 'all'): $Property[];
-    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
-    $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'type'): this is $Type;
     $is(role: 'constructor'): this is $Constructor;
@@ -182,6 +174,7 @@ export interface $Function<T extends Function = Function> extends $Rep {
     $as(role: 'constructor'): $Constructor;
     $as(role: 'function'): $Function<T>;
     $as(role: 'object'): $Object<T>;
+    $call(...args: any): T;
     $equals(other: $Rep): boolean;
 }
 
@@ -194,14 +187,6 @@ export interface $PrimitiveType extends $Rep {
     $constructor: $Constructor;
     $type: $Type;
     $parameters: $Parameter[];
-    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $members(whos?: 'own' | 'all'): $Member[];
-    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
-    $fields(whos?: 'own' | 'all'): $Field[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
-    $properties(whos?: 'own' | 'all'): $Property[];
-    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
-    $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'type'): this is $Type;
     $is(type: typeof String): this is $Type<typeof String>;
@@ -211,6 +196,14 @@ export interface $PrimitiveType extends $Rep {
     $is(type: typeof BigInt): this is $Type<typeof BigInt>;
     $is(type: Type | TypeofType): boolean;
     $as(role: 'type'): $Type;
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
     $equals(other: $Rep): boolean;
 }
 
@@ -223,15 +216,6 @@ export interface $Type<T extends Constructor | Function = Constructor> extends $
     $constructor: $Constructor<T>;
     $type: $Type;
     $parameters: $Parameter[];
-
-    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $members(whos?: 'own' | 'all'): $Member[];
-    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
-    $fields(whos?: 'own' | 'all'): $Field[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
-    $properties(whos?: 'own' | 'all'): $Property[];
-    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
-    $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'constructor'): this is $Constructor<T>;
     $is(role: 'function'): this is $Function<T>;
@@ -244,6 +228,14 @@ export interface $Type<T extends Constructor | Function = Constructor> extends $
     $as(role: 'type'): $Type<T>;
     $as(role: 'class'): $Type<T>;
     $as(role: 'object'): $Object<T>;
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
     $equals(other: $Rep): boolean;
 }
 
@@ -256,15 +248,6 @@ export interface $Constructor<T extends Constructor | Function = Constructor> ex
     $type: $Type;
     $constructor: $Constructor<T>;
     $parameters: $Parameter[];
-
-    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
-    $members(whos?: 'own' | 'all'): $Member[];
-    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
-    $properties(whos?: 'own' | 'all'): $Property[];
-    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
-    $fields(whos?: 'own' | 'all'): $Field[];
-    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
-    $methods(whos?: 'own' | 'all'): $Method[];
     $is(literal: undefined): boolean;
     $is(role: 'type'): this is $Type<T>;
     $is(role: 'function'): this is $Function<T>;
@@ -275,6 +258,15 @@ export interface $Constructor<T extends Constructor | Function = Constructor> ex
     $as(role: 'function'): $Function<T>;
     $as(role: 'constructor'): $Constructor<T>;
     $as(role: 'object'): $Object<T>;
+    $new(...args: any): T;
+    $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
+    $members(whos?: 'own' | 'all'): $Member[];
+    $property(name: string | symbol, whos?: 'own' | 'all'): $Property;
+    $properties(whos?: 'own' | 'all'): $Property[];
+    $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
+    $fields(whos?: 'own' | 'all'): $Field[];
+    $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
+    $methods(whos?: 'own' | 'all'): $Method[];
     $equals(other: $Rep): boolean;
 }
 
@@ -286,6 +278,13 @@ export interface $Array<T = any> extends $Rep {
     $type: $Type;
     $prototype: $Object;
     $constructor: $Constructor;
+    $is(literal: undefined): boolean;
+    $is(role: 'array'): this is $Array<T>;
+    $is(role: 'object'): this is $Object<T[]>;
+    $is(type: typeof Array): boolean;
+    $is(type: Type | TypeofType): boolean;
+    $as(role: 'array'): $Array<T>;
+    $as(role: 'object'): $Object<T[]>;
     $member(name: string | symbol, whos?: 'own' | 'all'): $Member;
     $members(whos?: 'own' | 'all'): $Member[];
     $field(name: string | symbol, whos?: 'own' | 'all'): $Field;
@@ -294,13 +293,6 @@ export interface $Array<T = any> extends $Rep {
     $properties(whos?: 'own' | 'all'): $Property[];
     $method(name: string | symbol, whos?: 'own' | 'all'): $Method;
     $methods(whos?: 'own' | 'all'): $Method[];
-    $is(literal: undefined): boolean;
-    $is(role: 'array'): this is $Array<T>;
-    $is(role: 'object'): this is $Object<T[]>;
-    $is(type: typeof Array): boolean;
-    $is(type: Type | TypeofType): boolean;
-    $as(role: 'array'): $Array<T>;
-    $as(role: 'object'): $Object<T[]>;
     $equals(other: $Rep): boolean;
 }
 
@@ -396,6 +388,7 @@ export interface $Method<T extends Function = Function> extends $Rep {
     $as(role: 'member'): $Member;
     $as(role: 'method'): $Method<T>;
     $as(role: 'function'): $Function<T>;
+    $call(...args: any): T;
     $equals(other: $Rep): boolean;
 }
 
@@ -590,6 +583,18 @@ export class $ObjectiveRep {
         return params?.length > 0 && params[params.length - 1].isRest;
     }
 
+    $call<T = any>(...args: any[]): T {
+        const $of = this[$of$] as $ObjectiveRep;
+        const desc = this[$literal$] as PropertyDescriptor;
+        return this[$role$] === 'constructor' ? this.$new(...args) :
+            this[$role$] === 'method' ? desc.value.call($of[$literal$], ...args) :
+            this[$literal$](...args);
+    }
+
+    $new<T = any>(...args: any[]): T {
+        return new this[$literal$](...args);
+    }
+
     $member(name: string | symbol, whos: 'own' | 'all' = 'all'): $ObjectiveRep {
         this.getMembers(whos);
         const $undefined = $$instanceof(undefined).$as('property').$of(this);
@@ -672,7 +677,7 @@ export class $ObjectiveRep {
         if (this[$role$] == role) return this;
         if (this[$roles$].has(role))
             return this[$roles$].get(role)!;
-        const $this = this.$new(this[$canonical$]);
+        const $this = this.$create(this[$canonical$]);
         $this[$role$] = role;
         $this[$roles$].set(role, $this);
         if (typeof this[$of$] === 'string')
@@ -682,7 +687,7 @@ export class $ObjectiveRep {
 
     $of(of: $ObjectiveRep | $ObjectiveRole): $ObjectiveRep {
         if (this[$of$] == of) return this;
-        const $this = this.$new();
+        const $this = this.$create();
         $this[$of$] = of;
         const $$this = this[$roles$].get($this.$role.$ref);
         return $$this ? $$this : $this;
@@ -702,7 +707,7 @@ export class $ObjectiveRep {
         if (literal === undefined) return typeof literal;
         if (literal === Object.prototype) return 'Object.prototype';
         if (this[$roles$].has('type')) return literal.name;
-        if (this[$roles$].has('property')) return this.$key!.getName();
+        if (this[$roles$].has('member')) return this.$key!.getName();
         if (this[$roles$].has('identifier')) return this.getSymbol(literal);
         if (typeof literal === "string") return this.getSymbol(literal);
         if (typeof literal === "symbol") return this.getSymbol(literal);
@@ -717,7 +722,7 @@ export class $ObjectiveRep {
         if (literal === undefined) return this.getName();
         if (literal === Object.prototype) return '{}.prototype';
         if (this[$roles$].has('type')) return this.getName();
-        if (this[$roles$].has('property')) return this.getName();
+        if (this[$roles$].has('memeber')) return this.getName();
         if (typeof literal === "string") return `"${literal}"`;
         if (typeof literal === "symbol") return `${'${'}${literal.description}}`;
         if (typeofTypes.has(literal)) return literal.name.toLowerCase();
@@ -839,7 +844,7 @@ export class $ObjectiveRep {
         return this[$of$] instanceof $ObjectiveRep ? this[$of$].isPrimitive() : false;
     }
 
-    protected $new(version?: $ObjectiveRep): $ObjectiveRep {
+    protected $create(version?: $ObjectiveRep): $ObjectiveRep {
         version = version || this;
         const $this = Object.create(version) as $ObjectiveRep;
         return $this;
