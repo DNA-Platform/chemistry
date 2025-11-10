@@ -1,10 +1,13 @@
 import { $Rep, PrimitiveType, Type, Typeof, Constructor, primitives, TypeofType, typeofTypes } from "./types";
 import { $lib, $Library } from './catalogue';
+import {// $SubjectiveRep
+    $ref$, $roles$, $role$, $of$, $type$$, $prototype$$, $canonical$, $key$, $value$, $name$, $members$, $membersOwn$, $membersMap$, $method$, $getter$, $setter$, $parameters$, $constructor$
+} from './symbols'
 import {// $ObjectiveRep
-    $lib$, $ref$, $roles$, $role$, $of$, $literal$, $typeof$, $type$$, $prototype$$, $canonical$, $key$, $value$, $name$, $members$, $membersOwn$, $membersMap$, $method$, $getter$, $setter$, $functionInfo$, $parameters$, $constructor$
+    $literal$, $typeof$, $functionInfo$
 } from './symbols'
 
-export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'identifier' | 'value' | 'JavaScript';
+export type $ObjectiveRole = 'object' | 'function' | 'primitive' | 'array' | 'parameter' | 'instance' | 'prototype' | 'type' | 'constructor' | 'class' | 'generic' | 'member' | 'field' | 'property' | 'method' | 'getter' | 'setter' | 'identifier' | 'value' | 'JavaScript' | 'TypeScript';
 
 export function $instanceof<T>(literal: null): $Primitive<null>;
 export function $instanceof(literal: undefined): $Primitive<undefined>;
@@ -403,30 +406,109 @@ export type LiteralOf<T> = T extends { literal: infer L } ? L : never;
 export type IsRole<T, R extends string> = T extends { $is(role: R): true } ? T : never;
 export type AsRole<T, R extends string> = T extends { $as(role: R): infer U } ? U : never;
 
-export class $ObjectiveRep {
+export class $SubjectiveRep<$RepType extends $SubjectiveRep<$RepType> = any>  {
     #lib?: $Library;
-    [$lib$]?: PropertyDescriptor;
-    [$ref$]?: string;
-    [$role$]: $ObjectiveRole;
-    [$roles$] = new Map<string, $ObjectiveRep>;
-    [$of$]: $ObjectiveRep | $ObjectiveRole
-    [$literal$]: any;
-    [$type$$]?: $ObjectiveRep;
-    [$typeof$]: Typeof;
-    [$prototype$$]?: $ObjectiveRep;
-    [$canonical$]!: $ObjectiveRep;
+    [$ref$]: string;
+    [$role$]: string;
+    [$roles$] = new Map<string, $RepType>;
+    [$of$]: $RepType | string;
+    [$type$$]?: $RepType;
+    [$prototype$$]?: $RepType;
+    [$canonical$]!: $RepType;
     [$name$]?: string;
-    [$key$]?: $ObjectiveRep;
-    [$value$]?: $ObjectiveRep;
-    [$members$]?: $ObjectiveRep[];
-    [$membersOwn$]?: $ObjectiveRep[];
-    [$membersMap$]?: Map<string | symbol, $ObjectiveRep>;
+    [$key$]?: $RepType;
+    [$members$]?: $RepType[];
+    [$membersOwn$]?: $RepType[];
+    [$membersMap$]?: Map<string | symbol, $RepType>;
+    [$value$]?: $RepType;
+    [$getter$]?: $RepType;
+    [$setter$]?: $RepType;
+    [$parameters$]?: $RepType[];
+    [$constructor$]?: $RepType;
+
+    get $ref(): string {
+        return this[$ref$];
+    }
+
+    get $name(): string {
+        return this[$name$] || this[$ref$];
+    }
+
+    get $type(): $RepType {
+        const $this: $RepType = this as any;
+        return this[$type$$] || $this.$as('type').$of($this);
+    }
+
+    get $role(): { role: string, of: $SubjectiveRep | string, $ref: string } {
+        const $this: $RepType = this as any;
+        const $role = {
+            role: this[$role$],
+            of: this[$of$],
+            get $ref() {
+                return `${$this[$role$]}of(${$role.of[$role$]})`;
+            },
+            toString: () => $role.$ref
+        } as any;
+        return $role;
+    }
+    
+    constructor(role: string, of: $RepType | string, ref: string, lib?: $Library, customize?: ($this: $SubjectiveRep<$RepType>) => void) {
+        this[$ref$] = ref;
+        this[$role$] = role;
+        this[$of$] = of;
+        if (ref === undefined) return;
+        this.#lib = lib;
+        const $this: $RepType = this as any; 
+        if (lib) {
+            const $this = lib!.$find(this) as $RepType;
+            if ($this) return $this.$as(role).$of(of as any) as any;
+            lib!.$index(this);
+            this[$canonical$] = $this;
+        }
+        this[$roles$].set(role, $this);
+        if (typeof of === 'string')
+            this[$roles$].set($this.$role.$ref, $this);
+        if (customize)
+            customize(this);
+    }
+
+    $as(role: string): $RepType {
+        if (this[$role$] == role) return this as any;
+        if (this[$roles$].has(role))
+            return this[$roles$].get(role)!;
+        const $this = this.$create(this[$canonical$]);
+        $this[$role$] = role;
+        $this[$roles$].set(role, $this);
+        if (typeof this[$of$] === 'string')
+            this[$roles$].set($this.$role.$ref, $this);
+        return $this;
+    }
+
+    $of(of: $RepType | string): $RepType {
+        if (this[$of$] == of) return this as any;
+        const $this = this.$create();
+        $this[$of$] = of;
+        const $$this = this[$roles$].get($this.$role.$ref);
+        return $$this ? $$this : $this;
+    }
+
+    protected getDescription(): string {
+        return this[$ref$];
+    }
+
+    protected $create(version?: $RepType): $RepType {
+        version = version || this as any;
+        const $this = Object.create(version!) as $RepType;
+        return $this;
+    }
+}
+
+export class $ObjectiveRep extends $SubjectiveRep<$ObjectiveRep> {
+    #$lib?: $Library;
+    [$literal$]: any;
+    [$typeof$]: Typeof;
     [$method$]?: $ObjectiveRep;
-    [$getter$]?: $ObjectiveRep;
-    [$setter$]?: $ObjectiveRep;
     [$functionInfo$]?: $FunctionInfo;
-    [$parameters$]?: $ObjectiveRep[];
-    [$constructor$]?: $ObjectiveRep;
 
     get literal() { return this[$literal$]; }
 
@@ -438,7 +520,7 @@ export class $ObjectiveRep {
 
     get $key(): $ObjectiveRep | undefined {
         if (this[$key$]) return this[$key$];
-        this[$key$] = new $ObjectiveRep('identifier', this, this[$literal$].property, this[$canonical$].#lib);
+        this[$key$] = new $ObjectiveRep('identifier', this, this[$literal$].property, this[$canonical$].#$lib);
         return this[$key$];
     }
 
@@ -448,11 +530,9 @@ export class $ObjectiveRep {
             role: this[$role$],
             of: this[$of$],
             get $ref() {
-                let $rep = $this[$of$] === 'JavaScript' ? $this.$name :
+                let $rep = $this[$of$] === 'JavaScript' || this[$of$] === 'TypeScript' ? $this.$name :
                     typeof $this[$of$] === 'string' ? $this[$of$] :
                         $this[$of$].getDescription();
-                // if ($this.$name && $rep !== $this.$name)
-                //     $rep = `${$rep}:${$this.$name}`;
                 return `${$this[$role$]}of(${$rep})`;
             },
             toString: () => $role.$ref
@@ -489,14 +569,14 @@ export class $ObjectiveRep {
         const $of = this[$of$] as $ObjectiveRep;
         if (!descriptor || !this.isReadable) return $$typeof(undefined).$as('value').$of(this);
         return 'value' in descriptor ? 
-            new $ObjectiveRep('value', this, descriptor!.value, this[$canonical$].#lib) :
-            new $ObjectiveRep('value', this, descriptor!.get!.bind($of[$literal$])(), this[$canonical$].#lib);
+            new $ObjectiveRep('value', this, descriptor!.value, this[$canonical$].#$lib) :
+            new $ObjectiveRep('value', this, descriptor!.get!.bind($of[$literal$])(), this[$canonical$].#$lib);
     }
 
     get $getter(): $ObjectiveRep {
         if (!this[$getter$]) {
             const descriptor = this[$literal$] as PropertyDescriptor;
-            this[$getter$] = new $ObjectiveRep('getter', this, descriptor?.get, this[$canonical$].#lib);
+            this[$getter$] = new $ObjectiveRep('getter', this, descriptor?.get, this[$canonical$].#$lib);
         }
         return this[$getter$];
     }
@@ -504,7 +584,7 @@ export class $ObjectiveRep {
     get $setter(): $ObjectiveRep {
         if (!this[$setter$]) {
             const descriptor = this[$literal$] as PropertyDescriptor;
-            this[$setter$] = new $ObjectiveRep('setter', this, descriptor?.set, this[$canonical$].#lib);
+            this[$setter$] = new $ObjectiveRep('setter', this, descriptor?.set, this[$canonical$].#$lib);
         }
         return this[$setter$];
     }
@@ -516,7 +596,7 @@ export class $ObjectiveRep {
                 this[$parameters$] = [];
             } else {
                 this[$parameters$] = info.params.map(param =>
-                    new $ObjectiveRep('parameter', this, param, this[$canonical$].#lib)
+                    new $ObjectiveRep('parameter', this, param, this[$canonical$].#$lib)
                 );
             }
         }
@@ -643,11 +723,10 @@ export class $ObjectiveRep {
     }
 
     constructor(role: $ObjectiveRole, of: $ObjectiveRep | $ObjectiveRole, literal: any, lib?: $Library) {
-        this.#lib = lib;
-        this[$role$] = role;
+        super(role, of, undefined as any, lib);
+        this.#$lib = lib;
         this[$literal$] = literal;
         this[$typeof$] = typeof literal;
-        this[$of$] = of;
         if (this[$of$] === 'JavaScript')
             this[$canonical$] = this;
         if (lib && this[$canonical$]) {
@@ -673,26 +752,6 @@ export class $ObjectiveRep {
         return this.$equals($$type(role));
     }
 
-    $as(role: $ObjectiveRole): $ObjectiveRep {
-        if (this[$role$] == role) return this;
-        if (this[$roles$].has(role))
-            return this[$roles$].get(role)!;
-        const $this = this.$create(this[$canonical$]);
-        $this[$role$] = role;
-        $this[$roles$].set(role, $this);
-        if (typeof this[$of$] === 'string')
-            this[$roles$].set($this.$role.$ref, $this);
-        return $this;
-    }
-
-    $of(of: $ObjectiveRep | $ObjectiveRole): $ObjectiveRep {
-        if (this[$of$] == of) return this;
-        const $this = this.$create();
-        $this[$of$] = of;
-        const $$this = this[$roles$].get($this.$role.$ref);
-        return $$this ? $$this : $this;
-    }
-
     $equals(other: $ObjectiveRep): boolean {
         return this.$ref === other.$ref;
     }
@@ -706,6 +765,7 @@ export class $ObjectiveRep {
         if (literal === null) return 'null';
         if (literal === undefined) return typeof literal;
         if (literal === Object.prototype) return 'Object.prototype';
+        if (this[$canonical$][$of$] === 'TypeScript') return this.literal.description;
         if (this[$roles$].has('type')) return literal.name;
         if (this[$roles$].has('member')) return this.$key!.getName();
         if (this[$roles$].has('identifier')) return this.getSymbol(literal);
@@ -721,6 +781,7 @@ export class $ObjectiveRep {
         if (literal === null) return this.getName();
         if (literal === undefined) return this.getName();
         if (literal === Object.prototype) return '{}.prototype';
+        if (this[$canonical$][$of$] === 'TypeScript') return this.literal.description;
         if (this[$roles$].has('type')) return this.getName();
         if (this[$roles$].has('memeber')) return this.getName();
         if (typeof literal === "string") return `"${literal}"`;
@@ -744,9 +805,9 @@ export class $ObjectiveRep {
             else if (this.isPrimitive())
                 this[$prototype$$] = this.$type.$as('prototype').$of(this);
             else if (this.isType())
-                this[$prototype$$] = new $ObjectiveRep('prototype', this, this[$literal$].prototype, this[$canonical$].#lib);
+                this[$prototype$$] = new $ObjectiveRep('prototype', this, this[$literal$].prototype, this[$canonical$].#$lib);
             else
-                this[$prototype$$] = new $ObjectiveRep('prototype', this, Object.getPrototypeOf(this[$literal$]), this[$canonical$].#lib);
+                this[$prototype$$] = new $ObjectiveRep('prototype', this, Object.getPrototypeOf(this[$literal$]), this[$canonical$].#$lib);
         }
         return this[$prototype$$];
     }
@@ -793,7 +854,7 @@ export class $ObjectiveRep {
                 for (const property of keys) {
                     const descriptor = descriptors[property as any] as any;
                     descriptor.property = property;
-                    const $property = new $ObjectiveRep('member', $this, descriptor, this[$canonical$].#lib);
+                    const $property = new $ObjectiveRep('member', $this, descriptor, this[$canonical$].#$lib);
                     this[$membersOwn$].push($property);
                     this[$membersMap$].set(property, $property);
                 }
@@ -843,12 +904,6 @@ export class $ObjectiveRep {
     protected ofPrimitive() {
         return this[$of$] instanceof $ObjectiveRep ? this[$of$].isPrimitive() : false;
     }
-
-    protected $create(version?: $ObjectiveRep): $ObjectiveRep {
-        version = version || this;
-        const $this = Object.create(version) as $ObjectiveRep;
-        return $this;
-    }
 }
 
 export const $undefined = $type(undefined);
@@ -861,6 +916,11 @@ export const $symbol = $type(Symbol);
 export const $object = $type(Object);
 export const $function = $type(Function);
 export const $prototype = $object.$prototype;
+
+export const $$any = new $SubjectiveRep('type', 'TypeScript', '$any', $lib, $this => {
+    $this[$name$] = 'any';
+    $this[$type$$] = $this.$of($this as any);
+});
 
 export interface $FunctionInfo {
     form: 'lambda' | 'function' | 'method' | 'getter' | 'setter' | 'class' | 'unknown';

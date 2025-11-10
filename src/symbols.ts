@@ -45,26 +45,27 @@ export const $transient$ = Symbol("$Component$.transient");
 // $promise symbols
 export const $cancelled$ = Symbol("$promise.cancelled");
 
-// $ObjectiveRep symbols
-export const $lib$ = Symbol("$ObjectiveRep.lib");
+// $SubjectiveRep symbols
 export const $ref$ = Symbol("$ObjectiveRep.ref");
 export const $roles$ = Symbol("$ObjectiveRep.roles");
 export const $role$ = Symbol("$ObjectiveRep.role");
 export const $of$ = Symbol("$ObjectiveRep.of");
 export const $key$ = Symbol("$ObjectiveRep.key");
-export const $value$ = Symbol("$ObjectiveRep.value");
 export const $name$ = Symbol("$ObjectiveRep.name");
-export const $literal$ = Symbol("$ObjectiveRep.literal");
 export const $type$$ = Symbol("$ObjectiveRep.type");
-export const $typeof$ = Symbol("$ObjectiveRep.typeof");
 export const $prototype$$ = Symbol("$ObjectiveRep.prototype");
 export const $canonical$ = Symbol("$ObjectiveRep.canonical");
 export const $members$ = Symbol("$ObjectiveRep.members");
 export const $membersOwn$ = Symbol("$ObjectiveRep.propertiesOwn");
 export const $membersMap$ = Symbol("$ObjectiveRep.propertiesMap");
+export const $parameters$ = Symbol("$ObjectiveRep.parameters");
+export const $constructor$ = Symbol("$ObjectiveRep.constructor");
+export const $value$ = Symbol("$ObjectiveRep.value");
 export const $method$ = Symbol("$ObjectiveRep.method");
 export const $getter$ = Symbol("$ObjectiveRep.getter");
 export const $setter$ = Symbol("$ObjectiveRep.setter");
+
+// $ObjectiveRep symbols
+export const $literal$ = Symbol("$ObjectiveRep.literal")
+export const $typeof$ = Symbol("$ObjectiveRep.typeof");
 export const $functionInfo$ = Symbol("$ObjectiveRep.functionInfo");
-export const $parameters$ = Symbol("$ObjectiveRep.parameters");
-export const $constructor$ = Symbol("$ObjectiveRep.constructor");
