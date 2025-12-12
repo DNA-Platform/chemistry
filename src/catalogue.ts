@@ -176,4 +176,4 @@ class $Catalogue implements $Rep {
 }
 
 export const $lib = new $Catalogue("$Chemistry");
-export function $subject(name: string) { return new $Catalogue(name); }
+export function $subject(name: string): $Subject { return new $Catalogue(name); }

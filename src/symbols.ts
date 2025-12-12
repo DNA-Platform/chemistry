@@ -45,10 +45,12 @@ export const $transient$ = Symbol("$Component$.transient");
 // $promise symbols
 export const $cancelled$ = Symbol("$promise.cancelled");
 
+// $Reference
+export const $ref$ = Symbol("$Referent.ref");
+export const $roles$ = Symbol("$Referent.roles");
+export const $role$ = Symbol("$Referent.role");
+
 // $SubjectiveRep symbols
-export const $ref$ = Symbol("$ObjectiveRep.ref");
-export const $roles$ = Symbol("$ObjectiveRep.roles");
-export const $role$ = Symbol("$ObjectiveRep.role");
 export const $of$ = Symbol("$ObjectiveRep.of");
 export const $key$ = Symbol("$ObjectiveRep.key");
 export const $name$ = Symbol("$ObjectiveRep.name");
