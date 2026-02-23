@@ -2,7 +2,7 @@ import React, { Fragment, ReactNode } from 'react';
 import {//Particle 
     $cid$, $symbol$, $type$, $prototype$, $template$, $isTemplate$, $derived$, $particlar$, $children$, $apply$, $bond$, $$template$$, $$getNextCid$$, $$createSymbol$$, $$isSymbol$$, $$parseCid$$
 } from "../symbols";
-import { $Props } from "../types";
+import { $$Component, $Props } from "../types";
 
 export class $Particle {
     [$cid$]: number;
@@ -21,7 +21,7 @@ export class $Particle {
         this[$cid$] = $Particle[$$getNextCid$$]();
         this[$type$] = this.constructor as any;
         if (!$this[$type$][$$template$$] || 
-           !($this[$type$][$$template$$] instanceof $this[$type$]))
+        !($this[$type$][$$template$$] instanceof $this[$type$]))
             $this[$type$][$$template$$] = $this;
         this[$template$] = this;
         this[$symbol$] = $Particle[$$createSymbol$$](this);
@@ -31,30 +31,7 @@ export class $Particle {
             this[$particlar$] = true;
             $this = particular;
         }
-        let prototype = $this;
-        let descriptor = Object.getOwnPropertyDescriptor(prototype, 'view');
-        while (!descriptor?.value) {
-            prototype = Object.getPrototypeOf(prototype);
-            descriptor = Object.getOwnPropertyDescriptor(prototype, 'view');
-        }
-        const view = descriptor?.value;
-        const $view = (props?: $Props): ReactNode => {
-            const $this = $view.$this as $Particle;
-            const view = $view.$view;
-            const $$cid = $this[$cid$];
-            const $$symbol = $this[$symbol$];
-            $this[$symbol$] = this[$symbol$];
-            $this[$apply$](props);
-            $this[$bond$]();
-            const $result = view.bind($this)();
-            $this[$cid$] = $$cid;
-            $this[$symbol$] = $$symbol;
-            return $result;
-        };
-        $view.$this = $this;
-        $view.$view = view;
-        $this.$view = $view;
-        this.view = $view;
+        $this.use($this.view);
         return $this;
     }
 
@@ -62,12 +39,30 @@ export class $Particle {
         return this.toString();
     }
 
-    frame($this: this = this): ReactNode {
-        return (
-            <Fragment key={this[$symbol$]}>
-                { $this.view() }
-            </Fragment>
-        );
+    use<A extends [] = []>(view: () => ReactNode): $$Component<this>;
+    use<A extends any[]>(view: (...args: A) => ReactNode, args: A): $$Component<this>;
+    use<A extends any[]>(view: (...args: A) => ReactNode, args?: A): $$Component<this> {
+        const $view$ = view as any;
+        let $this = this;
+        if ($view$.$view || !Object.hasOwn(this as any, 'view')) {
+            $this = Object.create(this) as this;
+            $this[$cid$] = $Particle[$$getNextCid$$]();
+            $this[$symbol$] = $Particle[$$createSymbol$$]($this);
+        }
+        const $view = (props?: $Props): ReactNode => {
+            let $$view = $view;
+            if ($$view.$this[$isTemplate$])
+                $$view = $$view.$this.use($$view.$this.view) as any;
+            const $$this = $$view.$this as $Particle;
+            const view = $$view.$view;
+            $$this[$apply$](props);
+            $$this[$bond$]();
+            return view.apply($$this, args || []);
+        };
+        $view.$view = $view$.$view ?? $view$;
+        $view.$this = $this;
+        $this.view = $view;
+        return $this.view as any;
     }
 
     toString() {
@@ -111,5 +106,5 @@ export class $Particle {
     static #symbolPattern = /\[(\d+)\]$/;
 }
 
-export const Particle = new $Particle().view!
+export const Particle = new $Particle();
 export default Particle;
